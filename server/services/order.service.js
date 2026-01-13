@@ -1,0 +1,128 @@
+import Order from "../models/order.model.js";
+import Product from "../models/product.model.js";
+import ErrorResponse from "../utils/ErrorResponse.js";
+
+// --- CREATE NEW ORDER ---
+export const createOrderService = async (data, userId) => {
+    const { orderItems, shippingAddress, paymentInfo } = data;
+
+    // 1. Stock Check aur Update Logic
+    // Hum har item par loop chalayenge taaki inventory update ho sake
+    for (const item of orderItems) {
+        const product = await Product.findById(item.product);
+
+        if (!product) {
+            throw new ErrorResponse(`Product not found with ID: ${item.product}`, 404);
+        }
+
+        if (product.stock < item.quantity) {
+            throw new ErrorResponse(`${product.name} ka stock khatam hai! (Available: ${product.stock})`, 400);
+        }
+
+        // Product stock kam karein
+        product.stock -= item.quantity;
+        await product.save({ validateBeforeSave: false });
+    }
+
+    // 2. Data Formatting (Schema ke hisaab se)
+    const finalOrderData = {
+        user: userId,
+        orderItems,
+        shippingAddress: {
+            fullName: shippingAddress.fullName,
+            phoneNumber: shippingAddress.phoneNumber,
+            addressLine1: shippingAddress.addressLine1,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            postalCode: shippingAddress.postalCode,
+            country: shippingAddress.country || "India",
+        },
+        paymentInfo: {
+            id: paymentInfo?.id || `manual_${Date.now()}`, // Admin order ke liye manual ID
+            status: paymentInfo?.status || "Pending",
+            method: paymentInfo?.method || "COD",
+        },
+        itemsPrice: data.itemsPrice || 0,
+        taxPrice: data.taxPrice || 0,
+        shippingPrice: data.shippingPrice || 0,
+        totalPrice: data.totalPrice || 0,
+        orderStatus: "Processing", // Default status as per your schema
+        paidAt: paymentInfo?.method === "Online" ? Date.now() : null,
+    };
+
+    // 3. Database mein save karein
+    const order = await Order.create(finalOrderData);
+
+    return order;
+};
+
+// --- UPDATE ORDER STATUS (Admin Only) ---
+export const updateOrderStatusService = async (orderId, status, trackingData = {}) => {
+    const order = await Order.findById(orderId);
+    if (!order) throw new ErrorResponse("Order nahi mila", 404);
+
+    if (order.orderStatus === "Delivered") {
+        throw new ErrorResponse("Ye order pehle hi deliver ho chuka hai", 400);
+    }
+
+    // Agar Cancelled ya Returned ho raha hai, toh stock wapas add karo
+    if (status === "Cancelled" || status === "Returned") {
+        for (const item of order.orderItems) {
+            const product = await Product.findById(item.product);
+            if (product) {
+                product.stock += item.quantity;
+                await product.save();
+            }
+        }
+    }
+
+    order.orderStatus = status;
+    if (status === "Delivered") order.deliveredAt = Date.now();
+    if (trackingData.trackingId) order.trackingId = trackingData.trackingId;
+    if (trackingData.courierPartner) order.courierPartner = trackingData.courierPartner;
+
+    await order.save();
+    return order;
+};
+
+// --- GET MY ORDERS (User) ---
+export const getMyOrdersService = async (userId) => {
+    return await Order.find({ user: userId }).sort("-createdAt");
+};
+
+// --- GET ALL ORDERS (Admin / User with Pagination) ---
+export const getAllOrdersService = async (queryStr, userId = null) => {
+    // 1. Pagination Params
+    const page = parseInt(queryStr.page) || 1;
+    const limit = parseInt(queryStr.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // 2. Filter Logic
+    let filter = {};
+
+    // Agar userId hai toh sirf us user ke orders (Profile page ke liye)
+    // Agar userId null hai toh saare orders (Admin Dashboard ke liye)
+    if (userId) filter.user = userId;
+
+    // Status filter (e.g., status=Processing)
+    if (queryStr.status) filter.orderStatus = queryStr.status;
+
+    // 3. Query Execute
+    const orders = await Order.find(filter)
+        .populate("user", "name email")
+        .sort("-createdAt") // Newest orders first
+        .skip(skip)
+        .limit(limit);
+
+    // 4. Total Count for frontend logic
+    const totalOrders = await Order.countDocuments(filter);
+
+    return {
+        orders,
+        totalOrders,
+        currentPage: page,
+        totalPages: Math.ceil(totalOrders / limit),
+        hasNextPage: page * limit < totalOrders,
+        hasPrevPage: page > 1
+    };
+};
