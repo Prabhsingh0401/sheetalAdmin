@@ -12,6 +12,8 @@ export default function useLogout() {
     const handleLogout = async () => {
         try {
             await adminLogout();
+            // Clear client-side cookie
+            document.cookie = "token=; path=/; max-age=0";
             dispatch(logout());
             toast.success("Logged out successfully");
             router.push("/admin/login");

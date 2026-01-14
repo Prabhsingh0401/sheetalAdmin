@@ -15,7 +15,7 @@ export const register = async (req, res, next) => {
         const result = await authService.registerService(req.body);
         if (!result.success) return res.status(result.statusCode).json(result);
         res.cookie("token", result.token, cookieOptions);
-        return successResponse(res, 201, result.user, "Account created successfully");
+        return successResponse(res, 201, { user: result.user, token: result.token }, "Account created successfully");
     } catch (error) { next(error); }
 };
 
@@ -33,7 +33,7 @@ export const login = async (req, res, next) => {
 
         res.cookie("token", result.token, cookieOptions);
 
-        return successResponse(res, 200, { user: result.user }, "Login successful");
+        return successResponse(res, 200, { user: result.user, token: result.token }, "Login successful");
     } catch (error) {
         next(error);
     }
