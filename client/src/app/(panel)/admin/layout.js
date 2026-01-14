@@ -1,9 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/admin/layout/Sidebar";
 import TopNav from "@/components/admin/layout/TopNav";
 
 export default function AdminLayout({ children }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/admin/login";
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -11,6 +14,10 @@ export default function AdminLayout({ children }) {
 
   if (!mounted) {
     return <div className="h-screen bg-[#fcfcfd]" />;
+  }
+
+  if (isLoginPage) {
+    return <>{children}</>;
   }
 
   return (
