@@ -24,7 +24,7 @@ export default function AdminLogin() {
 
             dispatch(
                 setCredentials({
-                    user: data.user,
+                    user: data.data.user,
                 })
             );
             toast.success("Login successful");

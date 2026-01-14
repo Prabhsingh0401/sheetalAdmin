@@ -27,7 +27,7 @@ const UserLogin = () => {
 
             dispatch(
                 setCredentials({
-                    user: data.user,
+                    user: data.data.user,
                 })
             );
             toast.success("Welcome back! Login successful.");
