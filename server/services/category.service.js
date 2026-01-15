@@ -38,6 +38,15 @@ export const getAllCategoriesService = async () => {
     return { success: true, data: categories };
 };
 
+export const getCategoryBySlugService = async (slug) => {
+    const category = await Category.findOne({ slug, isActive: true })
+        .populate("parentCategory", "name");
+
+    if (!category) return { success: false, message: "Category not found" };
+
+    return { success: true, data: category };
+};
+
 export const getAdminCategoriesService = async ({ page, limit, search }) => {
     const query = search ? { name: { $regex: search, $options: "i" } } : {};
 

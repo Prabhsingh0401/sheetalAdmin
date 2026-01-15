@@ -7,9 +7,11 @@ import { uploadTo } from "../middlewares/multer.middleware.js";
 const router = express.Router();
 
 // public routes
+router.get("/", getAllProducts);
 router.get("/all", getAllProducts);
 router.get("/detail/:id", getProductDetails);
 router.get("/reviews", getProductReviews);
+router.get("/:id", getProductDetails); // Allow fetching by ID/Slug directly
 
 // protected routes
 router.put("/review", isAuthenticated, createProductReview);

@@ -17,12 +17,13 @@ export default function useLogoutModal() {
     const handleConfirmLogout = async () => {
         try {
             await adminLogout();
-            dispatch(logout());
             toast.success("Logged out successfully");
-            router.push("/admin/login");
         } catch (err) {
-            toast.error(err.message || "Failed to logout");
+            console.error("Logout error:", err);
+            // Continue with local logout anyway
         } finally {
+            dispatch(logout());
+            router.push("/admin/login");
             closeModal();
         }
     };

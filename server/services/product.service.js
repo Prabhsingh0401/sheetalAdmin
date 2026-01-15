@@ -1,5 +1,6 @@
 import Review from "../models/review.model.js";
 import Product from "../models/product.model.js";
+import SizeChart from "../models/sizechart.model.js";
 import slugify from "slugify";
 import { deleteFile } from "../utils/fileHelper.js";
 import xlsx from "xlsx";

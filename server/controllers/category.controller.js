@@ -31,6 +31,18 @@ export const getAllCategories = async (req, res, next) => {
     }
 };
 
+export const getCategoryBySlug = async (req, res, next) => {
+    try {
+        const result = await categoryService.getCategoryBySlugService(req.params.slug);
+        if (!result.success) {
+            return res.status(404).json(result);
+        }
+        return successResponse(res, 200, result.data, "Category retrieved successfully");
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getAdminCategories = async (req, res, next) => {
     try {
         const { page = 1, limit = 10, search = "" } = req.query;

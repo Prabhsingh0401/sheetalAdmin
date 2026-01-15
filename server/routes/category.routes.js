@@ -1,5 +1,5 @@
 import express from "express";
-import { createCategory, getAllCategories, getAdminCategories, getCategoryStats, updateCategory, deleteCategory } from "../controllers/category.controller.js";
+import { createCategory, getAllCategories, getCategoryBySlug, getAdminCategories, getCategoryStats, updateCategory, deleteCategory } from "../controllers/category.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js";
 
@@ -7,6 +7,7 @@ const router = express.Router();
 
 // public routes
 router.get("/", getAllCategories);
+router.get("/:slug", getCategoryBySlug);
 
 // admin routes
 router.get("/admin/all", isAuthenticated, isAdmin, getAdminCategories);
