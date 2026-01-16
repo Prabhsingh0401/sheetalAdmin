@@ -20,6 +20,7 @@ import blogRoutes from "./routes/blog.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import returnRoutes from "./routes/return.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import clientAuthRoutes from "./routes/client.auth.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -51,7 +52,7 @@ app.use("/api/v1/auth", authLimiter);
 
 app.use(
     cors({
-        origin: ["http://localhost:3000", "http://localhost:4000", "https://sheetal-admin.vercel.app" , "https://sheetal-omega.vercel.app"],
+        origin: ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000" , "https://sheetal-admin.vercel.app" , "https://sheetal-omega.vercel.app"],
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE"],
         allowedHeaders: ["Content-Type", "Authorization"],
@@ -83,6 +84,7 @@ app.use("/api/v1/banner", bannerRoutes);
 app.use("/api/v1/blogs", blogRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/returns", returnRoutes);
+app.use("/api/v1/client/auth", clientAuthRoutes);
 
 app.get("/", (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

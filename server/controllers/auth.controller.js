@@ -6,7 +6,9 @@ const cookieOptions = {
     expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     httpOnly: true,
     secure: config.mode === "production",
-    sameSite: config.mode === "production" ? "none" : "lax"
+    sameSite: config.mode === "production" ? "none" : "lax",
+    path: "/",
+    domain: config.mode === "production" ? ".vercel.app" : undefined,
 };
 
 //  register

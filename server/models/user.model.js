@@ -13,9 +13,9 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
     {
-        name: { type: String, trim: true, required: [true, "Please provide your name"], maxlength: [50, "Name cannot exceed 50 characters"] },
+        name: { type: String, trim: true, maxlength: [50, "Name cannot exceed 50 characters"] },
         email: {
-            type: String, required: [true, "Please provide an email"], unique: true, lowercase: true, trim: true,
+            type: String, unique: true, sparse: true, lowercase: true, trim: true,
             match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Please provide a valid email"],
         },
         password: { type: String, select: false, minlength: [8, "Password must be at least 8 characters"] },
