@@ -2,9 +2,11 @@ import app from "./main.js";
 import { config } from "./config/config.js";
 import connectDB from "./config/db.js";
 import { seedAdmin } from "./scripts/seedAdmin.js";
+import initializeFirebase from "./config/firebase.js";
 
 const startServer = async () => {
     try {
+        initializeFirebase();
         await connectDB();
         await seedAdmin(); 
         

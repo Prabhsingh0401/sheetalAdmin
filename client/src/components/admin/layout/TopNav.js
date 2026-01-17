@@ -134,11 +134,11 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
 
                         {showUserDrop && (
                             <div className="absolute top-full right-0 mt-3 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group">
+                                {/* <button className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group">
                                     <Settings size={16} className="text-slate-400 group-hover:text-emerald-500" /> Dashboard Settings
-                                </button>
+                                </button> */}
                                 <button className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group">
-                                    <User size={16} className="text-slate-400 group-hover:text-emerald-500" /> My Profile
+                                    <User size={16} className="text-slate-400 group-hover:text-emerald-500" /> Change Password
                                 </button>
                                 <div className="h-px bg-slate-100 my-1.5 mx-2"></div>
                                 <button onClick={openModal} className="w-full flex items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-bold transition-all">

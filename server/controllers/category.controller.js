@@ -6,18 +6,24 @@ const safeUnlink = (path) => {
     if (path && fs.existsSync(path)) fs.unlinkSync(path);
 };
 
+const cleanupFiles = (files) => {
+    if (!files) return;
+    if (files.mainImage) safeUnlink(files.mainImage[0].path);
+    if (files.bannerImage) safeUnlink(files.bannerImage[0].path);
+};
+
 export const createCategory = async (req, res, next) => {
     try {
-        const result = await categoryService.createCategoryService(req.body, req.file);
+        const result = await categoryService.createCategoryService(req.body, req.files);
         
         if (!result.success) {
-            if (req.file) safeUnlink(req.file.path);
+            cleanupFiles(req.files);
             return res.status(400).json(result);
         }
         
         return successResponse(res, 201, result.data, "Category created successfully");
     } catch (error) {
-        if (req.file) safeUnlink(req.file.path);
+        cleanupFiles(req.files);
         next(error);
     }
 };
@@ -68,16 +74,16 @@ export const getCategoryStats = async (req, res, next) => {
 
 export const updateCategory = async (req, res, next) => {
     try {
-        const result = await categoryService.updateCategoryService(req.params.id, req.body, req.file);
+        const result = await categoryService.updateCategoryService(req.params.id, req.body, req.files);
         
         if (!result.success) {
-            if (req.file) safeUnlink(req.file.path);
+            cleanupFiles(req.files);
             return res.status(400).json(result);
         }
         
         return successResponse(res, 200, result.data, "Category updated successfully");
     } catch (error) {
-        if (req.file) safeUnlink(req.file.path);
+        cleanupFiles(req.files);
         next(error);
     }
 };

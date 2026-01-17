@@ -9,7 +9,8 @@ import { IMAGE_BASE_URL } from "@/services/api";
 export default function CategoryModal({ isOpen, onClose, onSuccess, initialData = null }) {
     const [loading, setLoading] = useState(false);
     const [parentCategories, setParentCategories] = useState([]);
-    const [preview, setPreview] = useState(null);
+    const [previewMainImage, setPreviewMainImage] = useState(null);
+    const [previewBannerImage, setPreviewBannerImage] = useState(null);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -17,7 +18,9 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
         parentCategory: "",
         isFeatured: false,
         status: "Active",
-        image: null,
+        categoryBanner: "", // Text field for category banner
+        mainImage: null,
+        bannerImage: null,
     });
 
     // Jab modal khule ya initialData change ho
@@ -29,15 +32,24 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                 parentCategory: initialData?.parentCategory?._id || "",
                 isFeatured: initialData?.isFeatured || false,
                 status: initialData?.isActive !== false ? "Active" : "Inactive",
-                image: null,
+                categoryBanner: initialData?.categoryBanner || "",
+                mainImage: null, // Always null for new file selection
+                bannerImage: null, // Always null for new file selection
             });
 
-            if (initialData?.image?.url) {
-                // Image URL path fix
-                const fullUrl = `${IMAGE_BASE_URL}/${initialData.image.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1");
-                setPreview(fullUrl);
+            // Set previews from initialData or clear them
+            if (initialData?.mainImage?.url) {
+                const fullUrl = `${IMAGE_BASE_URL}/${initialData.mainImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1");
+                setPreviewMainImage(fullUrl);
             } else {
-                setPreview(null);
+                setPreviewMainImage(null);
+            }
+            
+            if (initialData?.bannerImage?.url) {
+                const fullUrl = `${IMAGE_BASE_URL}/${initialData.bannerImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1");
+                setPreviewBannerImage(fullUrl);
+            } else {
+                setPreviewBannerImage(null);
             }
             fetchParents();
         }
@@ -46,7 +58,6 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
     const fetchParents = async () => {
         try {
             const res = await getCategories(1, 100);
-            // Current category ko parent list se hatana taaki recursion na ho
             const filtered = res.data.categories.filter(c => c._id !== initialData?._id);
             setParentCategories(filtered);
         } catch (err) { 
@@ -54,12 +65,18 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
         }
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = (e, fieldName) => {
         const file = e.target.files[0];
         if (file) {
             if (file.size > 2 * 1024 * 1024) return toast.error("File size should be less than 2MB");
-            setFormData({ ...formData, image: file });
-            setPreview(URL.createObjectURL(file));
+            
+            setFormData(prev => ({ ...prev, [fieldName]: file }));
+            
+            if (fieldName === 'mainImage') {
+                setPreviewMainImage(URL.createObjectURL(file));
+            } else if (fieldName === 'bannerImage') {
+                setPreviewBannerImage(URL.createObjectURL(file));
+            }
         }
     };
 
@@ -72,11 +89,11 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
         data.append("description", formData.description);
         data.append("parentCategory", formData.parentCategory || "");
         data.append("isFeatured", formData.isFeatured);
-        
-        // Status ko boolean string mein bhejna taaki backend parse kar sake
         data.append("status", formData.status);
+        data.append("categoryBanner", formData.categoryBanner); // Append categoryBanner text field
 
-        if (formData.image) data.append("image", formData.image);
+        if (formData.mainImage) data.append("mainImage", formData.mainImage);
+        if (formData.bannerImage) data.append("bannerImage", formData.bannerImage);
 
         try {
             const res = initialData 
@@ -85,8 +102,8 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                 
             if (res.success) {
                 toast.success(initialData ? "Category Updated!" : "Category Created!");
-                onSuccess(); // Table refresh karne ke liye
-                onClose();   // Modal close karne ke liye
+                onSuccess();
+                onClose();
             }
         } catch (err) {
             toast.error(err.response?.data?.message || "Something went wrong");
@@ -99,10 +116,10 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[100] p-4 transition-all">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200">
 
                 {/* --- HEADER --- */}
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="px-6 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 ${initialData ? 'bg-blue-600' : 'bg-slate-900'} text-white rounded-lg`}>
                             {initialData ? <Edit3 size={18} /> : <LayoutGrid size={18} />}
@@ -125,22 +142,44 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                 </div>
 
                 {/* --- FORM --- */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                <form onSubmit={handleSubmit} className="p-4 space-y-3">
                     
-                    {/* Image Upload Box */}
-                    <div className="flex justify-center pb-2">
-                        <div className="relative group w-24 h-24">
-                            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" id="cat-img-sharp" />
-                            <label htmlFor="cat-img-sharp" className="block w-full h-full rounded-lg border border-slate-400 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-slate-50">
-                                {preview ? (
-                                    <img src={preview} alt="preview" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                                        <Upload size={20} />
-                                        <span className="text-[9px] mt-1 font-bold uppercase">Upload</span>
-                                    </div>
-                                )}
-                            </label>
+                    {/* Image Upload Boxes */}
+                    <div className="grid grid-cols-2 gap-4 pb-2">
+                        {/* Main Image Upload Box */}
+                        <div className="flex flex-col items-center">
+                            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Main Image</label>
+                            <div className="relative group w-24 h-24">
+                                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'mainImage')} className="hidden" id="main-cat-img" />
+                                <label htmlFor="main-cat-img" className="block w-full h-full rounded-lg border border-slate-400 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-slate-50">
+                                    {previewMainImage ? (
+                                        <img src={previewMainImage} alt="Main Image Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                            <Upload size={20} />
+                                            <span className="text-[9px] mt-1 font-bold uppercase">Main Image</span>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Banner Image Upload Box */}
+                        <div className="flex flex-col items-center">
+                            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Banner Image</label>
+                            <div className="relative group w-24 h-24">
+                                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'bannerImage')} className="hidden" id="banner-cat-img" />
+                                <label htmlFor="banner-cat-img" className="block w-full h-full rounded-lg border border-slate-400 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-slate-50">
+                                    {previewBannerImage ? (
+                                        <img src={previewBannerImage} alt="Banner Image Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                            <Upload size={20} />
+                                            <span className="text-[9px] mt-1 font-bold uppercase">Banner Image</span>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -156,8 +195,19 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                         />
                     </div>
 
+                    {/* Category Banner Text Field */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Category Banner Text</label>
+                        <input
+                            value={formData.categoryBanner}
+                            onChange={(e) => setFormData({ ...formData, categoryBanner: e.target.value })}
+                            placeholder="e.g. Elegant Sarees for Every Occasion"
+                            className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
+                        />
+                    </div>
+
                     {/* Parent & Status Row */}
-                    <div className="grid grid-cols-2 gap-5">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Parent Category</label>
                             <select

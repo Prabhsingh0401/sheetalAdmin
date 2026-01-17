@@ -17,9 +17,13 @@ const categorySchema = new mongoose.Schema(
             index: true
         },
         description: { type: String },
-        image: { 
-            url: { type: String, default: "" }, 
-            public_id: { type: String } 
+        mainImage: {
+            url: { type: String, default: "" },
+            public_id: { type: String }
+        },
+        bannerImage: {
+            url: { type: String, default: "" },
+            public_id: { type: String }
         },
         parentCategory: { 
             type: mongoose.Schema.Types.ObjectId, 

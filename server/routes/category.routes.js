@@ -12,9 +12,9 @@ router.get("/:slug", getCategoryBySlug);
 // admin routes
 router.get("/admin/all", isAuthenticated, isAdmin, getAdminCategories);
 router.get("/admin/stats", isAuthenticated, isAdmin, getCategoryStats);
-router.post("/admin", isAuthenticated, isAdmin, uploadTo("categories").single("image"), createCategory);
+router.post("/admin", isAuthenticated, isAdmin, uploadTo("categories").fields([{ name: 'mainImage', maxCount: 1 }, { name: 'bannerImage', maxCount: 1 }]), createCategory);
 router.route("/admin/:id")
-    .put(isAuthenticated, isAdmin, uploadTo("categories").single("image"), updateCategory)
+    .put(isAuthenticated, isAdmin, uploadTo("categories").fields([{ name: 'mainImage', maxCount: 1 }, { name: 'bannerImage', maxCount: 1 }]), updateCategory)
     .delete(isAuthenticated, isAdmin, deleteCategory);
 
 export default router;

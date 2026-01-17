@@ -2,11 +2,6 @@ import admin from 'firebase-admin';
 import User from '../models/user.model.js';
 import { signToken } from '../utils/jwt.js';
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
 const sendOtp = async (phoneNumber) => {
   try {
     const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);

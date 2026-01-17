@@ -3,8 +3,8 @@ import Product from "../models/product.model.js";
 import slugify from "slugify";
 import fs from "fs";
 
-export const createCategoryService = async (data, file) => {
-    const { name, description, parentCategory, isFeatured, metaTitle, metaDescription, status } = data;
+export const createCategoryService = async (data, files) => {
+    const { name, description, parentCategory, isFeatured, metaTitle, metaDescription, status, categoryBanner } = data;
 
     if (!name) return { success: false, message: "Category name is required" };
 
@@ -13,7 +13,7 @@ export const createCategoryService = async (data, file) => {
 
     const slug = slugify(name, { lower: true });
 
-    const newCategory = await Category.create({
+    const newCategoryData = {
         name,
         slug,
         description,
@@ -23,15 +23,24 @@ export const createCategoryService = async (data, file) => {
         isActive: status === "Active",
         metaTitle,
         metaDescription,
-        image: file ? { url: file.path, public_id: file.filename } : null,
-    });
+        categoryBanner,
+    };
+
+    if (files && files.mainImage) {
+        newCategoryData.mainImage = { url: files.mainImage[0].path, public_id: files.mainImage[0].filename };
+    }
+    if (files && files.bannerImage) {
+        newCategoryData.bannerImage = { url: files.bannerImage[0].path, public_id: files.bannerImage[0].filename };
+    }
+
+    const newCategory = await Category.create(newCategoryData);
 
     return { success: true, data: newCategory, message: "Category created successfully" };
 };
 
 export const getAllCategoriesService = async () => {
     const categories = await Category.find({ isActive: true })
-        .select("name slug image parentCategory")
+        .select("name slug mainImage bannerImage parentCategory")
         .populate("parentCategory", "name")
         .sort({ createdAt: -1 });
 
@@ -80,7 +89,7 @@ export const getCategoryStatsService = async () => {
     };
 };
 
-export const updateCategoryService = async (id, data, file) => {
+export const updateCategoryService = async (id, data, files) => {
     const category = await Category.findById(id);
     if (!category) return { success: false, message: "Category not found" };
 
@@ -98,7 +107,10 @@ export const updateCategoryService = async (id, data, file) => {
         description: data.description,
         parentCategory: parentId,
         status: data.status,
-        isActive: data.status === "Active"
+        isActive: data.status === "Active",
+        categoryBanner: data.categoryBanner,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
     };
 
     if (data.name) {
@@ -109,13 +121,23 @@ export const updateCategoryService = async (id, data, file) => {
         updateData.isFeatured = data.isFeatured === "true" || data.isFeatured === true;
     }
 
-    if (file) {
-        if (category.image?.url && fs.existsSync(category.image.url)) {
-            try { fs.unlinkSync(category.image.url); } catch (e) { console.error("File deletion error"); }
+    if (files && files.mainImage) {
+        if (category.mainImage?.url && fs.existsSync(category.mainImage.url)) {
+            try { fs.unlinkSync(category.mainImage.url); } catch (e) { console.error("File deletion error for mainImage"); }
         }
-        updateData.image = {
-            url: file.path,
-            public_id: file.filename,
+        updateData.mainImage = {
+            url: files.mainImage[0].path,
+            public_id: files.mainImage[0].filename,
+        };
+    }
+
+    if (files && files.bannerImage) {
+        if (category.bannerImage?.url && fs.existsSync(category.bannerImage.url)) {
+            try { fs.unlinkSync(category.bannerImage.url); } catch (e) { console.error("File deletion error for bannerImage"); }
+        }
+        updateData.bannerImage = {
+            url: files.bannerImage[0].path,
+            public_id: files.bannerImage[0].filename,
         };
     }
 
@@ -127,6 +149,7 @@ export const updateCategoryService = async (id, data, file) => {
 
     return { success: true, data: updated, message: "Category updated successfully" };
 };
+
 
 export const deleteCategoryService = async (id) => {
     const category = await Category.findById(id);
@@ -142,8 +165,14 @@ export const deleteCategoryService = async (id) => {
         return { success: false, message: "Cannot delete category linked to active products" };
     }
 
-    if (category.image?.url && fs.existsSync(category.image.url)) {
-        try { fs.unlinkSync(category.image.url); } catch (e) { }
+    // Delete main image if it exists
+    if (category.mainImage?.url && fs.existsSync(category.mainImage.url)) {
+        try { fs.unlinkSync(category.mainImage.url); } catch (e) { console.error("Main image deletion error:", e)}
+    }
+
+    // Delete banner image if it exists
+    if (category.bannerImage?.url && fs.existsSync(category.bannerImage.url)) {
+        try { fs.unlinkSync(category.bannerImage.url); } catch (e) { console.error("Banner image deletion error:", e)}
     }
 
     await category.deleteOne();

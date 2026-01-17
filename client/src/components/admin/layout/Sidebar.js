@@ -12,12 +12,12 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     // Ecommerce Standard Menu Items
     const menuItems = [
         { icon: LayoutDashboard, label: "Overview", href: "/admin" },
-        { icon: Users, label: "Customers", href: "/admin/customers" },
         { icon: ListTree, label: "Categories", href: "/admin/categories" },
         { icon: ShoppingBag, label: "Products", href: "/admin/products" },
-        { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
-        { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
+        { icon: Users, label: "Customers", href: "/admin/customers" },
         { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
+        { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
+        { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
         { icon: Monitor , label: "Site Content", href: "/admin/cms" },
         // { icon: Star, label: "Reviews", href: "/admin/reviews" },
         // { icon: Settings, label: "Settings", href: "/admin/settings" },

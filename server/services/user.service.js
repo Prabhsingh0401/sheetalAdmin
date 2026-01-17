@@ -1,6 +1,44 @@
 import User from "../models/user.model.js";
 import Order from "../models/order.model.js";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+
+export const getWishlistService = async (userId) => {
+    const user = await User.findById(userId).populate({
+        path: 'wishlist',
+        select: '_id name slug mainImage price discountPrice stock' // Select relevant product fields
+    });
+    if (!user) {
+        return { success: false, statusCode: 404, message: "User not found" };
+    }
+    return { success: true, data: user.wishlist };
+};
+
+export const toggleWishlistService = async (userId, productId) => {
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return { success: false, statusCode: 400, message: "Invalid Product ID" };
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return { success: false, statusCode: 404, message: "User not found" };
+    }
+
+    const isWishlisted = user.wishlist.some(id => id.equals(productId));
+    let message;
+
+    if (isWishlisted) {
+        user.wishlist.pull(productId);
+        message = "Product removed from wishlist";
+    } else {
+        user.wishlist.push(productId);
+        message = "Product added to wishlist";
+    }
+
+    await user.save();
+    
+    return { success: true, message, data: user.wishlist };
+};
 
 export const getMeService = async (userId) => {
     const user = await User.findById(userId).select("-password");

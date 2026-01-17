@@ -1,6 +1,27 @@
 import * as userService from "../services/user.service.js";
 import successResponse from "../utils/successResponse.js";
 
+export const getWishlist = async (req, res, next) => {
+    try {
+        const result = await userService.getWishlistService(req.user._id);
+        if (!result.success) return res.status(result.statusCode).json(result);
+        return successResponse(res, 200, result.data, "Wishlist retrieved successfully");
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const toggleWishlist = async (req, res, next) => {
+    try {
+        const { productId } = req.body;
+        const result = await userService.toggleWishlistService(req.user._id, productId);
+        if (!result.success) return res.status(result.statusCode).json(result);
+        return successResponse(res, 200, result.data, result.message);
+    } catch (err) {
+        next(err);
+    }
+};
+
 export const getMe = async (req, res, next) => {
     try {
         const result = await userService.getMeService(req.user._id);

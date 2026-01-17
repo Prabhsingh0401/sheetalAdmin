@@ -156,7 +156,8 @@ export default function CategoryTable({ refreshStats }) {
           <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
             <tr>
               <th className="px-4 py-4 w-12 text-center">#</th>
-              <th className="px-4 py-4 w-16 text-center">Image</th>
+              <th className="px-4 py-4 w-16 text-center">Main Image</th>
+              <th className="px-4 py-4 w-16 text-center">Banner</th>
               <th className="px-4 py-4 cursor-pointer group" onClick={() => handleSort("name")}>
                 <div className="flex items-center gap-1">Name <ArrowUpDown size={14} className="opacity-50 group-hover:opacity-100" /></div>
               </th>
@@ -173,13 +174,30 @@ export default function CategoryTable({ refreshStats }) {
                     {(currentPage - 1) * rowsPerPage + i + 1}
                   </td>
 
+                  {/* Main Image */}
                   <td className="px-4 py-4">
                     <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer"
                       onClick={() => { setViewCategory(c); setShowDrawer(true); }}>
-                      {c.image?.url ? (
+                      {c.mainImage?.url ? (
                         <img
-                          src={`${IMAGE_BASE_URL}/${c.image.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
-                          alt=""
+                          src={`${IMAGE_BASE_URL}/${c.mainImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
+                          alt="Main"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon size={16} className="text-slate-300" />
+                      )}
+                    </div>
+                  </td>
+                  
+                  {/* Banner Image */}
+                  <td className="px-4 py-4">
+                    <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer"
+                      onClick={() => { setViewCategory(c); setShowDrawer(true); }}>
+                      {c.bannerImage?.url ? (
+                        <img
+                          src={`${IMAGE_BASE_URL}/${c.bannerImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
+                          alt="Banner"
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -193,6 +211,7 @@ export default function CategoryTable({ refreshStats }) {
                   <td className="px-4 py-4 text-slate-600 font-medium">
                     {c.parentCategory?.name || <span className="text-slate-400 text-xs italic">Main Category</span>}
                   </td>
+
 
                   <td className="px-4 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${c.isActive !== false ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
