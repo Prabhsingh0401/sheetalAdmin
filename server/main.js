@@ -21,6 +21,7 @@ import orderRoutes from "./routes/order.routes.js";
 import returnRoutes from "./routes/return.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import clientAuthRoutes from "./routes/client.auth.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -85,6 +86,7 @@ app.use("/api/v1/blogs", blogRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/returns", returnRoutes);
 app.use("/api/v1/client/auth", clientAuthRoutes);
+app.use("/api/v1/cart", cartRoutes);
 
 app.get("/", (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

@@ -208,7 +208,7 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
 
                     {/* Parent & Status Row */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
+                        {/* <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Parent Category</label>
                             <select
                                 value={formData.parentCategory}
@@ -220,7 +220,7 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                                     <option key={cat._id} value={cat._id}>{cat.name}</option>
                                 ))}
                             </select>
-                        </div>
+                        </div> */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Status</label>
                             <select
@@ -235,7 +235,7 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                     </div>
 
                     {/* Featured Checkbox */}
-                    <div className="flex items-center gap-2 px-1">
+                    {/* <div className="flex items-center gap-2 px-1">
                         <input
                             type="checkbox"
                             id="feat-cat"
@@ -246,7 +246,7 @@ export default function CategoryModal({ isOpen, onClose, onSuccess, initialData 
                         <label htmlFor="feat-cat" className="text-xs font-bold text-slate-900 uppercase tracking-wider cursor-pointer">
                             Mark as Featured Category
                         </label>
-                    </div>
+                    </div> */}
 
                     {/* Description */}
                     <div className="space-y-1.5">

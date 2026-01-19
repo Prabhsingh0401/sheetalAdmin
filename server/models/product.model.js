@@ -23,15 +23,17 @@ const productSchema = new mongoose.Schema(
         variants: [
             {
                 v_sku: { type: String, uppercase: true, sparse: true },
-                size: { type: String },
                 color: {
                     name: { type: String },
                     code: { type: String },
                     swatchImage: { type: String }
                 },
+                sizes: [{
+                    name: { type: String },
+                    stock: { type: Number, default: 0 },
+                }],
                 v_price: { type: Number },
                 v_discountPrice: { type: Number },
-                stock: { type: Number, default: 0 },
                 v_image: { type: String }
             }
         ],

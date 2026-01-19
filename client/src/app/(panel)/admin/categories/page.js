@@ -48,12 +48,12 @@ export default function CategoriesPage() {
                     icon={<XCircle size={20} />} 
                     color="rose" 
                 />
-                <StatCard 
+                {/* <StatCard 
                     title="Linked Products" 
                     count={stats.products} 
                     icon={<Box size={20} />} 
                     color="amber" 
-                />
+                /> */}
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">

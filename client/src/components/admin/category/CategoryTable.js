@@ -161,7 +161,7 @@ export default function CategoryTable({ refreshStats }) {
               <th className="px-4 py-4 cursor-pointer group" onClick={() => handleSort("name")}>
                 <div className="flex items-center gap-1">Name <ArrowUpDown size={14} className="opacity-50 group-hover:opacity-100" /></div>
               </th>
-              <th className="px-4 py-4">Parent</th>
+              {/* <th className="px-4 py-4">Parent</th> */}
               <th className="px-4 py-4">Status</th>
               <th className="px-4 py-4 text-right">Actions</th>
             </tr>
@@ -208,9 +208,9 @@ export default function CategoryTable({ refreshStats }) {
 
                   <td className="px-4 py-4 font-bold text-slate-900">{c.name}</td>
 
-                  <td className="px-4 py-4 text-slate-600 font-medium">
+                  {/* <td className="px-4 py-4 text-slate-600 font-medium">
                     {c.parentCategory?.name || <span className="text-slate-400 text-xs italic">Main Category</span>}
-                  </td>
+                  </td> */}
 
 
                   <td className="px-4 py-4">

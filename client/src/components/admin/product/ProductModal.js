@@ -16,11 +16,10 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
     const emptyVariant = {
         v_sku: "",
-        size: "",
         color: { name: "", code: "#000000", swatchImage: "" },
+        sizes: [{ name: "", stock: 0 }],
         v_price: 0,
         v_discountPrice: 0,
-        stock: 0,
         v_image: ""
     };
 
@@ -36,11 +35,12 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
         if (isOpen) {
             fetchCategories();
             if (initialData) {
+                const variants = Array.isArray(initialData.variants) ? initialData.variants.map(v => ({...v, sizes: Array.isArray(v.sizes) ? v.sizes : []})) : [];
                 setFormData({
                     ...initialData,
                     category: initialData.category?._id || initialData.category || "",
                     displayCollections: Array.isArray(initialData.displayCollections) ? initialData.displayCollections : [],
-                    variants: Array.isArray(initialData.variants) ? initialData.variants : [],
+                    variants: variants,
                     specifications: Array.isArray(initialData.specifications) ? initialData.specifications : [],
                     keyBenefits: Array.isArray(initialData.keyBenefits) ? initialData.keyBenefits : [],
                     eventTags: Array.isArray(initialData.eventTags) ? initialData.eventTags : [],
@@ -99,6 +99,13 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Frontend validation for MRP vs Selling Price
+        if (formData.price <= formData.discountPrice && formData.discountPrice > 0) {
+            toast.error("MRP Price must be greater than Selling Price (Discount Price).");
+            return;
+        }
+
         setLoading(true);
         try {
             const data = new FormData();
@@ -290,7 +297,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-5">
-                                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
+                                    {/* <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
                                         <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Display Collections (Press Enter to add)</label>
                                         <div className="flex flex-wrap gap-2 mb-2">
                                             {formData.displayCollections.map((tag, idx) => (
@@ -305,9 +312,9 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                             placeholder="e.g. Featured, Deal of Day..."
                                             className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm outline-none"
                                         />
-                                    </div>
+                                    </div> */}
 
-                                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
+                                    {/* <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
                                         <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Event Tags (Press Enter to add)</label>
                                         <div className="flex flex-wrap gap-2 mb-2">
                                             {formData.eventTags.map((tag, idx) => (
@@ -322,7 +329,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                             placeholder="Press Enter..."
                                             className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm outline-none"
                                         />
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         )}
@@ -362,30 +369,16 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                     <Trash2 size={14} />
                                                 </button>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                                                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] font-bold text-slate-500 uppercase">Variant SKU</label>
                                                         <input
                                                             className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs font-bold uppercase focus:ring-2 focus:ring-slate-900 outline-none"
-                                                            placeholder="e.g. TSHIRT-RED-M"
+                                                            placeholder="e.g. TSHIRT-RED"
                                                             value={v.v_sku}
                                                             onChange={(e) => {
                                                                 const up = [...formData.variants];
                                                                 up[i].v_sku = e.target.value.toUpperCase();
-                                                                setFormData({ ...formData, variants: up });
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Size</label>
-                                                        <input
-                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs font-bold"
-                                                            placeholder="M, L, XL..."
-                                                            value={v.size}
-                                                            onChange={(e) => {
-                                                                const up = [...formData.variants];
-                                                                up[i].size = e.target.value;
                                                                 setFormData({ ...formData, variants: up });
                                                             }}
                                                         />
@@ -428,48 +421,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                                 }}
                                                             />
                                                         </div>
-                                                    </div>
-
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Variant Price</label>
-                                                        <input
-                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
-                                                            type="number"
-                                                            value={v.v_price}
-                                                            onChange={(e) => {
-                                                                const up = [...formData.variants];
-                                                                up[i].v_price = Number(e.target.value);
-                                                                setFormData({ ...formData, variants: up });
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Discount Price</label>
-                                                        <input
-                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
-                                                            type="number"
-                                                            value={v.v_discountPrice}
-                                                            onChange={(e) => {
-                                                                const up = [...formData.variants];
-                                                                up[i].v_discountPrice = Number(e.target.value);
-                                                                setFormData({ ...formData, variants: up });
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Stock</label>
-                                                        <input
-                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
-                                                            type="number"
-                                                            value={v.stock}
-                                                            onChange={(e) => {
-                                                                const up = [...formData.variants];
-                                                                up[i].stock = Number(e.target.value);
-                                                                setFormData({ ...formData, variants: up });
-                                                            }}
-                                                        />
                                                     </div>
 
                                                     <div className="space-y-1">
@@ -519,6 +470,61 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                <div className="mt-4 pt-4 border-t border-slate-200">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <label className="text-[10px] font-bold text-slate-500 uppercase">Sizes for this variant</label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const up = [...formData.variants];
+                                                                up[i].sizes.push({ name: "", stock: 0 });
+                                                                setFormData({ ...formData, variants: up });
+                                                            }}
+                                                            className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold"
+                                                        >
+                                                            Add Size
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {v.sizes.map((s, s_idx) => (
+                                                            <div key={s_idx} className="flex items-center gap-2">
+                                                                <input
+                                                                    className="w-1/2 bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                                    placeholder="e.g. M, L, XL"
+                                                                    value={s.name}
+                                                                    onChange={(e) => {
+                                                                        const up = [...formData.variants];
+                                                                        up[i].sizes[s_idx].name = e.target.value;
+                                                                        setFormData({ ...formData, variants: up });
+                                                                    }}
+                                                                />
+                                                                <input
+                                                                    className="w-1/2 bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                                    placeholder="Stock"
+                                                                    type="number"
+                                                                    value={s.stock}
+                                                                    onChange={(e) => {
+                                                                        const up = [...formData.variants];
+                                                                        up[i].sizes[s_idx].stock = Number(e.target.value);
+                                                                        setFormData({ ...formData, variants: up });
+                                                                    }}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const up = [...formData.variants];
+                                                                        up[i].sizes.splice(s_idx, 1);
+                                                                        setFormData({ ...formData, variants: up });
+                                                                    }}
+                                                                    className="text-red-500"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
 
@@ -543,7 +549,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
                                 <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
                                     <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                                        <div className="bg-slate-900 px-5 py-3 flex justify-between items-center">
+                                        {/* <div className="bg-slate-900 px-5 py-3 flex justify-between items-center">
                                             <div className="flex items-center gap-2 text-white">
                                                 <CheckCircle size={16} className="text-emerald-400" />
                                                 <span className="text-xs font-bold uppercase tracking-wider">Key Benefits</span>
@@ -555,8 +561,8 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                             >
                                                 <Plus size={18} />
                                             </button>
-                                        </div>
-                                        <div className="p-5 space-y-3">
+                                        </div> */}
+                                        {/* <div className="p-5 space-y-3">
                                             {formData.keyBenefits.map((b, i) => (
                                                 <div key={i} className="flex gap-2 items-center group">
                                                     <CheckCircle size={14} className="text-blue-600 flex-shrink-0" />
@@ -582,7 +588,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                             {formData.keyBenefits.length === 0 && (
                                                 <p className="text-center text-[10px] text-slate-400 italic py-2">No benefits added yet</p>
                                             )}
-                                        </div>
+                                        </div> */}
                                     </div>
 
                                     <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">

@@ -105,11 +105,16 @@ export const createProductService = async (data, files, userId) => {
         }));
     }
 
+    let totalStock = 0;
     if (parsedData.variants && Array.isArray(parsedData.variants)) {
         let variantFileIndex = 0;
         const uploadedVariantFiles = files?.variantImages || [];
 
         parsedData.variants = parsedData.variants.map((v) => {
+            // Calculate stock for each variant based on its sizes
+            const variantStock = v.sizes.reduce((sum, s) => sum + (s.stock || 0), 0);
+            totalStock += variantStock; // Add to master stock
+
             if (v.hasNewImage === true && uploadedVariantFiles[variantFileIndex]) {
                 const filePath = uploadedVariantFiles[variantFileIndex].path.replace(/\\/g, '/');
                 variantFileIndex++;
@@ -129,6 +134,7 @@ export const createProductService = async (data, files, userId) => {
         ogImage,
         images: galleryImages,
         video: files?.video ? files.video[0].path.replace(/\\/g, '/') : "",
+        stock: totalStock, // Set master stock
         createdBy: userId
     });
 
@@ -186,11 +192,16 @@ export const updateProductService = async (id, data, files) => {
         parsedData.ogImage = data.existingOgImage;
     }
 
+    let totalStock = 0;
     if (parsedData.variants && Array.isArray(parsedData.variants)) {
         let variantFileIndex = 0;
         const uploadedVariantFiles = files['variantImages'] || [];
 
         parsedData.variants = parsedData.variants.map((v) => {
+            // Calculate stock for each variant based on its sizes
+            const variantStock = v.sizes.reduce((sum, s) => sum + (s.stock || 0), 0);
+            totalStock += variantStock; // Add to master stock
+
             if (v.hasNewImage === true && uploadedVariantFiles[variantFileIndex]) {
                 const filePath = uploadedVariantFiles[variantFileIndex].path.replace(/\\/g, '/');
                 variantFileIndex++;
@@ -218,7 +229,7 @@ export const updateProductService = async (id, data, files) => {
 
     const updatedProduct = await Product.findByIdAndUpdate(
         id,
-        { $set: parsedData },
+        { $set: { ...parsedData, stock: totalStock } },
         { new: true, runValidators: true }
     );
 

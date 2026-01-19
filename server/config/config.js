@@ -18,4 +18,5 @@ export const config = Object.freeze({
     adminEmail: process.env.ADMIN_EMAIL,
     adminPassword: process.env.ADMIN_PASSWORD,
     frontendDomain: process.env.FRONTEND_URL || "http://localhost:3000",
+    baseUrl: process.env.BACKEND_URL || "http://localhost:8000",
 });

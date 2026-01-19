@@ -2,6 +2,7 @@ import Category from "../models/category.model.js";
 import Product from "../models/product.model.js";
 import slugify from "slugify";
 import fs from "fs";
+import { config } from "../config/config.js";
 
 export const createCategoryService = async (data, files) => {
     const { name, description, parentCategory, isFeatured, metaTitle, metaDescription, status, categoryBanner } = data;
@@ -44,7 +45,18 @@ export const getAllCategoriesService = async () => {
         .populate("parentCategory", "name")
         .sort({ createdAt: -1 });
 
-    return { success: true, data: categories };
+    const categoriesWithFullUrls = categories.map(category => {
+        const data = category.toObject();
+        if (data.mainImage && data.mainImage.url) {
+            data.mainImage.url = `${config.baseUrl}/${data.mainImage.url.replace(/\\/g, "/")}`;
+        }
+        if (data.bannerImage && data.bannerImage.url) {
+            data.bannerImage.url = `${config.baseUrl}/${data.bannerImage.url.replace(/\\/g, "/")}`;
+        }
+        return data;
+    });
+
+    return { success: true, data: categoriesWithFullUrls };
 };
 
 export const getCategoryBySlugService = async (slug) => {
