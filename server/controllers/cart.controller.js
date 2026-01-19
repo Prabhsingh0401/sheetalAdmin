@@ -25,3 +25,13 @@ export const addToCart = async (req, res, next) => {
         next(err);
     }
 };
+
+export const removeFromCart = async (req, res, next) => {
+    try {
+        const { id } = req.params; // itemId is passed as a parameter
+        const result = await cartService.removeFromCartService(req.user._id, id);
+        return successResponse(res, 200, result.data, "Item removed from cart successfully");
+    } catch (err) {
+        next(err);
+    }
+};

@@ -59,3 +59,26 @@ export const addToCartService = async (userId, productId, quantity, size, color)
         data: cart,
     };
 };
+
+export const removeFromCartService = async (userId, itemId) => {
+    const cart = await Cart.findOne({ user: userId });
+
+    if (!cart) {
+        throw new ErrorResponse("Cart not found", 404);
+    }
+
+    // Find the index of the item to remove
+    const itemIndex = cart.items.findIndex(item => item._id.toString() === itemId);
+
+    if (itemIndex > -1) {
+        cart.items.splice(itemIndex, 1); // Remove the item
+        await cart.save();
+        return {
+            success: true,
+            data: cart,
+            message: "Item removed from cart successfully",
+        };
+    } else {
+        throw new ErrorResponse("Item not found in cart", 404);
+    }
+};
