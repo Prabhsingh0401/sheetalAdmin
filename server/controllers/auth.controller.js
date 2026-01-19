@@ -8,7 +8,7 @@ const cookieOptions = {
     secure: config.mode === "production",
     sameSite: config.mode === "production" ? "none" : "lax",
     path: "/",
-    domain: config.mode === "production" ? ".vercel.app" : undefined,
+    // domain: config.mode === "production" ? ".vercel.app" : undefined,
 };
 
 //  register
