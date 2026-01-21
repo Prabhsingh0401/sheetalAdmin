@@ -27,6 +27,7 @@ import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
 
 const app = express();
+app.set('trust proxy', 1);
 
 const logDir = 'logs';
 if (!fs.existsSync(logDir)) {
