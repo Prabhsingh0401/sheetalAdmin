@@ -213,9 +213,9 @@ export default function ProductTable({ refreshStats }) {
 
                   <td className="px-4 py-4 text-right">
                     <div className="flex justify-end gap-4 text-slate-400">
-                      <button title="View" className="hover:text-slate-900 transition-colors" onClick={() => { setViewProduct(p); setShowDrawer(true); }}>
+                      {/* <button title="View" className="hover:text-slate-900 transition-colors" onClick={() => { setViewProduct(p); setShowDrawer(true); }}>
                         <Eye size={18} />
-                      </button>
+                      </button> */}
                       <button title="Edit" className="hover:text-blue-600 transition-colors" onClick={() => { setEditData(p); setShowModal(true); }}>
                         <Edit3 size={18} />
                       </button>

@@ -26,6 +26,19 @@ export const adminLogout = async () => {
     return data;
 };
 
+// get auth status
+export const getAuthStatus = async () => {
+    const res = await fetch(`${API_BASE_URL}/auth/status`, {
+        method: "GET",
+        credentials: "include",
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Auth status check failed");
+    return data;
+};
+
+
 // login
 export const userLogin = async ({ email, password }) => {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -41,7 +54,7 @@ export const userLogin = async ({ email, password }) => {
 };
 
 export const userRegister = async ({ name, email, password, }) => {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -49,6 +62,7 @@ export const userRegister = async ({ name, email, password, }) => {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
+    if (!res.ok) throw new Error(data.message || "Registration failed");
     return data;
 };
+

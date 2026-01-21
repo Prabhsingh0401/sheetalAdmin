@@ -336,9 +336,9 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
                         {activeTab === "inventory" && (
                             <div className="space-y-6 animate-in fade-in duration-300">
-                                <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
+                                {/* <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
                                     <InputField label="Total Master Stock" name="stock" type="number" value={formData.stock} onChange={handleChange} placeholder="Total units available" />
-                                </div>
+                                </div> */}
 
                                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-md">
                                     <div className="bg-slate-900 px-5 py-4 flex justify-between items-center text-white">
@@ -793,7 +793,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                     />
 
                                                     <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                                        <label className="cursor-pointer bg-white text-slate-900 px-4 py-2 rounded-xl text-xs font-bold shadow-xl">Replace</label>
+                                                        {/* <label className="cursor-pointer bg-white text-slate-900 px-4 py-2 rounded-xl text-xs font-bold shadow-xl">Replace</label> */}
                                                         <button onClick={() => setFormData({ ...formData, hoverImageFile: null, hoverImage: { url: "" } })} className="bg-rose-500 text-white p-2.5 rounded-xl shadow-xl hover:bg-rose-600"><Trash2 size={16} /></button>
                                                         <input type="file" className="hidden" id="hover-upload" onChange={(e) => setFormData({ ...formData, hoverImageFile: e.target.files[0] })} />
                                                     </div>
