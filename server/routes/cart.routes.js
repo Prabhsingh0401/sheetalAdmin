@@ -4,7 +4,8 @@ import { isAuthenticated } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.route("/").get(isAuthenticated, getCart).post(isAuthenticated, addToCart);
-router.route("/:id").delete(isAuthenticated, removeFromCart); // New DELETE route
+router.route("/").get(isAuthenticated, getCart);
+router.route("/add").post(isAuthenticated, addToCart);
+router.route("/remove/:id").delete(isAuthenticated, removeFromCart);
 
 export default router;

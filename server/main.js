@@ -53,7 +53,14 @@ app.use("/api/v1/auth", authLimiter);
 
 app.use(
     cors({
-        origin: ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000" , "https://sheetal-admin.vercel.app" , "https://sheetal-omega.vercel.app"],
+        origin: (origin, callback) => {
+            const allowedOrigins = ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000", "http://192.168.0.227:4000", "https://sheetal-admin.vercel.app", "https://sheetal-omega.vercel.app"];
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE"],
         allowedHeaders: ["Content-Type", "Authorization"],

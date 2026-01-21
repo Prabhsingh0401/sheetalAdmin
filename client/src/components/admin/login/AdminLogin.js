@@ -23,7 +23,7 @@ export default function AdminLogin() {
             const data = await adminLogin({ email, password });
 
             // Set token in cookie for middleware access
-            document.cookie = `token=${data.data.token}; path=/; max-age=86400; SameSite=Lax; Secure`;
+            document.cookie = `token=${data.data.token}; path=/; max-age=86400; SameSite=None; Secure`;
 
             dispatch(
                 setCredentials({
