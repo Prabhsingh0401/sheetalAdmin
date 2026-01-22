@@ -43,32 +43,76 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
         const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
         if (!coupon) return { success: false, statusCode: 404, message: "Invalid or inactive coupon" };
 
-        const validation = coupon.isValid(userId, cartTotal);
+        // Pass cartItems to isValid method
+        const validation = coupon.isValid(userId, cartTotal, cartItems);
         if (!validation.valid) return { success: false, statusCode: 400, message: validation.message };
 
         let discount = 0;
+        let applicableItems = cartItems;
+        let applicableTotal = cartTotal;
+        let itemWiseDiscount = {}; // Initialize itemWiseDiscount
+
+        if (coupon.scope === "Category") {
+            applicableItems = cartItems.filter(item => 
+                coupon.applicableIds.some(id => id.toString() === item.product.category._id.toString())
+            );
+            applicableTotal = applicableItems.reduce((sum, item) => sum + (item.product.discountPrice ?? item.product.price) * item.quantity, 0);
+        }
+
         switch (coupon.offerType) {
             case "Percentage":
-                discount = (cartTotal * coupon.offerValue) / 100;
-                if (coupon.maxDiscountAmount) discount = Math.min(discount, coupon.maxDiscountAmount);
+                let totalApplicableDiscount = (applicableTotal * coupon.offerValue) / 100;
+                if (coupon.maxDiscountAmount) totalApplicableDiscount = Math.min(totalApplicableDiscount, coupon.maxDiscountAmount);
+                discount = totalApplicableDiscount;
+
+                // Distribute discount proportionally
+                if (applicableItems.length > 0 && applicableTotal > 0) {
+                    applicableItems.forEach(item => {
+                        const itemEffectivePrice = (item.product.discountPrice ?? item.product.price) * item.quantity;
+                        itemWiseDiscount[item._id] = Math.round((itemEffectivePrice / applicableTotal) * totalApplicableDiscount);
+                    });
+                }
                 break;
 
             case "FixedAmount":
-                discount = coupon.offerValue;
+                let fixedDiscountAmount = Math.min(coupon.offerValue, applicableTotal);
+                discount = fixedDiscountAmount;
+                
+                // Distribute fixed discount proportionally
+                if (applicableItems.length > 0 && applicableTotal > 0) {
+                    applicableItems.forEach(item => {
+                        const itemEffectivePrice = (item.product.discountPrice ?? item.product.price) * item.quantity;
+                        itemWiseDiscount[item._id] = Math.round((itemEffectivePrice / applicableTotal) * fixedDiscountAmount);
+                    });
+                }
                 break;
 
             case "BOGO":
-                if (cartItems.length < 2) {
-                    return { success: false, statusCode: 400, message: "BOGO requires at least 2 items in cart" };
+                const bogoApplicableItems = coupon.scope === "Category" ? applicableItems : cartItems;
+
+                if (bogoApplicableItems.length < (coupon.buyQuantity + coupon.getQuantity)) {
+                    return { success: false, statusCode: 400, message: `BOGO requires at least ${coupon.buyQuantity + coupon.getQuantity} items from the applicable category in cart` };
                 }
 
-                const sortedPrices = cartItems.map(item => item.price).sort((a, b) => a - b);
-                let cheapestItem = sortedPrices[0];
+                // Sort items by effective price to find the cheapest ones
+                const sortedItems = [...bogoApplicableItems].sort((a, b) => 
+                    (a.product.discountPrice ?? a.product.price) - (b.product.discountPrice ?? b.product.price)
+                );
+                
+                let bogoDiscount = 0;
+                const freeItemsCount = coupon.getQuantity;
+
+                for (let i = 0; i < freeItemsCount && i < sortedItems.length; i++) {
+                    const freeItem = sortedItems[i];
+                    const freeItemPrice = (freeItem.product.discountPrice ?? freeItem.product.price) * freeItem.quantity;
+                    itemWiseDiscount[freeItem._id] = freeItemPrice;
+                    bogoDiscount += freeItemPrice;
+                }
 
                 if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
-                    discount = Math.min(cheapestItem, coupon.maxDiscountAmount);
+                    discount = Math.min(bogoDiscount, coupon.maxDiscountAmount);
                 } else {
-                    discount = cheapestItem;
+                    discount = bogoDiscount;
                 }
                 break;
 
@@ -84,10 +128,12 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
             success: true,
             data: {
                 discount: Math.round(discount),
-                finalAmount: Math.max(0, cartTotal - Math.round(discount)),
                 couponCode: coupon.code,
                 offerType: coupon.offerType,
-                isMaxApplied: coupon.maxDiscountAmount ? discount >= coupon.maxDiscountAmount : false
+                isMaxApplied: coupon.maxDiscountAmount ? discount >= coupon.maxDiscountAmount : false,
+                applicableIds: coupon.applicableIds, // Pass applicableIds to frontend
+                scope: coupon.scope,
+                itemWiseDiscount: itemWiseDiscount // New: item-wise discount breakdown
             }
         };
     } catch (error) {

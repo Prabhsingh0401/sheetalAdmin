@@ -35,3 +35,18 @@ export const removeFromCart = async (req, res, next) => {
         next(err);
     }
 };
+
+export const updateCartItemQuantity = async (req, res, next) => {
+    try {
+        const { id: itemId } = req.params;
+        const { quantity: newQuantity } = req.body;
+        const result = await cartService.updateCartItemQuantityService(
+            req.user._id,
+            itemId,
+            newQuantity
+        );
+        return successResponse(res, 200, result.data, "Cart item quantity updated successfully");
+    } catch (err) {
+        next(err);
+    }
+};

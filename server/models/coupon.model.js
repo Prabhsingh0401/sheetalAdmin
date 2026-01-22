@@ -34,18 +34,34 @@ couponSchema.methods.canUserUse = function (userId) {
     return !userRecord || userRecord.count < this.usageLimitPerUser;
 };
 
-couponSchema.methods.isValid = function (userId, orderAmount) {
+couponSchema.methods.isValid = function (userId, orderAmount, cartItems = []) {
     const now = new Date();
 
     if (!this.isActive) return { valid: false, message: "Coupon inactive" };
     if (now < this.startDate || now > this.endDate) return { valid: false, message: "Offer expired" };
     if (this.usedCount >= this.totalUsageLimit) return { valid: false, message: "Usage limit reached" };
-    if (orderAmount < this.minOrderAmount) return { valid: false, message: "Minimum amount not met" };
+
+    if (this.scope === "Category") {
+        const categoryItems = cartItems.filter(item =>
+            item.product.category && this.applicableIds.some(id => id.toString() === item.product.category._id.toString())
+        );
+        if (categoryItems.length === 0) {
+            return { valid: false, message: "Coupon not valid for items in your cart" };
+        }
+        const categoryTotal = categoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        if (categoryTotal < this.minOrderAmount) {
+            return { valid: false, message: `Minimum cart value of ₹${this.minOrderAmount} required for the applicable category items.` };
+        }
+    } else {
+        if (orderAmount < this.minOrderAmount) {
+            return { valid: false, message: `Minimum cart value of ₹${this.minOrderAmount} required.` };
+        }
+    }
 
     if (userId) {
         const userUsage = this.usedBy.find(u => u.userId.toString() === userId.toString());
         if (userUsage && userUsage.count >= this.usageLimitPerUser) {
-            return { valid: false, message: "User limit exceeded" };
+            return { valid: false, message: "User limit for this coupon has been exceeded" };
         }
     }
 

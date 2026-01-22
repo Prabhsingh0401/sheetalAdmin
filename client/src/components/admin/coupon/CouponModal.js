@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { X, Loader2, Ticket, Edit3, Zap, Gift, Info } from "lucide-react";
 import { addCoupon, updateCoupon } from "@/services/couponService";
+import { getCategories } from "@/services/categoryService";
 import { toast } from "react-hot-toast";
 
 export default function CouponModal({ isOpen, onClose, onSuccess, initialData = null }) {
     const [loading, setLoading] = useState(false);
+    const [categories, setCategories] = useState([]); // State for categories
 
     const [formData, setFormData] = useState({
         code: "",
@@ -16,6 +18,8 @@ export default function CouponModal({ isOpen, onClose, onSuccess, initialData = 
         offerValue: "",
         buyQuantity: 1,
         getQuantity: 1,
+        scope: "All", // New field
+        applicableIds: [], // New field
         minOrderAmount: "",
         maxDiscountAmount: "",
         startDate: "",
@@ -24,6 +28,20 @@ export default function CouponModal({ isOpen, onClose, onSuccess, initialData = 
         usageLimitPerUser: 1,
         status: "Active",
     });
+
+    // Fetch categories when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            const fetchCategories = async () => {
+        try {
+            const res = await getCategories();
+            const actualArray = res?.categories?.categories || res?.data?.categories || [];
+            setCategories(Array.isArray(actualArray) ? actualArray : []);
+        } catch (err) { setCategories([]); }
+    };
+            fetchCategories();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
@@ -35,6 +53,8 @@ export default function CouponModal({ isOpen, onClose, onSuccess, initialData = 
                 offerValue: initialData?.offerValue || "",
                 buyQuantity: initialData?.buyQuantity || 1,
                 getQuantity: initialData?.getQuantity || 1,
+                scope: initialData?.scope || "All",
+                applicableIds: initialData?.applicableIds || [],
                 minOrderAmount: initialData?.minOrderAmount || "",
                 maxDiscountAmount: initialData?.maxDiscountAmount || "",
                 startDate: initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : "",
@@ -50,7 +70,6 @@ export default function CouponModal({ isOpen, onClose, onSuccess, initialData = 
         e.preventDefault();
         setLoading(true);
 
-        // Logic: Agar Festive Sale hai to system-generated code bhejenge ya backend handle karega
         const payload = {
             ...formData,
             code: formData.couponType === "FestiveSale" ? `AUTO-${Date.now()}` : formData.code,
@@ -157,6 +176,36 @@ export default function CouponModal({ isOpen, onClose, onSuccess, initialData = 
                         </div>
                     )}
 
+                    {/* Scope and Category Selectors */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Coupon Scope</label>
+                            <select
+                                value={formData.scope}
+                                onChange={(e) => setFormData({ ...formData, scope: e.target.value, applicableIds: [] })}
+                                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
+                            >
+                                <option value="All">All Products</option>
+                                <option value="Category">Specific Category</option>
+                            </select>
+                        </div>
+                        {formData.scope === 'Category' && (
+                            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Select Category</label>
+                                <select
+                                    value={formData.applicableIds[0] || ''} // Assuming one category per coupon for simplicity
+                                    onChange={(e) => setFormData({ ...formData, applicableIds: [e.target.value] })}
+                                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
+                                    required
+                                >
+                                    <option value="" disabled>-- Select a category --</option>
+                                    {categories.map(cat => (
+                                        <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
                     {/* BOGO Logic vs Offer Value Logic */}
                     {formData.offerType === "BOGO" ? (
                         <div className="grid grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">

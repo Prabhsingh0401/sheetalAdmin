@@ -37,11 +37,6 @@ if (!fs.existsSync(logDir)) {
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(sanitizeBody);
 
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: { success: false, message: "Too many requests, try again later." }
-});
 
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
@@ -49,7 +44,6 @@ const authLimiter = rateLimit({
     message: { success: false, message: "Auth limit reached. Try after an hour." }
 });
 
-app.use("/api", globalLimiter);
 app.use("/api/v1/auth", authLimiter);
 
 app.use(
