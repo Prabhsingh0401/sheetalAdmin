@@ -19,6 +19,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
         { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
         { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
         { icon: Monitor , label: "Site Content", href: "/admin/cms" },
+        { icon: ListTree , label: "Size Chart", href: "/admin/size-chart" },
         // { icon: Star, label: "Reviews", href: "/admin/reviews" },
         // { icon: Settings, label: "Settings", href: "/admin/settings" },
     ];

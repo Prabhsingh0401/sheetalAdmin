@@ -1,98 +1,53 @@
-import SizeChart from "../models/sizeChart.model.js";
+import SizeChart from "../models/sizechart.model.js";
 import { deleteFile } from "../utils/fileHelper.js";
 
-const parseJsonField = (field) => {
-    if (typeof field === "string") {
-        try { return JSON.parse(field); }
-        catch (e) { return []; }
-    }
-    return field || [];
-};
+// Upload how to measure image
+export const uploadHowToMeasureImageService = async (filePath) => {
+    let sizeChart = await getSizeChartService();
 
-export const getAllChartsService = async (queryStr) => {
-    const { page = 1, limit = 10, search } = queryStr;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    let filter = {};
-    if (search) {
-        filter.name = { $regex: search, $options: 'i' };
+    // If an old image exists, delete it
+    if (sizeChart.howToMeasureImage) {
+        deleteFile(sizeChart.howToMeasureImage);
     }
 
-    const [charts, totalCharts] = await Promise.all([
-        SizeChart.find(filter)
-            .sort("-createdAt")
-            .skip(skip)
-            .limit(Number(limit))
-            .lean(),
-        SizeChart.countDocuments(filter)
-    ]);
-
-    return {
-        charts,
-        totalCharts,
-        currentPage: Number(page),
-        totalPages: Math.ceil(totalCharts / limit)
-    };
+    sizeChart.howToMeasureImage = filePath.replace(/\\/g, '/');
+    await sizeChart.save();
+    return sizeChart;
 };
 
-export const getChartDetailsService = async (id) => {
-    const chart = await SizeChart.findById(id).lean();
-    return chart ? { success: true, data: chart } : { success: false, statusCode: 404 };
-};
-
-export const createSizeChartService = async (data, filePath) => {
-    const table = parseJsonField(data.table);
-    const steps = parseJsonField(data.steps);
-
-    const newChart = await SizeChart.create({
-        name: data.name,
-        unit: data.unit || "IN",
-        tip: data.tip,
-        table: table,
-        howToMeasure: {
-            guideImage: filePath ? filePath.replace(/\\/g, '/') : "",
-            steps: steps
-        }
-    });
-
-    return { success: true, data: newChart };
-};
-
-export const updateSizeChartService = async (id, data, filePath) => {
-    const chart = await SizeChart.findById(id);
-    if (!chart) return { success: false, statusCode: 404 };
-
-    const updateData = { ...data };
-
-    if (data.table) updateData.table = parseJsonField(data.table);
-    if (data.steps) {
-        updateData["howToMeasure.steps"] = parseJsonField(data.steps);
+// Get the size chart, create if it doesn't exist
+export const getSizeChartService = async () => {
+    let sizeChart = await SizeChart.findOne();
+    if (!sizeChart) {
+        sizeChart = await SizeChart.create({ table: [] });
     }
-
-    if (filePath) {
-        if (chart.howToMeasure?.guideImage) {
-            deleteFile(chart.howToMeasure.guideImage);
-        }
-        updateData["howToMeasure.guideImage"] = filePath.replace(/\\/g, '/');
-    }
-
-    const updatedChart = await SizeChart.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true, runValidators: true }
-    );
-
-    return { success: true, data: updatedChart };
+    return sizeChart;
 };
 
-export const deleteSizeChartService = async (id) => {
-    const chart = await SizeChart.findById(id);
-    if (!chart) return { success: false, statusCode: 404 };
+// Add a new size to the table
+export const addSizeService = async (sizeData) => {
+    const sizeChart = await getSizeChartService();
+    sizeChart.table.push(sizeData);
+    await sizeChart.save();
+    return sizeChart;
+};
 
-    if (chart.howToMeasure?.guideImage) {
-        deleteFile(chart.howToMeasure.guideImage);
+// Update a size in the table
+export const updateSizeService = async (sizeId, sizeData) => {
+    const sizeChart = await getSizeChartService();
+    const sizeIndex = sizeChart.table.findIndex(size => size._id.toString() === sizeId);
+    if (sizeIndex === -1) {
+        throw new Error("Size not found");
     }
+    sizeChart.table[sizeIndex] = { ...sizeChart.table[sizeIndex], ...sizeData };
+    await sizeChart.save();
+    return sizeChart;
+};
 
-    await chart.deleteOne();
-    return { success: true };
+// Delete a size from the table
+export const deleteSizeService = async (sizeId) => {
+    const sizeChart = await getSizeChartService();
+    sizeChart.table = sizeChart.table.filter(size => size._id.toString() !== sizeId);
+    await sizeChart.save();
+    return sizeChart;
 };

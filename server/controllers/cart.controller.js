@@ -12,13 +12,15 @@ export const getCart = async (req, res, next) => {
 
 export const addToCart = async (req, res, next) => {
     try {
-        const { productId, quantity, size, color } = req.body;
+        const { productId, quantity, size, color, price, discountPrice } = req.body;
         const result = await cartService.addToCartService(
             req.user._id,
             productId,
             quantity,
             size,
-            color
+            color,
+            price,
+            discountPrice
         );
         return successResponse(res, 200, result.data, "Product added to cart successfully");
     } catch (err) {

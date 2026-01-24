@@ -1,20 +1,9 @@
 import Review from "../models/review.model.js";
 import Product from "../models/product.model.js";
-import SizeChart from "../models/sizechart.model.js";
 import slugify from "slugify";
 import { deleteFile } from "../utils/fileHelper.js";
 import xlsx from "xlsx";
 
-const parseJsonField = (field) => {
-    if (typeof field === "string") {
-        try {
-            return JSON.parse(field);
-        } catch (e) {
-            return [];
-        }
-    }
-    return field || [];
-};
 
 export const getAllProductsService = async (queryStr) => {
     const { page = 1, limit = 10, search, sort, category, status, color, brand } = queryStr;
@@ -108,21 +97,28 @@ export const createProductService = async (data, files, userId) => {
     let totalStock = 0;
     if (parsedData.variants && Array.isArray(parsedData.variants)) {
         let variantFileIndex = 0;
-        const uploadedVariantFiles = files?.variantImages || [];
-
         parsedData.variants = parsedData.variants.map((v) => {
-            // Calculate stock for each variant based on its sizes
-            const variantStock = v.sizes.reduce((sum, s) => sum + (s.stock || 0), 0);
+            // Process sizes to ensure numerical types for stock, price, and discountPrice
+            const processedSizes = v.sizes.map(s => ({
+                ...s,
+                name: s.name, // Keep name as is
+                stock: Number(s.stock || 0),
+                price: Number(s.price || 0), // Explicitly convert to Number
+                discountPrice: Number(s.discountPrice || 0), // Explicitly convert to Number
+            }));
+
+            // Calculate stock for each variant based on its processed sizes
+            const variantStock = processedSizes.reduce((sum, s) => sum + (s.stock || 0), 0);
             totalStock += variantStock; // Add to master stock
 
             if (v.hasNewImage === true && uploadedVariantFiles[variantFileIndex]) {
                 const filePath = uploadedVariantFiles[variantFileIndex].path.replace(/\\/g, '/');
                 variantFileIndex++;
                 const { hasNewImage, ...rest } = v;
-                return { ...rest, v_image: filePath };
+                return { ...rest, sizes: processedSizes, v_image: filePath }; // Return variant with processed sizes and image
             }
             const { hasNewImage, ...rest } = v;
-            return rest;
+            return { ...rest, sizes: processedSizes }; // Return variant with processed sizes
         });
     }
 
@@ -198,18 +194,27 @@ export const updateProductService = async (id, data, files) => {
         const uploadedVariantFiles = files['variantImages'] || [];
 
         parsedData.variants = parsedData.variants.map((v) => {
-            // Calculate stock for each variant based on its sizes
-            const variantStock = v.sizes.reduce((sum, s) => sum + (s.stock || 0), 0);
+            // Process sizes to ensure numerical types for stock, price, and discountPrice
+            const processedSizes = v.sizes.map(s => ({
+                ...s,
+                name: s.name, // Keep name as is
+                stock: Number(s.stock || 0),
+                price: Number(s.price || 0), // Explicitly convert to Number
+                discountPrice: Number(s.discountPrice || 0), // Explicitly convert to Number
+            }));
+
+            // Calculate stock for each variant based on its processed sizes
+            const variantStock = processedSizes.reduce((sum, s) => sum + (s.stock || 0), 0);
             totalStock += variantStock; // Add to master stock
 
             if (v.hasNewImage === true && uploadedVariantFiles[variantFileIndex]) {
                 const filePath = uploadedVariantFiles[variantFileIndex].path.replace(/\\/g, '/');
                 variantFileIndex++;
                 const { hasNewImage, ...rest } = v;
-                return { ...rest, v_image: filePath };
+                return { ...rest, sizes: processedSizes, v_image: filePath }; // Return variant with processed sizes and image
             }
             const { hasNewImage, ...rest } = v;
-            return rest;
+            return { ...rest, sizes: processedSizes }; // Return variant with processed sizes
         });
     }
 

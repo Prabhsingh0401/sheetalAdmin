@@ -22,10 +22,10 @@ import returnRoutes from "./routes/return.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import clientAuthRoutes from "./routes/client.auth.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
+import sizeChartRoutes from "./routes/sizeChart.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
-
 const app = express();
 app.set('trust proxy', 1);
 
@@ -49,7 +49,7 @@ app.use("/api/v1/auth", authLimiter);
 app.use(
     cors({
         origin: (origin, callback) => {
-            const allowedOrigins = ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000", "http://192.168.0.227:4000", "https://sheetal-admin.vercel.app", "https://sheetal-omega.vercel.app"];
+            const allowedOrigins = ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000", "http://192.168.1.9:3000" , "http://192.168.0.227:4000", "https://sheetal-admin.vercel.app", "https://sheetal-omega.vercel.app"];
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
@@ -83,12 +83,12 @@ app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/coupons", couponRoutes);
 app.use("/api/v1/banner", bannerRoutes);
-
 app.use("/api/v1/blogs", blogRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/returns", returnRoutes);
 app.use("/api/v1/client/auth", clientAuthRoutes);
 app.use("/api/v1/cart", cartRoutes);
+app.use("/api/v1/size-chart", sizeChartRoutes);
 
 app.get("/", (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

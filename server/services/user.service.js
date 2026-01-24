@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 export const getWishlistService = async (userId) => {
     const user = await User.findById(userId).populate({
         path: 'wishlist',
-        select: '_id name slug mainImage hoverImage price discountPrice stock' // Select relevant product fields
+        select: '_id name slug mainImage hoverImage stock variants.v_sku variants.color variants.sizes.name variants.sizes.stock variants.sizes.price variants.sizes.discountPrice' // Select relevant product fields, including variants and their nested sizes and prices
     });
     if (!user) {
         return { success: false, statusCode: 404, message: "User not found" };

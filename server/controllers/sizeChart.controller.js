@@ -1,60 +1,54 @@
 import * as sizeChartService from "../services/sizeChart.service.js";
 import successResponse from "../utils/successResponse.js";
+import { deleteFile } from "../utils/fileHelper.js"; // Needed for cleanup if the service handles old image deletion
 
-export const createSizeChart = async (req, res, next) => {
+export const uploadHowToMeasureImage = async (req, res, next) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, message: "Guide image is required" });
+            return res.status(400).json({ success: false, message: "No image file uploaded." });
         }
+        const sizeChart = await sizeChartService.uploadHowToMeasureImageService(req.file.path);
+        return successResponse(res, 200, sizeChart, "How to measure image uploaded successfully");
+    } catch (error) {
+        // If an error occurs during processing, clean up the uploaded file
+        if (req.file) {
+            deleteFile(req.file.path);
+        }
+        next(error);
+    }
+};
 
-        const result = await sizeChartService.createSizeChartService(req.body, req.file.path);
-        return successResponse(res, 201, result.data, "Size Chart Created");
+export const getSizeChart = async (req, res, next) => {
+    try {
+        const sizeChart = await sizeChartService.getSizeChartService();
+        return successResponse(res, 200, sizeChart, "Size chart fetched");
     } catch (error) {
         next(error);
     }
 };
 
-export const getAllSizeCharts = async (req, res, next) => {
+export const addSize = async (req, res, next) => {
     try {
-        const result = await sizeChartService.getAllChartsService(req.query);
-        return res.status(200).json({ success: true, ...result });
+        const sizeChart = await sizeChartService.addSizeService(req.body);
+        return successResponse(res, 201, sizeChart, "Size added to chart");
     } catch (error) {
         next(error);
     }
 };
 
-export const getSizeChartDetails = async (req, res, next) => {
+export const updateSize = async (req, res, next) => {
     try {
-        const result = await sizeChartService.getChartDetailsService(req.params.id);
-        if (!result.success) return res.status(result.statusCode).json(result);
-
-        return successResponse(res, 200, result.data, "Size chart fetched");
+        const sizeChart = await sizeChartService.updateSizeService(req.params.id, req.body);
+        return successResponse(res, 200, sizeChart, "Size updated in chart");
     } catch (error) {
         next(error);
     }
 };
 
-export const updateSizeChart = async (req, res, next) => {
+export const deleteSize = async (req, res, next) => {
     try {
-        const result = await sizeChartService.updateSizeChartService(
-            req.params.id,
-            req.body,
-            req.file?.path
-        );
-
-        if (!result.success) return res.status(result.statusCode).json(result);
-        return successResponse(res, 200, result.data, "Size Chart updated successfully");
-    } catch (error) {
-        next(error);
-    }
-};
-
-export const deleteSizeChart = async (req, res, next) => {
-    try {
-        const result = await sizeChartService.deleteSizeChartService(req.params.id);
-        if (!result.success) return res.status(result.statusCode).json(result);
-
-        return successResponse(res, 200, null, "Size Chart deleted successfully");
+        const sizeChart = await sizeChartService.deleteSizeService(req.params.id);
+        return successResponse(res, 200, sizeChart, "Size deleted from chart");
     } catch (error) {
         next(error);
     }

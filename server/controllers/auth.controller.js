@@ -1,14 +1,12 @@
 import * as authService from "../services/auth.service.js";
-import { config } from "../config/config.js";
 import successResponse from "../utils/successResponse.js";
 
 const cookieOptions = {
     expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     httpOnly: true,
-    secure: config.mode === "production",
-    sameSite: config.mode === "production" ? "none" : "lax",
+    secure: true,
+    sameSite: "none",
     path: "/",
-    // domain: config.mode === "production" ? ".vercel.app" : undefined,
 };
 
 //  register

@@ -9,9 +9,6 @@ const productSchema = new mongoose.Schema(
         shortDescription: { type: String },
         description: { type: String, required: true },
         materialCare: { type: String, required: [true, "Material and Care instructions are required"] },
-
-        price: { type: Number, required: true, min: 0 },
-        discountPrice: { type: Number, default: 0 },
         gstPercent: { type: Number, default: 0 },
 
         status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
@@ -31,9 +28,9 @@ const productSchema = new mongoose.Schema(
                 sizes: [{
                     name: { type: String },
                     stock: { type: Number, default: 0 },
+                    price: { type: Number, required: true, min: 0 },
+                    discountPrice: { type: Number, default: 0 },
                 }],
-                v_price: { type: Number },
-                v_discountPrice: { type: Number },
                 v_image: { type: String }
             }
         ],

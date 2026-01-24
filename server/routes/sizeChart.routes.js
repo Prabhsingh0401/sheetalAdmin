@@ -1,19 +1,19 @@
 import express from "express";
 import * as sizeChartController from "../controllers/sizeChart.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
-import upload from "../middlewares/multer.js";
+import { uploadTo } from "../middlewares/multer.middleware.js";
 
 const router = express.Router();
 
-router.route("/all").get(sizeChartController.getAllSizeCharts);
+router.route("/how-to-measure")
+    .put(isAuthenticated, isAdmin, uploadTo("sizeChart").single("howToMeasureImage"), sizeChartController.uploadHowToMeasureImage);
 
-router.route("/details/:id").get(sizeChartController.getSizeChartDetails);
+router.route("/")
+    .get(sizeChartController.getSizeChart)
+    .post(isAuthenticated, isAdmin, sizeChartController.addSize);
 
-router.route("/admin/create").
-    post(isAuthenticated, isAdmin, upload.single("guideImage"), sizeChartController.createSizeChart);
-
-router.route("/admin/:id")
-    .put(isAuthenticated, isAdmin, upload.single("guideImage"), sizeChartController.updateSizeChart)
-    .delete(isAuthenticated, isAdmin, sizeChartController.deleteSizeChart);
+router.route("/:id")
+    .put(isAuthenticated, isAdmin, sizeChartController.updateSize)
+    .delete(isAuthenticated, isAdmin, sizeChartController.deleteSize);
 
 export default router;

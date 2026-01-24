@@ -17,14 +17,12 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
     const emptyVariant = {
         v_sku: "",
         color: { name: "", code: "#000000", swatchImage: "" },
-        sizes: [{ name: "", stock: 0 }],
-        v_price: 0,
-        v_discountPrice: 0,
+        sizes: [{ name: "", stock: 0, price: 0, discountPrice: 0 }], // Added price and discountPrice here
         v_image: ""
     };
 
     const [formData, setFormData] = useState({
-        name: "", sku: "", shortDescription: "", description: "", materialCare: "", price: 0, discountPrice: 0, gstPercent: 0,
+        name: "", sku: "", shortDescription: "", description: "", materialCare: "", gstPercent: 0,
         stock: 0, category: "", status: "Active", displayCollections: [], variants: [], specifications: [], keyBenefits: [], eventTags: [],
         brandInfo: "", metaTitle: "", metaDescription: "", metaKeywords: "", ogImage: "", canonicalUrl: "",
         brandInfo: "", returnPolicy: "7 Days Easy Return",
@@ -44,7 +42,10 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                     specifications: Array.isArray(initialData.specifications) ? initialData.specifications : [],
                     keyBenefits: Array.isArray(initialData.keyBenefits) ? initialData.keyBenefits : [],
                     eventTags: Array.isArray(initialData.eventTags) ? initialData.eventTags : [],
-                    returnPolicy: initialData.returnPolicy || "7 Days Easy Return"
+                    returnPolicy: initialData.returnPolicy || "7 Days Easy Return",
+                    // Remove root-level price and discountPrice if they were present in initialData
+                    price: undefined, // Explicitly set to undefined or remove if initialData might still contain it
+                    discountPrice: undefined, // Explicitly set to undefined or remove if initialData might still contain it
                 });
                 setExistingImages(initialData.images || []);
                 setImageFiles([]);
@@ -53,6 +54,22 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
             }
         }
     }, [initialData, isOpen]);
+
+    useEffect(() => {
+        // Validation for price logic: MRP Price must be greater than Selling Price
+        formData.variants.forEach((v, v_idx) => {
+            v.sizes.forEach((s, s_idx) => {
+                const currentPrice = Number(s.price);
+                const currentDiscountPrice = Number(s.discountPrice);
+                // Only show error if a discountPrice is set and it's invalid
+                if (currentDiscountPrice > 0 && currentPrice <= currentDiscountPrice) {
+                    toast.error(`For size '${s.name}' (Variant: ${v.color?.name || 'N/A'}), MRP Price (${currentPrice}) must be greater than Selling Price (${currentDiscountPrice}).`);
+                }
+            });
+        });
+    }, [formData.variants]);
+
+
 
     const fetchCategories = async () => {
         try {
@@ -64,8 +81,8 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
     const resetForm = () => {
         setFormData({
-            name: "", sku: "", shortDescription: "", description: "", price: 0, discountPrice: 0,
-            gstPercent: 0, stock: 0, category: "", status: "Active", displayCollections: [], variants: [],
+            name: "", sku: "", shortDescription: "", description: "", gstPercent: 0,
+            stock: 0, category: "", status: "Active", displayCollections: [], variants: [],
             specifications: [], keyBenefits: [], eventTags: [], brandInfo: "", returnPolicy: "7 Days Easy Return"
         });
         setImageFiles([]); setExistingImages([]);
@@ -99,12 +116,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Frontend validation for MRP vs Selling Price
-        if (formData.price <= formData.discountPrice && formData.discountPrice > 0) {
-            toast.error("MRP Price must be greater than Selling Price (Discount Price).");
-            return;
-        }
 
         setLoading(true);
         try {
@@ -273,11 +284,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                 <div className="grid grid-cols-2 gap-5">
                                     <InputField label="SKU Code" name="sku" value={formData.sku} onChange={handleChange} placeholder="CLOTH-001" required />
                                     <InputField label="GST %" name="gstPercent" type="number" value={formData.gstPercent} onChange={handleChange} />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-5">
-                                    <InputField label="MRP Price (₹)" name="price" type="number" value={formData.price} onChange={handleChange} required />
-                                    <InputField label="Selling Price (₹)" name="discountPrice" type="number" value={formData.discountPrice} onChange={handleChange} />
                                 </div>
 
                                 <div className="space-y-1.5">
@@ -488,28 +494,69 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                     </div>
                                                     <div className="space-y-2">
                                                         {v.sizes.map((s, s_idx) => (
-                                                            <div key={s_idx} className="flex items-center gap-2">
-                                                                <input
-                                                                    className="w-1/2 bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
-                                                                    placeholder="e.g. M, L, XL"
-                                                                    value={s.name}
-                                                                    onChange={(e) => {
-                                                                        const up = [...formData.variants];
-                                                                        up[i].sizes[s_idx].name = e.target.value;
-                                                                        setFormData({ ...formData, variants: up });
-                                                                    }}
-                                                                />
-                                                                <input
-                                                                    className="w-1/2 bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
-                                                                    placeholder="Stock"
-                                                                    type="number"
-                                                                    value={s.stock}
-                                                                    onChange={(e) => {
-                                                                        const up = [...formData.variants];
-                                                                        up[i].sizes[s_idx].stock = Number(e.target.value);
-                                                                        setFormData({ ...formData, variants: up });
-                                                                    }}
-                                                                />
+                                                            <div key={s_idx} className="flex items-end gap-2"> {/* Use flex on outer div for trash icon alignment */}
+                                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-grow"> {/* Grid for inputs */}
+                                                                    {/* Size Name */}
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[9px] font-bold text-slate-500 uppercase">Size</label>
+                                                                        <input
+                                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                                            placeholder="e.g. M, L, XL"
+                                                                            value={s.name}
+                                                                            onChange={(e) => {
+                                                                                const up = [...formData.variants];
+                                                                                up[i].sizes[s_idx].name = e.target.value;
+                                                                                setFormData({ ...formData, variants: up });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    {/* Stock */}
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[9px] font-bold text-slate-500 uppercase">Stock</label>
+                                                                        <input
+                                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                                            placeholder="Stock"
+                                                                            type="number"
+                                                                            value={s.stock}
+                                                                            onChange={(e) => {
+                                                                                const up = [...formData.variants];
+                                                                                up[i].sizes[s_idx].stock = Number(e.target.value);
+                                                                                setFormData({ ...formData, variants: up });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    {/* MRP Price */}
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[9px] font-bold text-slate-500 uppercase">MRP (₹)</label>
+                                                                        <input
+                                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                                            placeholder="MRP (₹)"
+                                                                            type="number"
+                                                                            value={s.price}
+                                                                            onChange={(e) => {
+                                                                                const up = [...formData.variants];
+                                                                                up[i].sizes[s_idx].price = Number(e.target.value);
+                                                                                setFormData({ ...formData, variants: up });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    {/* Discount Price */}
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[9px] font-bold text-slate-500 uppercase">Disc. (₹)</label>
+                                                                        <input
+                                                                            className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                                            placeholder="Disc. Price (₹)"
+                                                                            type="number"
+                                                                            value={s.discountPrice}
+                                                                            onChange={(e) => {
+                                                                                const up = [...formData.variants];
+                                                                                up[i].sizes[s_idx].discountPrice = Number(e.target.value);
+                                                                                setFormData({ ...formData, variants: up });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                {/* Delete Button */}
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
@@ -517,7 +564,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                                         up[i].sizes.splice(s_idx, 1);
                                                                         setFormData({ ...formData, variants: up });
                                                                     }}
-                                                                    className="text-red-500"
+                                                                    className="text-red-500 p-2 flex-shrink-0"
                                                                 >
                                                                     <Trash2 size={14} />
                                                                 </button>

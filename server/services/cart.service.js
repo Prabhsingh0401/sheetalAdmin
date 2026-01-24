@@ -6,7 +6,7 @@ export const getCartByUserIdService = async (userId) => {
     const cart = await Cart.findOne({ user: userId }).populate({
         path: "items.product",
         model: "Product",
-        select: "name price discountPrice mainImage.url category",
+        select: "name mainImage.url category",
         populate: {
             path: "category",
             model: "Category",
@@ -29,7 +29,7 @@ export const getCartByUserIdService = async (userId) => {
     };
 };
 
-export const addToCartService = async (userId, productId, quantity, size, color) => {
+export const addToCartService = async (userId, productId, quantity, size, color, price, discountPrice) => {
     const cart = await Cart.findOne({ user: userId });
     const product = await Product.findById(productId);
 
@@ -40,7 +40,7 @@ export const addToCartService = async (userId, productId, quantity, size, color)
     if (!cart) {
         const newCart = await Cart.create({
             user: userId,
-            items: [{ product: productId, quantity, size, color }],
+            items: [{ product: productId, quantity, size, color, price, discountPrice }],
         });
         return {
             success: true,
@@ -54,8 +54,11 @@ export const addToCartService = async (userId, productId, quantity, size, color)
 
     if (existingItem) {
         existingItem.quantity += quantity;
+        // Optionally update price if it can change
+        existingItem.price = price;
+        existingItem.discountPrice = discountPrice;
     } else {
-        cart.items.push({ product: productId, quantity, size, color });
+        cart.items.push({ product: productId, quantity, size, color, price, discountPrice });
     }
 
     await cart.save();

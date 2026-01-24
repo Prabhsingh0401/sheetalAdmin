@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import BannerTable from "@/components/admin/cms/BannerTable";
 import PageHeader from "@/components/admin/layout/PageHeader";
-import { ImageIcon, CheckCircle2, XCircle, Monitor, Plus } from "lucide-react";
+import { ImageIcon, CheckCircle2, XCircle, Monitor } from "lucide-react";
 import { getBannerStats } from "@/services/bannerService";
 import BannerModal from "@/components/admin/cms/BannerModal";
 
@@ -22,7 +22,7 @@ export default function BannersPage() {
 
     return (
         <div className="min-h-screen w-full animate-in fade-in duration-500 pb-10">
-            <PageHeader title="Banner Management" subtitle="Control your homepage sliders" />
+            <PageHeader title="Banner Management" subtitle="Control your homepage sliders" actionLabel="Add New Banner" onActionClick={() => setIsModalOpen(true)} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-8">
                 <StatCard title="Total Banners" count={stats.total} icon={<ImageIcon size={20} />} color="indigo" />
