@@ -49,7 +49,7 @@ app.use("/api/v1/auth", authLimiter);
 app.use(
     cors({
         origin: (origin, callback) => {
-            const allowedOrigins = ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000", "http://192.168.1.9:3000" , "http://192.168.0.227:4000", "https://sheetal-admin.vercel.app", "https://sheetal-omega.vercel.app"];
+            const allowedOrigins = ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000", "http://192.168.1.9:3000" , "http://192.168.0.227:4000", "https://sheetal-admin.vercel.app", "https://www.sheetal-admin.vercel.app", "https://sheetal-omega.vercel.app" , "https://www.sheetal-omega.vercel.app"];
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
@@ -58,7 +58,7 @@ app.use(
         },
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
     })
 );
 

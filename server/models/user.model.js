@@ -15,11 +15,11 @@ const userSchema = new mongoose.Schema(
     {
         name: { type: String, trim: true, maxlength: [50, "Name cannot exceed 50 characters"] },
         email: {
-            type: String, unique: true, sparse: true, lowercase: true, trim: true,
+            type: String, lowercase: true, trim: true,
             match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Please provide a valid email"],
         },
         password: { type: String, select: false, minlength: [8, "Password must be at least 8 characters"] },
-        phoneNumber: { type: String, unique: true, sparse: true },
+        phoneNumber: { type: String, trim: true },
         role: { type: String, enum: ["user", "admin", "guest"], default: "user" },
         status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
         isGuest: { type: Boolean, default: false },
@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { email: { $type: "string" } } });
+userSchema.index({ phoneNumber: 1 }, { unique: true, partialFilterExpression: { phoneNumber: { $type: "string" } } });
+
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 export default User;
