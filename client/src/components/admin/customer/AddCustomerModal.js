@@ -6,7 +6,6 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
     const [form, setForm] = useState({
         name: "",
         email: "",
-        password: "",
         phoneNumber: "",
         status: "Active",
     });
@@ -17,12 +16,11 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
                 setForm({
                     name: editUser.name || "",
                     email: editUser.email || "",
-                    password: "", 
                     phoneNumber: editUser.phoneNumber || "",
                     status: editUser.status || "Active",
                 });
             } else {
-                setForm({ name: "", email: "", password: "", phoneNumber: "", status: "Active" });
+                setForm({ name: "", email: "", phoneNumber: "", status: "Active" });
             }
         }
     }, [isOpen, editUser]);
@@ -92,21 +90,6 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
                                 required
                             />
                         </div>
-
-                        {!editUser && (
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Password</label>
-                                <input
-                                    name="password"
-                                    type="password"
-                                    value={form.password}
-                                    onChange={handleChange}
-                                    placeholder="••••••••"
-                                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-                                    required={!editUser}
-                                />
-                            </div>
-                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -134,14 +117,7 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
                         </div>
                     </div>
 
-                    {editUser && (
-                        <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-center gap-3">
-                            <ShieldCheck className="text-slate-400" size={16} />
-                            <p className="text-[11px] text-slate-500 font-medium">
-                                Password is encrypted and cannot be changed here.
-                            </p>
-                        </div>
-                    )}
+
 
                     <div className="pt-4 flex items-center gap-3">
                         <button
