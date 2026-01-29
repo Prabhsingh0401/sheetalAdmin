@@ -97,6 +97,7 @@ export const createProductService = async (data, files, userId) => {
     let totalStock = 0;
     if (parsedData.variants && Array.isArray(parsedData.variants)) {
         let variantFileIndex = 0;
+        const uploadedVariantFiles = files['variantImages'] || [];
         parsedData.variants = parsedData.variants.map((v) => {
             // Process sizes to ensure numerical types for stock, price, and discountPrice
             const processedSizes = v.sizes.map(s => ({

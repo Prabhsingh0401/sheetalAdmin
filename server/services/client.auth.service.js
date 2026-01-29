@@ -35,7 +35,12 @@ const verifyFirebaseIdToken = async (idToken) => {
     user: {
       id: user._id,
       phoneNumber: user.phoneNumber,
+      email: user.email, // Added
       role: user.role,
+      fullName: user.name, // Assuming 'name' in model maps to 'fullName' on frontend
+      alternativeMobileNumber: user.alternativeMobileNumber, // Added
+      gender: user.gender, // Added
+      dateOfBirth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : undefined, // Added, formatted to YYYY-MM-DD
     },
     token,
   };
