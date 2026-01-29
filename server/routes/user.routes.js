@@ -1,6 +1,7 @@
 import express from "express";
 import { getMe, updateProfile, getAllUsers, deleteUser, updateUser, createUser, guestLogin, getUserStats, getSingleUserDetails, toggleWishlist, getWishlist } from "../controllers/user.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
+import { uploadTo } from "../middlewares/multer.middleware.js"; // Import uploadTo
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ router.post("/guest-login", guestLogin);
 
 // protected routes
 router.get("/me", isAuthenticated, getMe);
-router.put("/update", isAuthenticated, updateProfile);
+router.put("/update", isAuthenticated, uploadTo('users').single('profilePicture'), updateProfile); // Added multer middleware
 router.post("/wishlist", isAuthenticated, toggleWishlist);
 router.get("/wishlist", isAuthenticated, getWishlist);
 

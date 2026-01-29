@@ -34,7 +34,7 @@ export const getMe = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
     try {
-        const result = await userService.updateProfileService(req.user._id, req.body);
+        const result = await userService.updateProfileService(req.user._id, req.body, req.file); // Pass req.file
         if (!result.success) return res.status(result.statusCode).json(result);
         return successResponse(res, 200, result.data, "Profile updated successfully");
     } catch (err) {

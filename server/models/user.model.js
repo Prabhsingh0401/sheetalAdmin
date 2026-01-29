@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
         password: { type: String, select: false, minlength: [8, "Password must be at least 8 characters"] },
         phoneNumber: { type: String, trim: true },
         alternativeMobileNumber: { type: String, trim: true }, // New field
-        gender: { type: String, enum: ['Male', 'Female', 'Other', 'Prefer not to say'], trim: true }, // New field
+        gender: { type: String, enum: ['Male', 'Female'], trim: true }, // New field
         dateOfBirth: { type: Date }, // New field
         profilePicture: { type: String, default: '' }, // New field
         role: { type: String, enum: ["user", "admin", "guest"], default: "user" },

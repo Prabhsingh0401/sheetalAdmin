@@ -1,8 +1,13 @@
 "use client";
 import { X, AlertTriangle } from "lucide-react";
 
-export default function DeleteConfirmModal({ isOpen, onClose, onConfirm }) {
+export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, entityName, itemName }) {
     if (!isOpen) return null;
+
+    const displayEntityName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
+    const confirmationText = itemName 
+        ? `Are you sure you want to delete ${itemName}?`
+        : `Are you sure you want to delete this ${entityName}?`;
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -21,10 +26,10 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm }) {
                 </div>
 
                 <h2 className="text-lg font-bold text-center text-slate-900">
-                    Delete User?
+                    Delete {displayEntityName}?
                 </h2>
                 <p className="text-sm text-slate-500 text-center mt-2">
-                    Are you sure you want to delete this user?
+                    {confirmationText}
                     This action cannot be undone.
                 </p>
 

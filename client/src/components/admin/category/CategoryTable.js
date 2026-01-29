@@ -30,6 +30,7 @@ export default function CategoryTable({ refreshStats }) {
   const [viewCategory, setViewCategory] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState(null); // New state for selected category name
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function CategoryTable({ refreshStats }) {
       toast.error(err.message || "Failed to delete", { id: loadingToast });
     } finally {
       setDeleteId(null);
+      setSelectedCategoryName(null); // Clear selected category name
       setShowDeleteModal(false);
     }
   };
@@ -228,7 +230,7 @@ export default function CategoryTable({ refreshStats }) {
                       <button title="Edit" className="hover:text-blue-600 transition-colors" onClick={() => { setEditData(c); setShowModal(true); }}>
                         <Edit3 size={18} />
                       </button>
-                      <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => { setDeleteId(c._id); setShowDeleteModal(true); }}>
+                      <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => { setDeleteId(c._id); setSelectedCategoryName(c.name); setShowDeleteModal(true); }}>
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -292,7 +294,13 @@ export default function CategoryTable({ refreshStats }) {
 
       <CategoryModal isOpen={showModal} onClose={() => setShowModal(false)} onSuccess={fetchCategories} initialData={editData} />
       <ViewCategoryDrawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} category={viewCategory} />
-      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={handleDeleteConfirm} />
+      <DeleteConfirmModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={handleDeleteConfirm} 
+        entityName="category" 
+        itemName={selectedCategoryName} 
+      />
     </div>
   );
 }

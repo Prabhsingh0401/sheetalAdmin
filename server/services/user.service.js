@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import Order from "../models/order.model.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import { deleteFile } from "../utils/fileHelper.js"; // Import deleteFile
 
 export const getWishlistService = async (userId) => {
     const user = await User.findById(userId).populate({
@@ -46,11 +47,23 @@ export const getMeService = async (userId) => {
     return { success: true, data: user };
 };
 
-export const updateProfileService = async (userId, data) => {
-    if (data.role) delete data.role;
-    const user = await User.findByIdAndUpdate(userId, data, { new: true, runValidators: true }).select("-password");
-    if (!user) return { success: false, statusCode: 404, message: "Update failed" };
-    return { success: true, data: user };
+export const updateProfileService = async (userId, data, profilePictureFile) => {
+    if (data.role) delete data.role; // Prevent role from being updated
+
+    const user = await User.findById(userId); // Get existing user to check for old profile picture
+    if (!user) return { success: false, statusCode: 404, message: "User not found" };
+
+    if (profilePictureFile) {
+        // If an old profile picture exists and is not the default, delete it
+        if (user.profilePicture && user.profilePicture !== "") {
+            deleteFile(user.profilePicture);
+        }
+        data.profilePicture = profilePictureFile.path.replace(/\\/g, '/');
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, data, { new: true, runValidators: true }).select("-password");
+    if (!updatedUser) return { success: false, statusCode: 404, message: "Update failed" };
+    return { success: true, data: updatedUser };
 };
 
 export const getAllUsersService = async ({ page, limit, search }) => {

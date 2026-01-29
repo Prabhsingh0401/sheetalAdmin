@@ -589,10 +589,10 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
 
                         {activeTab === "specs" && (
                             <div className="space-y-8 animate-in fade-in duration-300">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <InputField label="Brand Information" name="brandInfo" value={formData.brandInfo} onChange={handleChange} placeholder="e.g. Levi's Premium" />
                                     <InputField label="Return Policy" name="returnPolicy" value={formData.returnPolicy} onChange={handleChange} placeholder="e.g. 7 Days Return Policy" />
-                                </div>
+                                </div> */}
 
                                 <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
                                     <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">

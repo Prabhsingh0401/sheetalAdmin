@@ -30,6 +30,7 @@ export default function ProductTable({ refreshStats }) {
   const [viewProduct, setViewProduct] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedProductName, setSelectedProductName] = useState(null); // New state for selected product name
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function ProductTable({ refreshStats }) {
       toast.error("Failed to delete", { id: loadingToast });
     } finally {
       setDeleteId(null);
+      setSelectedProductName(null); // Clear selected product name
       setShowDeleteModal(false);
     }
   };
@@ -283,7 +285,13 @@ export default function ProductTable({ refreshStats }) {
 
       <ProductModal isOpen={showModal} onClose={() => setShowModal(false)} onSuccess={fetchProducts} initialData={editData} />
       <ViewProductDrawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} product={viewProduct} />
-      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={handleDeleteConfirm} />
+      <DeleteConfirmModal 
+        isOpen={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)} 
+        onConfirm={handleDeleteConfirm} 
+        entityName="product" 
+        itemName={selectedProductName} 
+      />
     </div>
   );
 }

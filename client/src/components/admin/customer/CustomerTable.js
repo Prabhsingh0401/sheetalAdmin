@@ -30,6 +30,7 @@ export default function CustomerTable({ refreshStats }) {
   const [viewUser, setViewUser] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState(null);
+  const [selectedUserName, setSelectedUserName] = useState(null); // New state for selected user name
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function CustomerTable({ refreshStats }) {
       toast.error("Failed to delete user", { id: loadingToast });
     } finally {
       setDeleteUserId(null);
+      setSelectedUserName(null); // Clear selected user name
       setShowDeleteModal(false);
     }
   };
@@ -214,7 +216,7 @@ export default function CustomerTable({ refreshStats }) {
                       <button title="Edit" className="hover:text-blue-600 transition-colors" onClick={() => { setEditUser(u); setShowModal(true); }}>
                         <Edit3 size={18} />
                       </button>
-                      <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => { setDeleteUserId(u._id); setShowDeleteModal(true); }}>
+                      <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => { setDeleteUserId(u._id); setSelectedUserName(u.name); setShowDeleteModal(true); }}>
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -301,7 +303,7 @@ export default function CustomerTable({ refreshStats }) {
 
       <AddUserModal isOpen={showModal} onClose={() => setShowModal(false)} onAddUser={handleAddUser} editUser={editUser} />
       <ViewUserDrawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} user={viewUser} />
-      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={confirmDeleteUser} />
+      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={confirmDeleteUser} entityName="user" itemName={selectedUserName} />
     </div>
   );
 }

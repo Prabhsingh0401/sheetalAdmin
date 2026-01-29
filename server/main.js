@@ -70,9 +70,20 @@ if (config.mode === "development") {
     app.use(morgan("combined", { stream: logStream }));
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Custom middleware to conditionally parse JSON and URL-encoded data
+const parseJsonAndUrlEncoded = (req, res, next) => {
+    if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+        return next();
+    }
+    express.json()(req, res, (err) => {
+        if (err) return next(err);
+        express.urlencoded({ extended: true })(req, res, next);
+    });
+};
+
+app.use(parseJsonAndUrlEncoded);
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
