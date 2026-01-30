@@ -239,7 +239,14 @@ export default function CouponModal({ isOpen, onClose, onSuccess, initialData = 
                                 <input
                                     type="number"
                                     value={formData.offerValue}
-                                    onChange={(e) => setFormData({ ...formData, offerValue: e.target.value })}
+                                    onChange={(e) => {
+                                        let value = e.target.value;
+                                        if (formData.offerType === 'Percentage' && Number(value) > 100) {
+                                            toast.error("Discount percentage cannot exceed 100%. Setting to 100.");
+                                            value = "100"; // Cap at 100
+                                        }
+                                        setFormData({ ...formData, offerValue: value });
+                                    }}
                                     className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none font-bold"
                                     required
                                 />

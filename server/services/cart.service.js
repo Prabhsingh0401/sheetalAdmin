@@ -29,7 +29,7 @@ export const getCartByUserIdService = async (userId) => {
     };
 };
 
-export const addToCartService = async (userId, productId, quantity, size, color, price, discountPrice) => {
+export const addToCartService = async (userId, productId, quantity, size, color, price, discountPrice, variantImage) => {
     const cart = await Cart.findOne({ user: userId });
     const product = await Product.findById(productId);
 
@@ -40,7 +40,7 @@ export const addToCartService = async (userId, productId, quantity, size, color,
     if (!cart) {
         const newCart = await Cart.create({
             user: userId,
-            items: [{ product: productId, quantity, size, color, price, discountPrice }],
+            items: [{ product: productId, quantity, size, color, price, discountPrice, variantImage }],
         });
         return {
             success: true,
@@ -57,8 +57,9 @@ export const addToCartService = async (userId, productId, quantity, size, color,
         // Optionally update price if it can change
         existingItem.price = price;
         existingItem.discountPrice = discountPrice;
+        existingItem.variantImage = variantImage;
     } else {
-        cart.items.push({ product: productId, quantity, size, color, price, discountPrice });
+        cart.items.push({ product: productId, quantity, size, color, price, discountPrice, variantImage });
     }
 
     await cart.save();

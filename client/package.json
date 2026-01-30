@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
+    "@tiptap/extension-bullet-list": "^3.18.0",
+    "@tiptap/extension-list-item": "^3.18.0",
+    "@tiptap/extension-underline": "^3.18.0",
     "@tiptap/pm": "^3.14.0",
     "@tiptap/react": "^3.14.0",
     "@tiptap/starter-kit": "^3.14.0",

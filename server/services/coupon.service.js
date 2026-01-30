@@ -56,7 +56,7 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
             applicableItems = cartItems.filter(item => 
                 coupon.applicableIds.some(id => id.toString() === item.product.category._id.toString())
             );
-            applicableTotal = applicableItems.reduce((sum, item) => sum + (item.product.discountPrice ?? item.product.price) * item.quantity, 0);
+            applicableTotal = applicableItems.reduce((sum, item) => sum + (item.discountPrice ?? item.price) * item.quantity, 0);
         }
 
         switch (coupon.offerType) {
@@ -68,7 +68,7 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
                 // Distribute discount proportionally
                 if (applicableItems.length > 0 && applicableTotal > 0) {
                     applicableItems.forEach(item => {
-                        const itemEffectivePrice = (item.product.discountPrice ?? item.product.price) * item.quantity;
+                        const itemEffectivePrice = (item.discountPrice ?? item.price) * item.quantity;
                         itemWiseDiscount[item._id] = Math.round((itemEffectivePrice / applicableTotal) * totalApplicableDiscount);
                     });
                 }
@@ -81,7 +81,7 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
                 // Distribute fixed discount proportionally
                 if (applicableItems.length > 0 && applicableTotal > 0) {
                     applicableItems.forEach(item => {
-                        const itemEffectivePrice = (item.product.discountPrice ?? item.product.price) * item.quantity;
+                        const itemEffectivePrice = (item.discountPrice ?? item.price) * item.quantity;
                         itemWiseDiscount[item._id] = Math.round((itemEffectivePrice / applicableTotal) * fixedDiscountAmount);
                     });
                 }
@@ -96,24 +96,38 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
 
                 // Sort items by effective price to find the cheapest ones
                 const sortedItems = [...bogoApplicableItems].sort((a, b) => 
-                    (a.product.discountPrice ?? a.product.price) - (b.product.discountPrice ?? b.product.price)
+                    (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price)
                 );
                 
                 let bogoDiscount = 0;
                 const freeItemsCount = coupon.getQuantity;
 
+                // Calculate total BOGO discount first
                 for (let i = 0; i < freeItemsCount && i < sortedItems.length; i++) {
                     const freeItem = sortedItems[i];
-                    const freeItemPrice = (freeItem.product.discountPrice ?? freeItem.product.price) * freeItem.quantity;
-                    itemWiseDiscount[freeItem._id] = freeItemPrice;
+                    const freeItemPrice = (freeItem.discountPrice ?? freeItem.price) * freeItem.quantity;
                     bogoDiscount += freeItemPrice;
                 }
 
+                // Apply max discount cap if exists
+                let finalBogoDiscount = bogoDiscount;
                 if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
-                    discount = Math.min(bogoDiscount, coupon.maxDiscountAmount);
-                } else {
-                    discount = bogoDiscount;
+                    finalBogoDiscount = Math.min(bogoDiscount, coupon.maxDiscountAmount);
                 }
+
+                // Now distribute the final discount among items proportionally
+                if (bogoDiscount > 0) {
+                    const discountRatio = finalBogoDiscount / bogoDiscount; // Ratio to apply if capped
+                    
+                    for (let i = 0; i < freeItemsCount && i < sortedItems.length; i++) {
+                        const freeItem = sortedItems[i];
+                        const freeItemPrice = (freeItem.discountPrice ?? freeItem.price) * freeItem.quantity;
+                        // Apply the ratio if discount was capped
+                        itemWiseDiscount[freeItem._id] = Math.round(freeItemPrice * discountRatio);
+                    }
+                }
+
+                discount = finalBogoDiscount;
                 break;
 
             case "FreeShipping":

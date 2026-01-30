@@ -964,7 +964,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                 <p className="text-sm font-bold text-slate-700">
                                                     {formData.videoFile ? formData.videoFile.name : formData.video ? "Current Video" : 'Upload Demo Video'}
                                                 </p>
-                                                <p className="text-[10px] text-slate-500 mt-1 uppercase">MP4, WEBM (MAX 50MB)</p>
+                                                <p className="text-[10px] text-slate-500 mt-1 uppercase">MP4, WEBM (MAX 5MB)</p>
                                             </div>
 
                                             <label className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-800 cursor-pointer transition-all active:scale-95">
@@ -976,8 +976,12 @@ export default function ProductModal({ isOpen, onClose, onSuccess, initialData =
                                                     onChange={(e) => {
                                                         const file = e.target.files[0];
                                                         if (file) {
-                                                            if (file.size > 50 * 1024 * 1024) {
-                                                                alert("File too large! Max 50MB.");
+                                                            const MAX_VIDEO_SIZE_MB = 5;
+                                                            const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
+                                                            if (file.size > MAX_VIDEO_SIZE_BYTES) {
+                                                                toast.error(`Video file size exceeds the ${MAX_VIDEO_SIZE_MB}MB limit.`);
+                                                                e.target.value = ''; // Clear the input
+                                                                setFormData({ ...formData, videoFile: null }); // Clear the video file from form data
                                                                 return;
                                                             }
                                                             setFormData({ ...formData, videoFile: file });
