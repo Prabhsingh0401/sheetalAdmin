@@ -5,7 +5,7 @@ import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
 router.post("/apply", isAuthenticated, applyCoupon);
-
+router.get("/all", isAuthenticated, getAllCoupons);
 router.get("/admin/all", isAuthenticated, isAdmin, getAllCoupons);
 router.get("/admin/stats", isAuthenticated, isAdmin, getCouponStats);
 router.post("/admin", isAuthenticated, isAdmin, createCoupon);

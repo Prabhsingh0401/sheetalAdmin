@@ -23,6 +23,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import clientAuthRoutes from "./routes/client.auth.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import sizeChartRoutes from "./routes/sizeChart.routes.js";
+import searchRoutes from "./routes/search.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -100,6 +101,7 @@ app.use("/api/v1/returns", returnRoutes);
 app.use("/api/v1/client/auth", clientAuthRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/size-chart", sizeChartRoutes);
+app.use("/api/v1/search", searchRoutes);
 
 app.get("/", (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

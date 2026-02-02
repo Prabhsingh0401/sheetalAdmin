@@ -157,10 +157,24 @@ export const applyCouponService = async (code, cartTotal, userId, cartItems = []
 
 export const getAllCouponsService = async ({ page, limit, search }) => {
     try {
-        const query = search ? { code: { $regex: search, $options: "i" } } : {};
+        const now = new Date();
+        const baseQuery = { 
+            isActive: true,
+            endDate: { $gte: now } 
+        };
+        const query = search 
+            ? { ...baseQuery, code: { $regex: search, $options: "i" } } 
+            : baseQuery;
+
         const skip = (page - 1) * limit;
         const [data, total] = await Promise.all([
-            Coupon.find(query).sort("-createdAt").skip(skip).limit(limit),
+            Coupon.find(query)
+                .populate({
+                    path: 'applicableIds',
+                    model: 'Category', // Explicitly populate as Category
+                    select: 'name' // Only retrieve the name field
+                })
+                .sort("-createdAt").skip(skip).limit(limit),
             Coupon.countDocuments(query)
         ]);
         return { success: true, data, pagination: { total, page, limit } };
