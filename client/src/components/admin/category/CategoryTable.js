@@ -1,15 +1,74 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Eye, Edit3, Trash2, ArrowUpDown, Search, RefreshCw, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
+import { Eye, Edit3, Trash2, ArrowUpDown, Search, RefreshCw, ChevronLeft, ChevronRight, ImageIcon, GripVertical } from "lucide-react";
 import toast from "react-hot-toast";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import CategoryModal from "./CategoryModal";
 import ViewCategoryDrawer from "./ViewCategoryDrawer";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
-import { getCategories, deleteCategory } from "@/services/categoryService";
+import { getCategories, deleteCategory, reorderCategories } from "@/services/categoryService";
 import { IMAGE_BASE_URL } from "@/services/api";
+
+function SortableCategoryRow({ category, onEdit, onView, onDelete }) { // Removed index from props
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category._id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.8 : 1,
+        zIndex: isDragging ? 1 : 0,
+    };
+
+    return (
+        <tr ref={setNodeRef} style={style} {...attributes} className="hover:bg-slate-50/80 transition-colors bg-white">
+            <td className="px-4 py-3 text-slate-500 font-medium text-center touch-none">
+                <button {...listeners} className="cursor-grab p-2 hover:bg-slate-200 rounded-lg">
+                    <GripVertical size={16} />
+                </button>
+            </td>
+            {/* Removed the serial number td */}
+            <td className="px-4 py-3">
+                <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer"
+                    onClick={() => onView(category)}>
+                    {category.mainImage?.url ? (
+                        <img
+                            src={`${IMAGE_BASE_URL}/${category.mainImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "")}
+                            alt="Main"
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <ImageIcon size={16} className="text-slate-300" />
+                    )}
+                </div>
+            </td>
+            <td className="px-4 py-3 font-bold text-slate-900">{category.name}</td>
+            <td className="px-4 py-3">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${category.isActive !== false ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
+                    {category.isActive !== false ? "Active" : "Inactive"}
+                </span>
+            </td>
+            <td className="px-4 py-3 text-right">
+                <div className="flex justify-end gap-4 text-slate-400">
+                    <button title="View" className="hover:text-slate-900 transition-colors" onClick={() => onView(category)}>
+                        <Eye size={18} />
+                    </button>
+                    <button title="Edit" className="hover:text-blue-600 transition-colors" onClick={() => onEdit(category)}>
+                        <Edit3 size={18} />
+                    </button>
+                    <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => onDelete(category)}>
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+}
+
 
 export default function CategoryTable({ refreshStats }) {
   const [categories, setCategories] = useState([]);
@@ -17,30 +76,29 @@ export default function CategoryTable({ refreshStats }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(100); // Show more for reordering
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [sortConfig, setSortConfig] = useState({
-    key: "name",
-    direction: "asc",
-  });
-
+  
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [viewCategory, setViewCategory] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
-  const [selectedCategoryName, setSelectedCategoryName] = useState(null); // New state for selected category name
+  const [selectedCategoryName, setSelectedCategoryName] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchCategories = async (isRefresh = false) => {
     setLoading(true);
     try {
-      const res = await getCategories(1, 100, "");
+      // Fetch all categories to enable full reordering
+      const res = await getCategories(1, 100, ""); 
       if (res.success) {
         setCategories(res.data.categories);
         if (refreshStats) refreshStats();
@@ -53,6 +111,10 @@ export default function CategoryTable({ refreshStats }) {
     }
   };
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
   const handleDeleteConfirm = async () => {
     const loadingToast = toast.loading("Deleting category...");
     try {
@@ -62,20 +124,12 @@ export default function CategoryTable({ refreshStats }) {
         toast.success("Category deleted successfully", { id: loadingToast });
       }
     } catch (err) {
-      // toast.error("Failed to delete", { id: loadingToast });
       toast.error(err.message || "Failed to delete", { id: loadingToast });
     } finally {
       setDeleteId(null);
-      setSelectedCategoryName(null); // Clear selected category name
+      setSelectedCategoryName(null);
       setShowDeleteModal(false);
     }
-  };
-
-  const handleSort = (key) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
   };
 
   const filteredData = useMemo(() => {
@@ -83,20 +137,11 @@ export default function CategoryTable({ refreshStats }) {
       .filter((c) => {
         const searchMatch = c.name?.toLowerCase().includes(search.toLowerCase()) ||
           c.slug?.toLowerCase().includes(search.toLowerCase());
-
         const currentStatus = c.isActive !== false ? "Active" : "Inactive";
         const statusMatch = statusFilter === "All" || currentStatus === statusFilter;
-
         return searchMatch && statusMatch;
-      })
-      .sort((a, b) => {
-        const aVal = a[sortConfig.key] || "";
-        const bVal = b[sortConfig.key] || "";
-        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
       });
-  }, [categories, search, statusFilter, sortConfig]);
+  }, [categories, search, statusFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -109,10 +154,35 @@ export default function CategoryTable({ refreshStats }) {
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+        const oldIndex = categories.findIndex((c) => c._id === active.id);
+        const newIndex = categories.findIndex((c) => c._id === over.id);
+
+        const newOrder = arrayMove(categories, oldIndex, newIndex);
+        setCategories(newOrder);
+
+        const orderedIds = newOrder.map((c) => c._id);
+        
+        const reorderPromise = reorderCategories(orderedIds);
+        
+        toast.promise(reorderPromise, {
+            loading: 'Saving new order...',
+            success: 'Order saved successfully!',
+            error: (err) => {
+                // Revert state on error
+                fetchCategories(); 
+                return err.message || 'Failed to save order.';
+            }
+        });
+    }
+  };
+  
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm text-slate-900 overflow-hidden">
 
-      {/* Toolbar - Same as Customer */}
       <div className="p-4 flex justify-between items-center gap-4 border-b border-slate-100">
         <div className="flex gap-3 flex-1 items-center">
           <div className="relative max-w-md w-full">
@@ -152,112 +222,54 @@ export default function CategoryTable({ refreshStats }) {
         </button>
       </div>
 
-      {/* Table Section */}
-      <div className="overflow-x-auto min-h-[300px]">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
-            <tr>
-              <th className="px-4 py-4 w-12 text-center">#</th>
-              <th className="px-4 py-4 w-16 text-center">Main Image</th>
-              <th className="px-4 py-4 w-16 text-center">Banner</th>
-              <th className="px-4 py-4 cursor-pointer group" onClick={() => handleSort("name")}>
-                <div className="flex items-center gap-1">Name <ArrowUpDown size={14} className="opacity-50 group-hover:opacity-100" /></div>
-              </th>
-              {/* <th className="px-4 py-4">Parent</th> */}
-              <th className="px-4 py-4">Status</th>
-              <th className="px-4 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {paginatedData.length > 0 ? (
-              paginatedData.map((c, i) => (
-                <tr key={c._id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-4 py-4 text-slate-500 font-medium text-center">
-                    {(currentPage - 1) * rowsPerPage + i + 1}
-                  </td>
-
-                  {/* Main Image */}
-                  <td className="px-4 py-4">
-                    <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer"
-                      onClick={() => { setViewCategory(c); setShowDrawer(true); }}>
-                      {c.mainImage?.url ? (
-                        <img
-                          src={`${IMAGE_BASE_URL}/${c.mainImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
-                          alt="Main"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <ImageIcon size={16} className="text-slate-300" />
-                      )}
-                    </div>
-                  </td>
-                  
-                  {/* Banner Image */}
-                  <td className="px-4 py-4">
-                    <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center cursor-pointer"
-                      onClick={() => { setViewCategory(c); setShowDrawer(true); }}>
-                      {c.bannerImage?.url ? (
-                        <img
-                          src={`${IMAGE_BASE_URL}/${c.bannerImage.url.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
-                          alt="Banner"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <ImageIcon size={16} className="text-slate-300" />
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-4 font-bold text-slate-900">{c.name}</td>
-
-                  {/* <td className="px-4 py-4 text-slate-600 font-medium">
-                    {c.parentCategory?.name || <span className="text-slate-400 text-xs italic">Main Category</span>}
-                  </td> */}
-
-
-                  <td className="px-4 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${c.isActive !== false ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-                      }`}>
-                      {c.isActive !== false ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex justify-end gap-4 text-slate-400">
-                      <button title="View" className="hover:text-slate-900 transition-colors" onClick={() => { setViewCategory(c); setShowDrawer(true); }}>
-                        <Eye size={18} />
-                      </button>
-                      <button title="Edit" className="hover:text-blue-600 transition-colors" onClick={() => { setEditData(c); setShowModal(true); }}>
-                        <Edit3 size={18} />
-                      </button>
-                      <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => { setDeleteId(c._id); setSelectedCategoryName(c.name); setShowDeleteModal(true); }}>
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="6" className="px-4 py-20 text-center text-slate-500 font-medium italic">
-                  {loading ? "Syncing data..." : "No categories found."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Footer - Same as Customer */}
-      <div className="p-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between bg-slate-50/50 gap-4">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <div className="overflow-x-auto min-h-[300px]">
+                      <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
+                          <tr>
+                          <th className="px-4 py-4 w-12 text-center"></th> {/* Drag handle column */}
+                          <th className="px-4 py-4 w-16 text-center">Main Image</th>
+                          <th className="px-4 py-4">
+                              <div className="flex items-center gap-1">Name</div>
+                          </th>
+                          <th className="px-4 py-4">Status</th>
+                          <th className="px-4 py-4 text-right">Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                          <SortableContext items={categories.map(c => c._id)} strategy={verticalListSortingStrategy}>
+                              {paginatedData.length > 0 ? (
+                              paginatedData.map((c, i) => (
+                                  <SortableCategoryRow
+                                  key={c._id}
+                                  category={c}
+                                  index={(currentPage - 1) * rowsPerPage + i + 1}
+                                  onView={setViewCategory}
+                                  onEdit={(cat) => { setEditData(cat); setShowModal(true); }}
+                                  onDelete={(cat) => { setDeleteId(cat._id); setSelectedCategoryName(cat.name); setShowDeleteModal(true); }}
+                                  />
+                              ))
+                              ) : (
+                              <tr>
+                                  <td colSpan="5" className="px-4 py-20 text-center text-slate-500 font-medium italic"> {/* colSpan adjusted to 5 */}
+                                  {loading ? "Syncing data..." : "No categories found."}
+                                  </td>
+                              </tr>
+                              )}
+                          </SortableContext>
+                      </tbody>
+                      </table>
+                  </div>
+                </DndContext>
+            <div className="p-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between bg-slate-50/50 gap-4">
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Rows per page</span>
           <select
             value={rowsPerPage}
-            onChange={(e) => setRowsPerPage(Number(e.target.value))}
+            onChange={(e) => {setRowsPerPage(Number(e.target.value)); setCurrentPage(1);}}
             className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1 px-2 rounded-md outline-none cursor-pointer"
           >
-            {[5, 10, 20, 50].map(val => <option key={val} value={val}>{val}</option>)}
+            {[10, 20, 50, 100].map(val => <option key={val} value={val}>{val}</option>)}
           </select>
         </div>
 

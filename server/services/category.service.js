@@ -43,7 +43,7 @@ export const getAllCategoriesService = async () => {
     const categories = await Category.find({ isActive: true })
         .select("name slug mainImage bannerImage parentCategory")
         .populate("parentCategory", "name")
-        .sort({ createdAt: -1 });
+        .sort({ order: 1 });
 
     const categoriesWithFullUrls = categories.map(category => {
         const data = category.toObject();
@@ -57,6 +57,27 @@ export const getAllCategoriesService = async () => {
     });
 
     return { success: true, data: categoriesWithFullUrls };
+};
+
+export const reorderCategoriesService = async (orderedIds) => {
+    try {
+        const bulkOps = orderedIds.map((id, index) => ({
+            updateOne: {
+                filter: { _id: id },
+                update: { $set: { order: index + 1 } }
+            }
+        }));
+
+        if (bulkOps.length === 0) {
+            return { success: true, message: "No categories to reorder." };
+        }
+
+        await Category.bulkWrite(bulkOps);
+        return { success: true, message: "Categories reordered successfully." };
+    } catch (error) {
+        console.error("Error reordering categories:", error);
+        return { success: false, statusCode: 500, message: "An error occurred while reordering categories." };
+    }
 };
 
 export const getCategoryBySlugService = async (slug) => {
@@ -74,7 +95,7 @@ export const getAdminCategoriesService = async ({ page, limit, search }) => {
     const total = await Category.countDocuments(query);
     const categories = await Category.find(query)
         .populate("parentCategory", "name")
-        .sort({ createdAt: -1 })
+        .sort({ order: 1 })
         .skip((page - 1) * limit)
         .limit(limit);
 

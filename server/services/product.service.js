@@ -50,6 +50,25 @@ export const getAllProductsService = async (queryStr) => {
     };
 };
 
+export const getNewArrivalsService = async () => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const products = await Product.find({
+        isActive: true,
+        createdAt: { $gte: sevenDaysAgo }
+    })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .populate("category", "name slug")
+    .lean();
+
+    return {
+        success: true,
+        products,
+    };
+};
+
 export const getProductDetailsService = async (id) => {
     const query = id.match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
     const product = await Product.findOne(query)

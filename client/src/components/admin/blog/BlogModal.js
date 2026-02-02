@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Newspaper, Edit3, Loader2, Info } from "lucide-react";
+import { X, Newspaper, Edit3, Loader2, Info, ImageIcon } from "lucide-react";
 import { addBlog, updateBlog } from "@/services/blogService";
 import { toast } from "react-hot-toast";
 import { IMAGE_BASE_URL } from "@/services/api";
@@ -9,7 +9,8 @@ import TiptapEditor from "@/components/TiptapEditor";
 
 export default function BlogModal({ isOpen, onClose, onSuccess, initialData = null }) {
     const [loading, setLoading] = useState(false);
-    const [preview, setPreview] = useState(null);
+    const [bannerPreview, setBannerPreview] = useState(null);
+    const [contentImagePreview, setContentImagePreview] = useState(null);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -20,6 +21,7 @@ export default function BlogModal({ isOpen, onClose, onSuccess, initialData = nu
         isPublished: true,
         status: "Active",
         bannerImage: null,
+        contentImage: null,
     });
 
     useEffect(() => {
@@ -33,23 +35,42 @@ export default function BlogModal({ isOpen, onClose, onSuccess, initialData = nu
                 isPublished: initialData?.isPublished ?? true,
                 status: initialData?.status || "Active",
                 bannerImage: null,
+                contentImage: null,
             });
 
             if (initialData?.bannerImage) {
                 const fullUrl = `${IMAGE_BASE_URL}/${initialData.bannerImage.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1");
-                setPreview(fullUrl);
+                setBannerPreview(fullUrl);
             } else {
-                setPreview(null);
+                setBannerPreview(null);
+            }
+
+            if (initialData?.contentImage) {
+                const fullUrl = `${IMAGE_BASE_URL}/${initialData.contentImage.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1");
+                setContentImagePreview(fullUrl);
+            } else {
+                setContentImagePreview(null);
             }
         }
     }, [isOpen, initialData]);
 
-    const handleFileChange = (e) => {
+    const handleBannerChange = (e) => {
         const file = e.target.files[0];
         if (file) {
             if (file.size > 3 * 1024 * 1024) return toast.error("File size should be less than 3MB");
             setFormData({ ...formData, bannerImage: file });
-            setPreview(URL.createObjectURL(file));
+            setBannerPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleContentImageChange = (e) => {
+        const file = e.target.
+        
+        files[0];
+        if (file) {
+            if (file.size > 3 * 1024 * 1024) return toast.error("File size should be less than 3MB");
+            setFormData({ ...formData, contentImage: file });
+            setContentImagePreview(URL.createObjectURL(file));
         }
     };
 
@@ -60,7 +81,7 @@ export default function BlogModal({ isOpen, onClose, onSuccess, initialData = nu
         setLoading(true);
         const data = new FormData();
         Object.keys(formData).forEach(key => {
-            if (key === 'bannerImage') {
+            if (key === 'bannerImage' || key === 'contentImage') {
                 if (formData[key]) data.append(key, formData[key]);
             } else {
                 data.append(key, formData[key]);
@@ -75,9 +96,7 @@ export default function BlogModal({ isOpen, onClose, onSuccess, initialData = nu
                 onClose();
             }
         } catch (err) {
-            // toast.error(err.response?.data?.message || "Something went wrong");
             const errorMessage = err.message || "Something went wrong";
-
             toast.error(errorMessage);
             console.error("Submission error:", err);
         } finally {
@@ -115,29 +134,57 @@ export default function BlogModal({ isOpen, onClose, onSuccess, initialData = nu
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Cover Image</label>
-                        <div className="flex items-center gap-4">
-                            <div className="w-24 h-24 rounded-lg border border-slate-400 overflow-hidden bg-slate-50 flex-shrink-0">
-                                {preview ? (
-                                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-slate-300">
-                                        <Newspaper size={24} />
-                                    </div>
-                                )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Banner Image</label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-24 h-24 rounded-lg border border-slate-400 overflow-hidden bg-slate-50 flex-shrink-0">
+                                    {bannerPreview ? (
+                                        <img src={bannerPreview} alt="Banner Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-300">
+                                            <Newspaper size={24} />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleBannerChange}
+                                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-black cursor-pointer"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-2 italic font-medium">Max 3MB</p>
+                                    <p className="text-[10px] text-slate-400 mt-2 italic font-medium">Size: 1920 X 735</p>
+                                </div>
                             </div>
-                            <div className="flex-1">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileChange}
-                                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-black cursor-pointer"
-                                />
-                                <p className="text-[10px] text-slate-400 mt-2 italic font-medium">Recommended size: 1200x630px (Max 3MB)</p>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Content Image</label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-24 h-24 rounded-lg border border-slate-400 overflow-hidden bg-slate-50 flex-shrink-0">
+                                    {contentImagePreview ? (
+                                        <img src={contentImagePreview} alt="Content Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-300">
+                                            <ImageIcon size={24} />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleContentImageChange}
+                                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-black cursor-pointer"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-2 italic font-medium">Max 3MB</p>
+                                    <p className="text-[10px] text-slate-400 mt-2 italic font-medium">Size: 960 X 640</p>
+                                </div>
                             </div>
                         </div>
                     </div>
+
 
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Blog Title</label>

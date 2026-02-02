@@ -88,6 +88,22 @@ export const updateCategory = async (req, res, next) => {
     }
 };
 
+export const reorderCategories = async (req, res, next) => {
+    try {
+        const { orderedIds } = req.body;
+        if (!orderedIds || !Array.isArray(orderedIds)) {
+            return res.status(400).json({ success: false, message: "orderedIds array is required." });
+        }
+        const result = await categoryService.reorderCategoriesService(orderedIds);
+        if (!result.success) {
+            return res.status(result.statusCode || 400).json(result);
+        }
+        return successResponse(res, 200, null, "Categories reordered successfully");
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const deleteCategory = async (req, res, next) => {
     try {
         const result = await categoryService.deleteCategoryService(req.params.id);

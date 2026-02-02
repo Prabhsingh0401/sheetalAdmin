@@ -2,13 +2,29 @@ import * as blogService from "../services/blog.service.js";
 import successResponse from "../utils/successResponse.js";
 import fs from "fs";
 
+const clearBlogFiles = (files) => {
+    if (!files) return;
+    for (const key in files) {
+        if (Array.isArray(files[key])) {
+            files[key].forEach(file => {
+                if (file && fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            });
+        }
+    }
+};
+
 export const createBlog = async (req, res, next) => {
     try {
-        const result = await blogService.createBlogService(req.body, req.file, req.user._id);
-        if (!result.success) return res.status(400).json(result);
+        const result = await blogService.createBlogService(req.body, req.files, req.user._id);
+        if (!result.success) {
+            clearBlogFiles(req.files);
+            return res.status(400).json(result);
+        }
         successResponse(res, 201, result.data, "Blog post created successfully");
     } catch (error) {
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        clearBlogFiles(req.files);
         next(error);
     }
 };
@@ -36,10 +52,14 @@ export const getSingleBlog = async (req, res, next) => {
 
 export const updateBlog = async (req, res, next) => {
     try {
-        const result = await blogService.updateBlogService(req.params.id, req.body, req.file);
-        if (!result.success) return res.status(400).json(result);
+        const result = await blogService.updateBlogService(req.params.id, req.body, req.files);
+        if (!result.success) {
+            clearBlogFiles(req.files);
+            return res.status(400).json(result);
+        }
         successResponse(res, 200, result.data, "Blog post updated successfully");
     } catch (error) {
+        clearBlogFiles(req.files);
         next(error);
     }
 };

@@ -151,6 +151,7 @@ export default function BlogTable({ refreshStats }) {
                         <tr>
                             <th className="px-4 py-4 w-12 text-center">#</th>
                             <th className="px-4 py-4 w-16">Banner</th>
+                            <th className="px-4 py-4 w-16">Content Img</th>
                             <th className="px-4 py-4 cursor-pointer group" onClick={() => handleSort("title")}>
                                 <div className="flex items-center gap-1">Title <ArrowUpDown size={14} className="opacity-50 group-hover:opacity-100" /></div>
                             </th>
@@ -173,6 +174,20 @@ export default function BlogTable({ refreshStats }) {
                                             {b.bannerImage ? (
                                                 <img
                                                     src={`${IMAGE_BASE_URL}/${b.bannerImage.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
+                                                    alt=""
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <ImageIcon size={14} className="text-slate-300" />
+                                            )}
+                                        </div>
+                                    </td>
+                                    
+                                    <td className="px-4 py-4">
+                                        <div className="w-12 h-8 rounded bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                                            {b.contentImage ? (
+                                                <img
+                                                    src={`${IMAGE_BASE_URL}/${b.contentImage.replace(/\\/g, '/')}`.replace(/([^:]\/)\/+/g, "$1")}
                                                     alt=""
                                                     className="w-full h-full object-cover"
                                                 />
@@ -214,7 +229,7 @@ export default function BlogTable({ refreshStats }) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="7" className="px-4 py-20 text-center text-slate-500 font-medium italic">
+                                <td colSpan="8" className="px-4 py-20 text-center text-slate-500 font-medium italic">
                                     {loading ? "Syncing blogs..." : "No blog posts found."}
                                 </td>
                             </tr>

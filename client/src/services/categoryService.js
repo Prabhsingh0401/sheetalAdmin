@@ -59,6 +59,21 @@ export const deleteCategory = async (id) => {
 };
 
 /* =========================
+   Reorder Categories
+   ========================= */
+export const reorderCategories = async (orderedIds) => {
+    const res = await fetch(`${API_BASE_URL}/categories/admin/reorder`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ orderedIds }),
+    });
+    return handleResponse(res);
+};
+
+/* =========================
    Get Category Stats
    ========================= */
 export const getCategoryStats = async () => {

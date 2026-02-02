@@ -16,6 +16,10 @@ const categorySchema = new mongoose.Schema(
             lowercase: true,
             index: true
         },
+        order: {
+            type: Number,
+            index: true
+        },
         description: { type: String },
         mainImage: {
             url: { type: String, default: "" },
@@ -39,5 +43,14 @@ const categorySchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+categorySchema.pre('save', async function (next) {
+    if (this.isNew && (this.order === null || this.order === undefined)) {
+        const highestOrderCategory = await this.constructor.findOne().sort('-order');
+        this.order = (highestOrderCategory && highestOrderCategory.order) ? highestOrderCategory.order + 1 : 1;
+    }
+    next();
+});
+
 const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 export default Category;

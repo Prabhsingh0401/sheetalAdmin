@@ -2,13 +2,24 @@ import fs from "fs";
 import slugify from "slugify";
 import Blog from "../models/blog.model.js";
 
-export const createBlogService = async (data, file, userId) => {
+export const createBlogService = async (data, files, userId) => {
+    const clearFiles = () => {
+        if (!files) return;
+        for (const key in files) {
+            if (Array.isArray(files[key])) {
+                files[key].forEach(file => fs.unlinkSync(file.path));
+            }
+        }
+    };
+
     try {
         const { title, content, category, tags, relatedProducts, status, isPublished } = data;
 
-        if (!title || !content || !category || (!file && !data.bannerImage)) {
-            if (file) fs.unlinkSync(file.path);
-            return { success: false, message: "Title, Content, Category and Banner are required" };
+        const bannerImageFile = files?.bannerImage?.[0];
+
+        if (!title || !content || !category || !bannerImageFile) {
+            clearFiles();
+            return { success: false, message: "Title, Content, Category and Banner Image are required" };
         }
 
         const slug = slugify(title, { lower: true, strict: true });
@@ -22,7 +33,8 @@ export const createBlogService = async (data, file, userId) => {
             slug,
             excerpt,
             author: userId,
-            bannerImage: file ? file.path : "",
+            bannerImage: bannerImageFile.path,
+            contentImage: files?.contentImage?.[0]?.path || "",
             tags: tagsArray,
             relatedProducts: productsArray,
             status: status || "Active",
@@ -32,16 +44,28 @@ export const createBlogService = async (data, file, userId) => {
 
         return { success: true, data: blog };
     } catch (err) {
-        if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        clearFiles();
         if (err.code === 11000) return { success: false, message: "Blog title/slug already exists" };
         return { success: false, message: err.message };
     }
 };
 
-export const updateBlogService = async (id, data, file) => {
+export const updateBlogService = async (id, data, files) => {
+    const clearFiles = () => {
+        if (!files) return;
+        for (const key in files) {
+            if (Array.isArray(files[key])) {
+                files[key].forEach(file => fs.unlinkSync(file.path));
+            }
+        }
+    };
+
     try {
         const existingBlog = await Blog.findById(id);
-        if (!existingBlog) return { success: false, message: "Blog not found" };
+        if (!existingBlog) {
+            clearFiles();
+            return { success: false, message: "Blog not found" };
+        }
 
         let updateData = { ...data };
 
@@ -55,11 +79,18 @@ export const updateBlogService = async (id, data, file) => {
                 : data.tags;
         }
 
-        if (file) {
+        if (files?.bannerImage?.[0]) {
             if (existingBlog.bannerImage && fs.existsSync(existingBlog.bannerImage)) {
                 fs.unlinkSync(existingBlog.bannerImage);
             }
-            updateData.bannerImage = file.path;
+            updateData.bannerImage = files.bannerImage[0].path;
+        }
+
+        if (files?.contentImage?.[0]) {
+            if (existingBlog.contentImage && fs.existsSync(existingBlog.contentImage)) {
+                fs.unlinkSync(existingBlog.contentImage);
+            }
+            updateData.contentImage = files.contentImage[0].path;
         }
 
         if (data.isPublished !== undefined) {
@@ -69,7 +100,7 @@ export const updateBlogService = async (id, data, file) => {
         const updatedBlog = await Blog.findByIdAndUpdate(id, updateData, { new: true });
         return { success: true, data: updatedBlog };
     } catch (err) {
-        if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        clearFiles();
         return { success: false, message: err.message };
     }
 };
@@ -81,7 +112,7 @@ export const getAllBlogsService = async (query) => {
     let filter = {};
     if (!isAdmin) {
         filter.status = "Active";
-        filter.isPublished = true;
+        // filter.isPublished = true; // Temporarily removed to show active but unpublished blogs
     } else {
         if (category) filter.category = category;
         if (status && status !== 'All') filter.status = status;
@@ -116,7 +147,14 @@ export const deleteBlogService = async (id) => {
     try {
         const blog = await Blog.findById(id);
         if (!blog) return { success: false, message: "Blog post not found" };
-        if (blog.bannerImage && fs.existsSync(blog.bannerImage)) fs.unlinkSync(blog.bannerImage);
+        
+        if (blog.bannerImage && fs.existsSync(blog.bannerImage)) {
+            fs.unlinkSync(blog.bannerImage);
+        }
+        if (blog.contentImage && fs.existsSync(blog.contentImage)) {
+            fs.unlinkSync(blog.contentImage);
+        }
+
         await blog.deleteOne();
         return { success: true, message: "Blog post deleted successfully" };
     } catch (err) {

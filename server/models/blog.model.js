@@ -8,6 +8,7 @@ const blogSchema = new mongoose.Schema(
         excerpt: { type: String, required: true, maxlength: 200 },
         author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         bannerImage: { type: String, required: true },
+        contentImage: { type: String },
         imageAlt: { type: String, default: "blog-image" },
         category: { type: String, required: true, index: true },
         tags: [{ type: String }],

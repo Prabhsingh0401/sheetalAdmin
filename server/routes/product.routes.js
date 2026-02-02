@@ -1,5 +1,5 @@
 import express from "express";
-import { createProduct, getAllProducts, updateProduct, deleteProduct, createProductReview, getProductReviews, deleteReview, getProductDetails, getProductStats, bulkImportProducts } from "../controllers/product.controller.js";
+import { createProduct, getAllProducts, updateProduct, deleteProduct, createProductReview, getProductReviews, deleteReview, getProductDetails, getProductStats, bulkImportProducts, getNewArrivals } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js";
@@ -9,6 +9,7 @@ const router = express.Router();
 // public routes
 router.get("/", getAllProducts);
 router.get("/all", getAllProducts);
+router.get("/new-arrivals", getNewArrivals);
 router.get("/detail/:id", getProductDetails);
 router.get("/reviews", getProductReviews);
 router.get("/:id", getProductDetails); // Allow fetching by ID/Slug directly

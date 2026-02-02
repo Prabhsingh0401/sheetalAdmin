@@ -36,6 +36,15 @@ export const getAllProducts = async (req, res, next) => {
     }
 };
 
+export const getNewArrivals = async (req, res, next) => {
+    try {
+        const result = await productService.getNewArrivalsService();
+        return res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getProductDetails = async (req, res, next) => {
     try {
         const result = await productService.getProductDetailsService(req.params.id);
