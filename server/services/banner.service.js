@@ -1,26 +1,52 @@
 import Banner from "../models/banner.model.js";
 import fs from "fs";
 
-export const createBannerService = async (data, file) => {
-  const { title, link, order, status } = data;
+export const createBannerService = async (data, files) => {
+  const { title, link, status, expiresAt } = data;
 
   if (!title) return { success: false, message: "Banner title is required" };
-  if (!file) return { success: false, message: "Banner image is required" };
+
+  const image = {};
+  if (files.desktopImage) {
+    image.desktop = {
+      url: files.desktopImage[0].path,
+      public_id: files.desktopImage[0].filename,
+    };
+  }
+  if (files.mobileImage) {
+    image.mobile = {
+      url: files.mobileImage[0].path,
+      public_id: files.mobileImage[0].filename,
+    };
+  }
+
+  const maxOrderBanner = await Banner.findOne().sort({ order: -1 });
+  const newOrder = maxOrderBanner ? maxOrderBanner.order + 1 : 1;
 
   const newBanner = await Banner.create({
     title,
     link: link || "/",
-    order: Number(order) || 0,
     status: status || "Active",
-    isActive: status === "Active",
-    image: { url: file.path, public_id: file.filename },
+    image,
+    order: newOrder,
+    expiresAt: expiresAt || null,
   });
 
   return { success: true, data: newBanner };
 };
 
 export const getAllBannersService = async () => {
-  const banners = await Banner.find({ isActive: true }).sort({ order: 1 });
+  const currentDate = new Date();
+  await Banner.updateMany(
+    { expiresAt: { $lt: currentDate }, status: "Active" },
+    { $set: { status: "Inactive", isActive: false } },
+  );
+
+  const banners = await Banner.find({
+    isActive: true,
+    status: "Active",
+    $or: [{ expiresAt: null }, { expiresAt: { $gte: currentDate } }],
+  }).sort({ order: 1 });
   return { success: true, data: banners };
 };
 
@@ -29,7 +55,7 @@ export const getAdminBannersService = async ({ page, limit, search }) => {
 
   const total = await Banner.countDocuments(query);
   const banners = await Banner.find(query)
-    .sort({ order: 1, createdAt: -1 })
+    .sort({ order: 1 })
     .skip((page - 1) * limit)
     .limit(limit);
 
@@ -53,28 +79,48 @@ export const getBannerStatsService = async () => {
   };
 };
 
-export const updateBannerService = async (id, data, file) => {
+export const updateBannerService = async (id, data, files) => {
   const banner = await Banner.findById(id);
   if (!banner) return { success: false, message: "Banner not found" };
 
   const updateData = {
     title: data.title,
     link: data.link,
-    order: data.order !== undefined ? Number(data.order) : banner.order,
     status: data.status,
-    isActive: data.status === "Active",
+    image: banner.image,
+    expiresAt: data.expiresAt || null,
   };
 
-  if (file) {
-    // Purani image delete karna
-    if (banner.image?.url && fs.existsSync(banner.image.url)) {
+  if (files.desktopImage) {
+    if (banner.image.desktop?.url) {
       try {
-        fs.unlinkSync(banner.image.url);
-      } catch (e) {
-        console.error("File error");
+        await fs.promises.unlink(banner.image.desktop.url);
+      } catch (err) {
+        console.error(
+          `Failed to delete old desktop banner image: ${err.message}`,
+        );
       }
     }
-    updateData.image = { url: file.path, public_id: file.filename };
+    updateData.image.desktop = {
+      url: files.desktopImage[0].path,
+      public_id: files.desktopImage[0].filename,
+    };
+  }
+
+  if (files.mobileImage) {
+    if (banner.image.mobile?.url) {
+      try {
+        await fs.promises.unlink(banner.image.mobile.url);
+      } catch (err) {
+        console.error(
+          `Failed to delete old mobile banner image: ${err.message}`,
+        );
+      }
+    }
+    updateData.image.mobile = {
+      url: files.mobileImage[0].path,
+      public_id: files.mobileImage[0].filename,
+    };
   }
 
   const updated = await Banner.findByIdAndUpdate(
@@ -89,12 +135,47 @@ export const deleteBannerService = async (id) => {
   const banner = await Banner.findById(id);
   if (!banner) return { success: false, message: "Banner not found" };
 
-  if (banner.image?.url && fs.existsSync(banner.image.url)) {
+  if (banner.image.desktop?.url) {
     try {
-      fs.unlinkSync(banner.image.url);
-    } catch (e) {}
+      await fs.promises.unlink(banner.image.desktop.url);
+    } catch (err) {
+      console.error(`Failed to delete desktop banner image: ${err.message}`);
+    }
+  }
+
+  if (banner.image.mobile?.url) {
+    try {
+      await fs.promises.unlink(banner.image.mobile.url);
+    } catch (err) {
+      console.error(`Failed to delete mobile banner image: ${err.message}`);
+    }
   }
 
   await banner.deleteOne();
   return { success: true, message: "Banner deleted successfully" };
+};
+
+export const reorderBannersService = async (orderedIds) => {
+  try {
+    const bulkOps = orderedIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { $set: { order: index + 1 } },
+      },
+    }));
+
+    if (bulkOps.length === 0) {
+      return { success: true, message: "No banners to reorder." };
+    }
+
+    await Banner.bulkWrite(bulkOps);
+    return { success: true, message: "Banners reordered successfully." };
+  } catch (error) {
+    console.error("Error reordering banners:", error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "An error occurred while reordering banners.",
+    };
+  }
 };

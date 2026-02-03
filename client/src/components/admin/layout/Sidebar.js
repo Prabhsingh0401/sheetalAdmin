@@ -30,6 +30,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
     { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
+    { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
     { icon: Monitor, label: "Site Content", href: "/admin/cms" },
     { icon: ListTree, label: "Size Chart", href: "/admin/size-chart" },
     // { icon: Star, label: "Reviews", href: "/admin/reviews" },

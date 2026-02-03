@@ -9,24 +9,37 @@ const bannerSchema = new mongoose.Schema(
       maxlength: [100, "Title cannot be more than 100 characters"],
     },
     image: {
-      url: { type: String, required: [true, "Banner image URL is required"] },
-      public_id: {
-        type: String,
-        required: [true, "Public ID is required for deletion"],
+      desktop: {
+        url: { type: String },
+        public_id: { type: String },
+      },
+      mobile: {
+        url: { type: String },
+        public_id: { type: String },
       },
     },
     link: { type: String, default: "/", trim: true },
-    order: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: true },
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
-    deviceType: {
-      type: String,
-      enum: ["All", "Desktop", "Mobile"],
-      default: "All",
+    order: {
+      type: Number,
+      default: 0,
+    },
+    isActive: { type: Boolean, default: true },
+    expiresAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true },
 );
+
+bannerSchema.pre("save", function (next) {
+  if (!this.image.desktop?.url && !this.image.mobile?.url) {
+    return next(new Error("At least one banner image is required"));
+  }
+  this.isActive = this.status === "Active";
+  next();
+});
 
 const Banner = mongoose.models.Banner || mongoose.model("Banner", bannerSchema);
 

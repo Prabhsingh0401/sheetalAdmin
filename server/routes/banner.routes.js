@@ -1,3 +1,4 @@
+
 import express from "express";
 import {
   createBanner,
@@ -6,6 +7,7 @@ import {
   getBannerStats,
   updateBanner,
   deleteBanner,
+  reorderBanners,
 } from "../controllers/banner.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js";
@@ -16,12 +18,16 @@ router.get("/", getAllBanners);
 
 router.get("/admin/all", isAuthenticated, isAdmin, getAdminBanners);
 router.get("/admin/stats", isAuthenticated, isAdmin, getBannerStats);
+router.put("/admin/reorder", isAuthenticated, isAdmin, reorderBanners);
 
 router.post(
   "/admin",
   isAuthenticated,
   isAdmin,
-  uploadTo("banners").single("image"),
+  uploadTo("banners").fields([
+    { name: "desktopImage", maxCount: 1 },
+    { name: "mobileImage", maxCount: 1 },
+  ]),
   createBanner,
 );
 
@@ -30,9 +36,13 @@ router
   .put(
     isAuthenticated,
     isAdmin,
-    uploadTo("banners").single("image"),
+    uploadTo("banners").fields([
+      { name: "desktopImage", maxCount: 1 },
+      { name: "mobileImage", maxCount: 1 },
+    ]),
     updateBanner,
   )
   .delete(isAuthenticated, isAdmin, deleteBanner);
 
 export default router;
+

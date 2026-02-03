@@ -7,11 +7,10 @@ import {
   Loader2,
   ImageIcon,
   Edit3,
-  Smartphone,
-  Monitor,
-  CheckCircle2,
 } from "lucide-react";
 import { addBanner, updateBanner } from "@/services/bannerService";
+import { getCategories } from "@/services/categoryService"; 
+import { getProducts } from "@/services/productService";
 import toast from "react-hot-toast";
 import { IMAGE_BASE_URL } from "@/services/api";
 
@@ -22,62 +21,151 @@ export default function BannerModal({
   initialData,
 }) {
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [desktopPreview, setDesktopPreview] = useState("");
+  const [mobilePreview, setMobilePreview] = useState("");
+  const [selectedDesktopFile, setSelectedDesktopFile] = useState(null);
+  const [selectedMobileFile, setSelectedMobileFile] = useState(null);
 
   const isEdit = !!initialData;
 
   const [formData, setFormData] = useState({
     title: "",
-    link: "/",
-    order: 0,
     status: "Active",
-    deviceType: "Desktop",
+    expiresAt: null,
   });
+
+  const [linkType, setLinkType] = useState("custom"); // New state for link type
+  const [customLink, setCustomLink] = useState(""); // New state for custom link
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState(""); // New state for category slug
+  const [selectedProductSlug, setSelectedProductSlug] = useState(""); // New state for product slug
+  const [staticPage, setStaticPage] = useState(""); // New state for static page
+
+  const [allCategories, setAllCategories] = useState([]); // New state for all categories
+  const [allProducts, setAllProducts] = useState([]); // New state for all products
+
+
+  // Fetch categories and products
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch Categories
+        const categoriesRes = await getCategories();
+        if (categoriesRes.success) {
+          setAllCategories(categoriesRes.data.categories); // Corrected access
+        } else {
+          toast.error("Could not load categories.");
+        }
+
+        // Fetch Products
+        const productsRes = await getProducts();
+        if (productsRes.success) {
+          setAllProducts(productsRes.products); // Corrected access
+        } else {
+          toast.error("Could not load products.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories or products:", error);
+        toast.error("Failed to load link options.");
+      }
+    };
+    if (isOpen) {
+      fetchData();
+    }
+  }, [isOpen]);
+
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setFormData({
           title: initialData.title || "",
-          link: initialData.link || "/",
-          order: initialData.order || 0,
           status: initialData.status || "Active",
-          deviceType: initialData.deviceType || "Desktop",
+          expiresAt: initialData.expiresAt
+            ? new Date(initialData.expiresAt).toISOString().split("T")[0]
+            : "",
         });
-        if (initialData?.image?.url) {
+
+        // Parse initial link to determine linkType
+        const link = initialData.link || "";
+        if (link === "/") {
+          setLinkType("home");
+        } else if (link.startsWith("/product-list?category=")) {
+          setLinkType("category");
+          setSelectedCategorySlug(link.split("=")[1]);
+        } else if (link.startsWith("/product/")) {
+          setLinkType("product");
+          setSelectedProductSlug(link.split("/")[2]);
+        } else if (
+          link === "/about-us" ||
+          link === "/contact-us" ||
+          link === "/blogs"
+        ) {
+          setLinkType("static");
+          setStaticPage(link);
+        } else {
+          setLinkType("custom");
+          setCustomLink(link);
+        }
+
+        if (initialData?.image?.desktop?.url) {
           const fullUrl =
-            `${IMAGE_BASE_URL}/${initialData.image.url.replace(/\\/g, "/")}`.replace(
+            `${IMAGE_BASE_URL}/${initialData.image.desktop.url.replace(/\\/g, "/")}`.replace(
               /([^:]\/)\/+/g,
               "$1",
             );
-          setPreview(fullUrl);
+          setDesktopPreview(fullUrl);
         } else {
-          setPreview(null);
+          setDesktopPreview(null);
+        }
+        if (initialData?.image?.mobile?.url) {
+          const fullUrl =
+            `${IMAGE_BASE_URL}/${initialData.image.mobile.url.replace(/\\/g, "/")}`.replace(
+              /([^:]\/)\/+/g,
+              "$1",
+            );
+          setMobilePreview(fullUrl);
+        } else {
+          setMobilePreview(null);
         }
       } else {
+        // Reset for new banner
         setFormData({
           title: "",
-          link: "/",
-          order: 0,
           status: "Active",
-          deviceType: "Desktop",
         });
-        setPreview("");
-        setSelectedFile(null);
+        setDesktopPreview("");
+        setMobilePreview("");
+        setSelectedDesktopFile(null);
+        setSelectedMobileFile(null);
+        setLinkType("custom");
+        setCustomLink("");
+        setSelectedCategorySlug("");
+        setSelectedProductSlug("");
+        setStaticPage("");
+        setFormData((prev) => ({ ...prev, expiresAt: null }));
       }
     }
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleImageChange = (e) => {
+  const handleDesktopImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024)
         return toast.error("File too large (Max 5MB)");
-      setSelectedFile(file);
-      setPreview(URL.createObjectURL(file));
+      setSelectedDesktopFile(file);
+      setDesktopPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleMobileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024)
+        return toast.error("File too large (Max 5MB)");
+      setSelectedMobileFile(file);
+      setMobilePreview(URL.createObjectURL(file));
     }
   };
 
@@ -85,14 +173,37 @@ export default function BannerModal({
     e.preventDefault();
     setLoading(true);
 
+    let finalLink = "";
+    switch (linkType) {
+      case "home":
+        finalLink = "/";
+        break;
+      case "category":
+        finalLink = `/product-list?category=${selectedCategorySlug}`;
+        break;
+      case "product":
+        finalLink = `/product/${selectedProductSlug}`;
+        break;
+      case "static":
+        finalLink = staticPage;
+        break;
+      case "custom":
+        finalLink = customLink;
+        break;
+      default:
+        finalLink = "/";
+    }
+
     const data = new FormData();
     data.append("title", formData.title);
-    data.append("link", formData.link);
-    data.append("order", formData.order);
+    data.append("link", finalLink); // Use the constructed link
     data.append("status", formData.status);
-    data.append("deviceType", formData.deviceType);
+    if (formData.expiresAt) {
+      data.append("expiresAt", new Date(formData.expiresAt).toISOString());
+    }
 
-    if (selectedFile) data.append("image", selectedFile);
+    if (selectedDesktopFile) data.append("desktopImage", selectedDesktopFile);
+    if (selectedMobileFile) data.append("mobileImage", selectedMobileFile);
 
     try {
       const res = isEdit
@@ -112,13 +223,11 @@ export default function BannerModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[100] p-4 transition-all">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
-        {/* --- HEADER (Category Style) --- */}
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200">
+        {/* --- HEADER --- */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div
-              className={`p-2 ${isEdit ? "bg-blue-600" : "bg-slate-900"} text-white rounded-lg`}
-            >
+            <div className={`p-2 ${isEdit ? "bg-blue-600" : "bg-slate-900"} text-white rounded-lg`}>
               {isEdit ? <Edit3 size={18} /> : <ImageIcon size={18} />}
             </div>
             <div>
@@ -126,9 +235,7 @@ export default function BannerModal({
                 {isEdit ? "Edit Banner Details" : "Add New Banner"}
               </h2>
               <p className="text-xs text-slate-500 font-medium">
-                {isEdit
-                  ? "Modify existing slide information"
-                  : "Create a new homepage slider"}
+                {isEdit ? "Modify existing slide information" : "Create a new homepage slider"}
               </p>
             </div>
           </div>
@@ -141,121 +248,177 @@ export default function BannerModal({
         </div>
 
         {/* --- FORM --- */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Image Preview Area (Sharp Style) */}
-          <div className="flex justify-center pb-2">
-            <div className="relative group w-full aspect-video max-w-[280px]">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-                id="banner-img-input"
-              />
-              <label
-                htmlFor="banner-img-input"
-                className="block w-full h-full rounded-lg border border-slate-400 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-slate-50 shadow-inner"
-              >
-                {preview ? (
-                  <img
-                    src={preview}
-                    alt="preview"
-                    className="w-full h-full object-cover"
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 p-6">
+            {/* --- LEFT COLUMN (IMAGES) --- */}
+            <div className="space-x-6 flex items-center">
+              {/* Desktop Image */}
+              <div className="relative group w-full max-w-xs">
+                <h3 className="text-center text-sm font-bold mb-2 uppercase tracking-wider text-slate-700">Desktop Image (1920x720)</h3>
+                <div className="aspect-video">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleDesktopImageChange}
+                    className="hidden"
+                    id="desktop-banner-img-input"
                   />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                    <Upload size={24} />
-                    <span className="text-[10px] mt-2 font-bold uppercase tracking-wider">
-                      Select Banner Image
-                    </span>
-                  </div>
-                )}
-              </label>
+                  <label
+                    htmlFor="desktop-banner-img-input"
+                    className="block w-full h-full rounded-lg border-2 border-dashed border-slate-300 hover:border-slate-500 transition-all cursor-pointer overflow-hidden relative bg-slate-50 shadow-inner flex items-center justify-center"
+                  >
+                    {desktopPreview ? (
+                      <img src={desktopPreview} alt="desktop preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-400">
+                        <Upload size={32} />
+                        <span className="text-xs mt-2 font-semibold">Select Banner</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {/* Mobile Image */}
+              <div className="relative group w-full max-w-[150px]">
+                <h3 className="text-center text-sm font-bold mb-2 uppercase tracking-wider text-slate-700">Mobile Image (800x1000)</h3>
+                <div className="aspect-[9/16]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleMobileImageChange}
+                    className="hidden"
+                    id="mobile-banner-img-input"
+                  />
+                  <label
+                    htmlFor="mobile-banner-img-input"
+                    className="block w-full h-full rounded-lg border-2 border-dashed border-slate-300 hover:border-slate-500 transition-all cursor-pointer overflow-hidden relative bg-slate-50 shadow-inner flex items-center justify-center"
+                  >
+                    {mobilePreview ? (
+                      <img src={mobilePreview} alt="mobile preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-400">
+                        <Upload size={32} />
+                        <span className="text-xs mt-2 font-semibold">Select Banner</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* --- RIGHT COLUMN (INPUTS) --- */}
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Banner Title</label>
+                <input
+                  required
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Summer Collection Sale"
+                  className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Expiration Date</label>
+                  <input
+                    type="date"
+                    value={formData.expiresAt || ""}
+                    onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Redirect Link Type</label>
+                <select
+                  value={linkType}
+                  onChange={(e) => setLinkType(e.target.value)}
+                  className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
+                >
+                  <option value="custom">Custom URL</option>
+                  <option value="home">Home Page</option>
+                  <option value="category">Category Page</option>
+                  <option value="product">Product Page</option>
+                  <option value="static">Static Page</option>
+                </select>
+              </div>
+
+              {linkType === 'custom' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Custom Redirect Link</label>
+                  <input
+                    value={customLink}
+                    onChange={(e) => setCustomLink(e.target.value)}
+                    placeholder="e.g. https://www.example.com/promo"
+                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none transition"
+                  />
+                </div>
+              )}
+              {linkType === 'category' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Select Category</label>
+                  <select
+                    value={selectedCategorySlug}
+                    onChange={(e) => setSelectedCategorySlug(e.target.value)}
+                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
+                  >
+                    <option value="">-- Select a Category --</option>
+                    {allCategories.map((cat) => (
+                      <option key={cat._id} value={cat.slug}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {linkType === 'product' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Select Product</label>
+                  <select
+                    value={selectedProductSlug}
+                    onChange={(e) => setSelectedProductSlug(e.target.value)}
+                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
+                  >
+                    <option value="">-- Select a Product --</option>
+                    {allProducts.map((p) => (
+                      <option key={p._id} value={p.slug}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {linkType === 'static' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Select Static Page</label>
+                  <select
+                    value={staticPage}
+                    onChange={(e) => setStaticPage(e.target.value)}
+                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
+                  >
+                    <option value="">-- Select a Page --</option>
+                    <option value="/about-us">About Us</option>
+                    <option value="/contact-us">Contact Us</option>
+                    <option value="/blogs">Blogs</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Banner Title */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Banner Title
-            </label>
-            <input
-              required
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              placeholder="e.g. Summer Collection Sale"
-              className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-            />
-          </div>
-
-          {/* Device & Status Row */}
-          <div className="grid grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Device Visibility
-              </label>
-              <select
-                value={formData.deviceType}
-                onChange={(e) =>
-                  setFormData({ ...formData, deviceType: e.target.value })
-                }
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
-              >
-                <option value="Desktop">Desktop Only</option>
-                <option value="Mobile">Mobile Only</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
-                }
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Order & Link Row */}
-          <div className="grid grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Sort Order
-              </label>
-              <input
-                type="number"
-                value={formData.order}
-                onChange={(e) =>
-                  setFormData({ ...formData, order: e.target.value })
-                }
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Redirect Link
-              </label>
-              <input
-                value={formData.link}
-                onChange={(e) =>
-                  setFormData({ ...formData, link: e.target.value })
-                }
-                placeholder="/"
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none transition"
-              />
-            </div>
-          </div>
-
+          
           {/* --- ACTIONS --- */}
-          <div className="pt-4 flex items-center gap-3">
+          <div className="px-6 pb-6 pt-4 flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -268,13 +431,7 @@ export default function BannerModal({
               disabled={loading}
               className={`flex-[2] ${isEdit ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
             >
-              {loading ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : isEdit ? (
-                "Update Details"
-              ) : (
-                "Confirm & Add"
-              )}
+              {loading ? <Loader2 className="animate-spin" size={18} /> : (isEdit ? "Update Details" : "Confirm & Add")}
             </button>
           </div>
         </form>

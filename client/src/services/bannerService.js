@@ -61,3 +61,15 @@ export const deleteBanner = async (id) => {
   });
   return handleResponse(res);
 };
+
+export const reorderBanners = async (orderedIds) => {
+  const res = await fetch(`${API_BASE_URL}/banner/admin/reorder`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ orderedIds }),
+  });
+  return handleResponse(res);
+};

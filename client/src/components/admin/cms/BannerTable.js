@@ -4,54 +4,137 @@ import { useEffect, useState, useMemo } from "react";
 import {
   Edit3,
   Trash2,
-  ArrowUpDown,
   Search,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   ImageIcon,
-  Smartphone,
-  Monitor,
-  Layout,
+  GripVertical,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import BannerModal from "./BannerModal";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
-import { getBanners, deleteBanner } from "@/services/bannerService";
+import { getBanners, deleteBanner, reorderBanners } from "@/services/bannerService";
 import { IMAGE_BASE_URL } from "@/services/api";
+
+function SortableBannerRow({ banner, onEdit, onDelete }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: banner._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} {...attributes} className="hover:bg-slate-50/80 transition-colors bg-white"><td className="px-4 py-3 text-slate-500 font-medium text-center touch-none">
+        <button {...listeners} className="cursor-grab p-2 hover:bg-slate-200 rounded-lg">
+          <GripVertical size={16} />
+        </button>
+      </td><td className="px-4 py-4">
+        <div className="flex gap-2">
+          {banner.image?.desktop?.url && (
+            <div className="w-16 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden">
+              <img
+                src={`${IMAGE_BASE_URL}/${banner.image.desktop.url.replace(/\\/g, "/")}`}
+                alt="desktop"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          {banner.image?.mobile?.url && (
+            <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden">
+              <img
+                src={`${IMAGE_BASE_URL}/${banner.image.mobile.url.replace(/\\/g, "/")}`}
+                alt="mobile"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+        </div>
+      </td><td className="px-4 py-4 font-bold text-slate-900">
+        <div className="flex flex-col">
+          <span>{banner.title}</span>
+          <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">{banner.link}</span>
+        </div>
+      </td><td className="px-4 py-4">
+        <span
+          className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+            banner.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {banner.status}
+        </span>
+      </td><td className="px-4 py-4 text-right">
+        <div className="flex justify-end gap-4 text-slate-400">
+          <button
+            title="Edit"
+            className="hover:text-blue-600 transition-colors"
+            onClick={() => onEdit(banner)}
+          >
+            <Edit3 size={18} />
+          </button>
+          <button
+            title="Delete"
+            className="hover:text-rose-600 transition-colors"
+            onClick={() => onDelete(banner)}
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </td></tr>
+  );
+}
 
 export default function BannerTable({ refreshStats }) {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [deviceFilter, setDeviceFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const [sortConfig, setSortConfig] = useState({
-    key: "order",
-    direction: "asc",
-  });
 
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteName, setDeleteName] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  useEffect(() => {
-    fetchBanners();
-  }, []);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const fetchBanners = async (isRefresh = false) => {
     setLoading(true);
     try {
       const res = await getBanners(1, 100, "");
       if (res.success) {
-        setBanners(res.data.banners || res.data);
+        setBanners(res.data.banners || []);
         if (refreshStats) refreshStats();
         if (isRefresh) toast.success("Data synchronized!");
       }
@@ -61,6 +144,10 @@ export default function BannerTable({ refreshStats }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchBanners();
+  }, []);
 
   const handleDeleteConfirm = async () => {
     const loadingToast = toast.loading("Deleting banner...");
@@ -78,57 +165,44 @@ export default function BannerTable({ refreshStats }) {
     }
   };
 
-  const handleSort = (key) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
-  };
+  const filteredBanners = useMemo(() => {
+    return (Array.isArray(banners) ? banners : []).filter((b) => {
+      const searchMatch =
+        b.title?.toLowerCase().includes(search.toLowerCase()) || b.link?.toLowerCase().includes(search.toLowerCase());
+      const statusMatch = statusFilter === "All" || b.status === statusFilter;
+      return searchMatch && statusMatch;
+    });
+  }, [banners, search, statusFilter]);
 
-  // Logic for filtering and sorting
-  const filteredData = useMemo(() => {
-    return (Array.isArray(banners) ? banners : [])
-      .filter((b) => {
-        const searchMatch =
-          b.title?.toLowerCase().includes(search.toLowerCase()) ||
-          b.link?.toLowerCase().includes(search.toLowerCase());
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = banners.findIndex((b) => b._id === active.id);
+      const newIndex = banners.findIndex((b) => b._id === over.id);
 
-        const deviceMatch =
-          deviceFilter === "All" || b.deviceType === deviceFilter;
-        const statusMatch = statusFilter === "All" || b.status === statusFilter;
+      const newOrder = arrayMove(banners, oldIndex, newIndex);
+      setBanners(newOrder);
 
-        return searchMatch && deviceMatch && statusMatch;
-      })
-      .sort((a, b) => {
-        const aVal = a[sortConfig.key] || "";
-        const bVal = b[sortConfig.key] || "";
-        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
+      const orderedIds = newOrder.map((b) => b._id);
+      const reorderPromise = reorderBanners(orderedIds);
+
+      toast.promise(reorderPromise, {
+        loading: "Saving new order...",
+        success: "Order saved!",
+        error: (err) => {
+          fetchBanners();
+          return err.message || "Failed to save order.";
+        },
       });
-  }, [banners, search, deviceFilter, statusFilter, sortConfig]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, deviceFilter, statusFilter, rowsPerPage]);
-
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage,
-  );
-
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    }
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm text-slate-900 overflow-hidden">
-      {/* Toolbar */}
-      <div className="p-4 flex flex-wrap justify-between items-center gap-4 border-b border-slate-100">
-        <div className="flex gap-3 flex-1 items-center min-w-[300px]">
+      <div className="p-4 flex justify-between items-center gap-4 border-b border-slate-100">
+        <div className="flex gap-3 flex-1 items-center">
           <div className="relative max-w-md w-full">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-            />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-slate-200 outline-none"
               placeholder="Search banners..."
@@ -136,17 +210,6 @@ export default function BannerTable({ refreshStats }) {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
-          <select
-            className="border border-slate-300 rounded px-3 py-2 text-sm font-bold text-slate-700 bg-white outline-none cursor-pointer hover:border-slate-400 transition-colors"
-            value={deviceFilter}
-            onChange={(e) => setDeviceFilter(e.target.value)}
-          >
-            <option value="All">All Devices</option>
-            <option value="Desktop">Desktop</option>
-            <option value="Mobile">Mobile</option>
-          </select>
-
           <select
             className="border border-slate-300 rounded px-3 py-2 text-sm font-bold text-slate-700 bg-white outline-none cursor-pointer hover:border-slate-400 transition-colors"
             value={statusFilter}
@@ -156,7 +219,6 @@ export default function BannerTable({ refreshStats }) {
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
           </select>
-
           <button
             onClick={() => fetchBanners(true)}
             disabled={loading}
@@ -165,7 +227,6 @@ export default function BannerTable({ refreshStats }) {
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
-
         <button
           onClick={() => {
             setEditData(null);
@@ -177,225 +238,48 @@ export default function BannerTable({ refreshStats }) {
         </button>
       </div>
 
-      {/* Table Section */}
-      <div className="overflow-x-auto min-h-[300px]">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
-            <tr>
-              <th
-                className="px-4 py-4 w-12 text-center cursor-pointer"
-                onClick={() => handleSort("order")}
-              >
-                <div className="flex items-center justify-center gap-1">
-                  Order <ArrowUpDown size={12} />
-                </div>
-              </th>
-              <th className="px-4 py-4 w-20 text-center">Image</th>
-              <th
-                className="px-4 py-4 cursor-pointer group"
-                onClick={() => handleSort("title")}
-              >
-                <div className="flex items-center gap-1">
-                  Banner Title{" "}
-                  <ArrowUpDown
-                    size={14}
-                    className="opacity-50 group-hover:opacity-100"
-                  />
-                </div>
-              </th>
-              <th className="px-4 py-4">Device</th>
-              <th className="px-4 py-4">Status</th>
-              <th className="px-4 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {paginatedData.length > 0 ? (
-              paginatedData.map((b) => (
-                <tr
-                  key={b._id}
-                  className="hover:bg-slate-50/80 transition-colors"
-                >
-                  <td className="px-4 py-4 text-slate-500 font-bold text-center">
-                    #{b.order}
-                  </td>
-
-                  <td className="px-4 py-4">
-                    <div className="w-16 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden">
-                      {b.image?.url ? (
-                        <img
-                          src={`${IMAGE_BASE_URL}/${b.image.url.replace(/\\/g, "/")}`.replace(
-                            /([^:]\/)\/+/g,
-                            "$1",
-                          )}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <ImageIcon size={16} className="text-slate-300" />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-4 font-bold text-slate-900">
-                    <div className="flex flex-col">
-                      <span>{b.title}</span>
-                      <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">
-                        {b.link}
-                      </span>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-4 text-slate-600 font-medium">
-                    <div className="flex items-center gap-1.5">
-                      {b.deviceType === "Mobile" ? (
-                        <Smartphone size={14} />
-                      ) : (
-                        <Monitor size={14} />
-                      )}
-                      <span className="text-xs">{b.deviceType}</span>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        b.status === "Active"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {b.status}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex justify-end gap-4 text-slate-400">
-                      <button
-                        title="Edit"
-                        className="hover:text-blue-600 transition-colors"
-                        onClick={() => {
-                          setEditData(b);
-                          setShowModal(true);
-                        }}
-                      >
-                        <Edit3 size={18} />
-                      </button>
-                      <button
-                        title="Delete"
-                        className="hover:text-rose-600 transition-colors"
-                        onClick={() => {
-                          setDeleteId(b._id);
-                          setShowDeleteModal(true);
-                        }}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan="6"
-                  className="px-4 py-20 text-center text-slate-500 font-medium italic"
-                >
-                  {loading ? "Syncing data..." : "No banners found."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Footer / Pagination */}
-      <div className="p-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between bg-slate-50/50 gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-            Rows per page
-          </span>
-          <select
-            value={rowsPerPage}
-            onChange={(e) => setRowsPerPage(Number(e.target.value))}
-            className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1 px-2 rounded-md outline-none cursor-pointer"
-          >
-            {[5, 10, 20, 50].map((val) => (
-              <option key={val} value={val}>
-                {val}
-              </option>
-            ))}
-          </select>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="overflow-x-auto min-h-[300px]">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
+              <tr><th className="px-4 py-4 w-12 text-center"></th><th className="px-4 py-4 w-40 text-center">Images</th><th className="px-4 py-4">Banner Title</th><th className="px-4 py-4">Status</th><th className="px-4 py-4 text-right">Actions</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              <SortableContext items={banners.map((b) => b._id)} strategy={verticalListSortingStrategy}>
+                {filteredBanners.length > 0 ? (
+                  filteredBanners.map((b) => (
+                    <SortableBannerRow
+                      key={b._id}
+                      banner={b}
+                      onEdit={(banner) => {
+                        setEditData(banner);
+                        setShowModal(true);
+                      }}
+                      onDelete={(banner) => {
+                        setDeleteId(banner._id);
+                        setDeleteName(banner.title);
+                        setShowDeleteModal(true);
+                      }}
+                    />
+                  ))
+                ) : (
+                  <tr><td colSpan="5" className="px-4 py-20 text-center text-slate-500 font-medium italic">
+                      {loading ? "Syncing data..." : "No banners found."}
+                    </td></tr>
+                )}
+              </SortableContext>
+            </tbody>
+          </table>
         </div>
+      </DndContext>
 
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          <div className="text-[11px] font-medium text-slate-500">
-            {filteredData.length > 0 ? (
-              <>
-                Showing{" "}
-                <span className="font-bold text-slate-900">
-                  {(currentPage - 1) * rowsPerPage + 1}
-                </span>{" "}
-                to{" "}
-                <span className="font-bold text-slate-900">
-                  {Math.min(currentPage * rowsPerPage, filteredData.length)}
-                </span>{" "}
-                of{" "}
-                <span className="font-bold text-slate-900">
-                  {filteredData.length}
-                </span>{" "}
-                results
-              </>
-            ) : (
-              "No results found"
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
-            >
-              <ChevronLeft size={16} className="text-slate-600" />
-            </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all ${currentPage === page ? "bg-slate-900 text-white shadow-md" : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300"}`}
-                  >
-                    {page}
-                  </button>
-                ),
-              )}
-            </div>
-
-            <button
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
-            >
-              <ChevronRight size={16} className="text-slate-600" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <BannerModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSuccess={fetchBanners}
-        initialData={editData}
-      />
+      <BannerModal isOpen={showModal} onClose={() => setShowModal(false)} onSuccess={fetchBanners} initialData={editData} />
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
+        entityName="banner"
+        itemName={deleteName}
       />
     </div>
   );
