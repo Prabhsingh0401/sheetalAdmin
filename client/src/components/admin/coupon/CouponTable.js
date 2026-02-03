@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Eye, Edit3, Trash2, ArrowUpDown, Search, RefreshCw, ChevronLeft, ChevronRight, Ticket, Zap } from "lucide-react";
+import {
+  Eye,
+  Edit3,
+  Trash2,
+  ArrowUpDown,
+  Search,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Ticket,
+  Zap,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import CouponModal from "./CouponModal";
@@ -82,7 +93,8 @@ export default function CouponTable({ refreshStats }) {
           c.description?.toLowerCase().includes(search.toLowerCase());
 
         const currentStatus = c.isActive ? "Active" : "Inactive";
-        const statusMatch = statusFilter === "All" || currentStatus === statusFilter;
+        const statusMatch =
+          statusFilter === "All" || currentStatus === statusFilter;
 
         return searchMatch && statusMatch;
       })
@@ -101,19 +113,21 @@ export default function CouponTable({ refreshStats }) {
 
   const paginatedData = filteredData.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    currentPage * rowsPerPage,
   );
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm text-slate-900 overflow-hidden">
-
       {/* Toolbar */}
       <div className="p-4 flex flex-wrap justify-between items-center gap-4 border-b border-slate-100">
         <div className="flex gap-3 flex-1 items-center min-w-[300px]">
           <div className="relative max-w-md w-full">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            />
             <input
               className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-slate-200 outline-none"
               placeholder="Search coupons..."
@@ -142,7 +156,10 @@ export default function CouponTable({ refreshStats }) {
         </div>
 
         <button
-          onClick={() => { setEditData(null); setShowModal(true); }}
+          onClick={() => {
+            setEditData(null);
+            setShowModal(true);
+          }}
           className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap"
         >
           + Add Coupon
@@ -155,8 +172,17 @@ export default function CouponTable({ refreshStats }) {
           <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
             <tr>
               <th className="px-4 py-4 w-12 text-center">#</th>
-              <th className="px-4 py-4 cursor-pointer group" onClick={() => handleSort("code")}>
-                <div className="flex items-center gap-1">Campaign / Code <ArrowUpDown size={14} className="opacity-50 group-hover:opacity-100" /></div>
+              <th
+                className="px-4 py-4 cursor-pointer group"
+                onClick={() => handleSort("code")}
+              >
+                <div className="flex items-center gap-1">
+                  Campaign / Code{" "}
+                  <ArrowUpDown
+                    size={14}
+                    className="opacity-50 group-hover:opacity-100"
+                  />
+                </div>
               </th>
               <th className="px-4 py-4">Offer Details</th>
               <th className="px-4 py-4">Usage Progress</th>
@@ -168,7 +194,10 @@ export default function CouponTable({ refreshStats }) {
           <tbody className="divide-y divide-slate-100">
             {paginatedData.length > 0 ? (
               paginatedData.map((c, i) => (
-                <tr key={c._id} className="hover:bg-slate-50/80 transition-colors">
+                <tr
+                  key={c._id}
+                  className="hover:bg-slate-50/80 transition-colors"
+                >
                   <td className="px-4 py-4 text-slate-400 font-medium text-center text-xs">
                     {(currentPage - 1) * rowsPerPage + i + 1}
                   </td>
@@ -176,12 +205,22 @@ export default function CouponTable({ refreshStats }) {
                   {/* Code Logic: Handle Festive Sale */}
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded ${c.couponType === 'FestiveSale' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {c.couponType === 'FestiveSale' ? <Zap size={14} /> : <Ticket size={14} />}
+                      <div
+                        className={`p-1.5 rounded ${c.couponType === "FestiveSale" ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500"}`}
+                      >
+                        {c.couponType === "FestiveSale" ? (
+                          <Zap size={14} />
+                        ) : (
+                          <Ticket size={14} />
+                        )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-900">{c.code || "AUTO-APPLIED"}</span>
-                        <span className="text-[10px] text-slate-400 uppercase font-medium">{c.couponType}</span>
+                        <span className="font-bold text-slate-900">
+                          {c.code || "AUTO-APPLIED"}
+                        </span>
+                        <span className="text-[10px] text-slate-400 uppercase font-medium">
+                          {c.couponType}
+                        </span>
                       </div>
                     </div>
                   </td>
@@ -191,21 +230,29 @@ export default function CouponTable({ refreshStats }) {
                     <div className="flex flex-col">
                       <span className="font-bold text-slate-800">
                         {c.offerType === "Percentage" && `${c.offerValue}% OFF`}
-                        {c.offerType === "FixedAmount" && `₹${c.offerValue} OFF`}
-                        {c.offerType === "BOGO" && `Buy ${c.buyQuantity} Get ${c.getQuantity}`}
+                        {c.offerType === "FixedAmount" &&
+                          `₹${c.offerValue} OFF`}
+                        {c.offerType === "BOGO" &&
+                          `Buy ${c.buyQuantity} Get ${c.getQuantity}`}
                       </span>
-                      <span className="text-[10px] text-slate-400">Min: ₹{c.minOrderAmount || 0}</span>
+                      <span className="text-[10px] text-slate-400">
+                        Min: ₹{c.minOrderAmount || 0}
+                      </span>
                     </div>
                   </td>
 
                   {/* Usage Progress */}
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[11px] font-bold text-slate-600">{c.usedCount} / {c.totalUsageLimit} Used</span>
+                      <span className="text-[11px] font-bold text-slate-600">
+                        {c.usedCount} / {c.totalUsageLimit} Used
+                      </span>
                       <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
                         <div
-                          className={`h-full ${(c.usedCount / c.totalUsageLimit) > 0.8 ? 'bg-rose-500' : 'bg-slate-900'}`}
-                          style={{ width: `${Math.min((c.usedCount / (c.totalUsageLimit || 1)) * 100, 100)}%` }}
+                          className={`h-full ${c.usedCount / c.totalUsageLimit > 0.8 ? "bg-rose-500" : "bg-slate-900"}`}
+                          style={{
+                            width: `${Math.min((c.usedCount / (c.totalUsageLimit || 1)) * 100, 100)}%`,
+                          }}
                         ></div>
                       </div>
                     </div>
@@ -214,28 +261,59 @@ export default function CouponTable({ refreshStats }) {
                   <td className="px-4 py-4">
                     <div className="flex flex-col">
                       <span className="text-slate-600 text-xs font-bold">
-                        {new Date(c.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                        {new Date(c.endDate).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
                       </span>
-                      <span className="text-[10px] text-slate-400">{new Date(c.endDate).getFullYear()}</span>
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(c.endDate).getFullYear()}
+                      </span>
                     </div>
                   </td>
 
                   <td className="px-4 py-4">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${c.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
-                      }`}>
+                    <span
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${
+                        c.isActive
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
+                      }`}
+                    >
                       {c.isActive ? "Live" : "Paused"}
                     </span>
                   </td>
 
                   <td className="px-4 py-4 text-right">
                     <div className="flex justify-end gap-3 text-slate-400">
-                      <button title="View" className="hover:text-slate-900 transition-colors p-1" onClick={() => { setViewCoupon(c); setShowDrawer(true); }}>
+                      <button
+                        title="View"
+                        className="hover:text-slate-900 transition-colors p-1"
+                        onClick={() => {
+                          setViewCoupon(c);
+                          setShowDrawer(true);
+                        }}
+                      >
                         <Eye size={18} />
                       </button>
-                      <button title="Edit" className="hover:text-blue-600 transition-colors p-1" onClick={() => { setEditData(c); setShowModal(true); }}>
+                      <button
+                        title="Edit"
+                        className="hover:text-blue-600 transition-colors p-1"
+                        onClick={() => {
+                          setEditData(c);
+                          setShowModal(true);
+                        }}
+                      >
                         <Edit3 size={18} />
                       </button>
-                      <button title="Delete" className="hover:text-rose-600 transition-colors p-1" onClick={() => { setDeleteId(c._id); setShowDeleteModal(true); }}>
+                      <button
+                        title="Delete"
+                        className="hover:text-rose-600 transition-colors p-1"
+                        onClick={() => {
+                          setDeleteId(c._id);
+                          setShowDeleteModal(true);
+                        }}
+                      >
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -244,7 +322,10 @@ export default function CouponTable({ refreshStats }) {
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="px-4 py-20 text-center text-slate-500 font-medium italic">
+                <td
+                  colSpan="7"
+                  className="px-4 py-20 text-center text-slate-500 font-medium italic"
+                >
                   {loading ? "Syncing data..." : "No coupons found."}
                 </td>
               </tr>
@@ -256,50 +337,93 @@ export default function CouponTable({ refreshStats }) {
       {/* Footer Pagination: Same as your original logic */}
       <div className="p-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between bg-slate-50/50 gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Rows per page</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+            Rows per page
+          </span>
           <select
             value={rowsPerPage}
             onChange={(e) => setRowsPerPage(Number(e.target.value))}
             className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1 px-2 rounded-md outline-none cursor-pointer"
           >
-            {[5, 10, 20, 50].map(val => <option key={val} value={val}>{val}</option>)}
+            {[5, 10, 20, 50].map((val) => (
+              <option key={val} value={val}>
+                {val}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="text-[11px] font-medium text-slate-500">
             {filteredData.length > 0 && (
-              <>Showing <span className="font-bold text-slate-900">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * rowsPerPage, filteredData.length)}</span> of <span className="font-bold text-slate-900">{filteredData.length}</span> results</>
+              <>
+                Showing{" "}
+                <span className="font-bold text-slate-900">
+                  {(currentPage - 1) * rowsPerPage + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-bold text-slate-900">
+                  {Math.min(currentPage * rowsPerPage, filteredData.length)}
+                </span>{" "}
+                of{" "}
+                <span className="font-bold text-slate-900">
+                  {filteredData.length}
+                </span>{" "}
+                results
+              </>
             )}
           </div>
 
           <div className="flex items-center gap-1">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
+            >
               <ChevronLeft size={16} className="text-slate-600" />
             </button>
 
             <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all ${currentPage === page ? "bg-slate-900 text-white shadow-md" : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300"}`}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all ${currentPage === page ? "bg-slate-900 text-white shadow-md" : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300"}`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
             </div>
 
-            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors">
+            <button
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
+            >
               <ChevronRight size={16} className="text-slate-600" />
             </button>
           </div>
         </div>
       </div>
 
-      <CouponModal isOpen={showModal} onClose={() => setShowModal(false)} onSuccess={fetchCoupons} initialData={editData} />
-      <ViewCouponDrawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} coupon={viewCoupon} />
-      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={handleDeleteConfirm} />
+      <CouponModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSuccess={fetchCoupons}
+        initialData={editData}
+      />
+      <ViewCouponDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        coupon={viewCoupon}
+      />
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

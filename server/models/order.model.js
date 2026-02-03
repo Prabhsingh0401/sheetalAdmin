@@ -1,52 +1,63 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-        orderItems: [
-            {
-                product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-                name: { type: String, required: true },
-                image: { type: String, required: true },
-                price: { type: Number, required: true },
-                quantity: { type: Number, required: true },
-                variant: {
-                    size: String,
-                    color: String,
-                    v_sku: String
-                }
-            }
-        ],
-        shippingAddress: {
-            fullName: { type: String, required: true },
-            phoneNumber: { type: String, required: true },
-            addressLine1: { type: String, required: true },
-            city: { type: String, required: true },
-            state: { type: String, required: true },
-            postalCode: { type: String, required: true },
-            country: { type: String, default: "India" }
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    orderItems: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
         },
-        paymentInfo: {
-            id: { type: String },
-            status: { type: String, default: "Pending" },
-            method: { type: String, enum: ["COD", "Online"], required: true }
+        name: { type: String, required: true },
+        image: { type: String, required: true },
+        price: { type: Number, required: true },
+        quantity: { type: Number, required: true },
+        variant: {
+          size: String,
+          color: String,
+          v_sku: String,
         },
-        itemsPrice: { type: Number, default: 0 },
-        taxPrice: { type: Number, default: 0 },
-        shippingPrice: { type: Number, default: 0 },
-        totalPrice: { type: Number, default: 0 },
-        orderStatus: {
-            type: String,
-            required: true,
-            enum: ["Processing", "Shipped", "Delivered", "Returned", "Exchanged", "Cancelled"],
-            default: "Processing"
-        },
-        trackingId: { type: String },
-        courierPartner: { type: String },
-        deliveredAt: Date,
-        paidAt: Date
+      },
+    ],
+    shippingAddress: {
+      fullName: { type: String, required: true },
+      phoneNumber: { type: String, required: true },
+      addressLine1: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      postalCode: { type: String, required: true },
+      country: { type: String, default: "India" },
     },
-    { timestamps: true }
+    paymentInfo: {
+      id: { type: String },
+      status: { type: String, default: "Pending" },
+      method: { type: String, enum: ["COD", "Online"], required: true },
+    },
+    itemsPrice: { type: Number, default: 0 },
+    taxPrice: { type: Number, default: 0 },
+    shippingPrice: { type: Number, default: 0 },
+    totalPrice: { type: Number, default: 0 },
+    orderStatus: {
+      type: String,
+      required: true,
+      enum: [
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Returned",
+        "Exchanged",
+        "Cancelled",
+      ],
+      default: "Processing",
+    },
+    trackingId: { type: String },
+    courierPartner: { type: String },
+    deliveredAt: Date,
+    paidAt: Date,
+  },
+  { timestamps: true },
 );
 
 const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);

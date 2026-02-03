@@ -2,67 +2,65 @@ import { API_BASE_URL } from "./api";
 
 // login
 export const adminLogin = async ({ email, password }) => {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-    });
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    credentials: "include",
+  });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
-    return data;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Login failed");
+  return data;
 };
 
 // logout
 export const adminLogout = async () => {
-    const res = await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-    });
+  const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Logout failed");
-    return data;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Logout failed");
+  return data;
 };
 
 // get auth status
 export const getAuthStatus = async () => {
-    const res = await fetch(`${API_BASE_URL}/auth/status`, {
-        method: "GET",
-        credentials: "include",
-    });
+  const res = await fetch(`${API_BASE_URL}/auth/status`, {
+    method: "GET",
+    credentials: "include",
+  });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Auth status check failed");
-    return data;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Auth status check failed");
+  return data;
 };
-
 
 // login
 export const userLogin = async ({ email, password }) => {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-    });
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    credentials: "include",
+  });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
-    return data;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Login failed");
+  return data;
 };
 
-export const userRegister = async ({ name, email, password, }) => {
-    const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-        credentials: "include",
-    });
+export const userRegister = async ({ name, email, password }) => {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password }),
+    credentials: "include",
+  });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Registration failed");
-    return data;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Registration failed");
+  return data;
 };
-

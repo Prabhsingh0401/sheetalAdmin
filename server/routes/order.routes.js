@@ -1,5 +1,10 @@
 import express from "express";
-import { createOrder, getMyOrders, adminGetAllOrders, updateOrderStatus } from "../controllers/order.controller.js";
+import {
+  createOrder,
+  getMyOrders,
+  adminGetAllOrders,
+  updateOrderStatus,
+} from "../controllers/order.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
@@ -10,7 +15,6 @@ router.post("/create", isAuthenticated, createOrder);
 
 // 2. User ko apne purane orders dikhane ke liye (With Pagination)
 router.get("/my-orders", isAuthenticated, getMyOrders);
-
 
 // --- ADMIN ROUTES ---
 // 3. Admin ko poori website ke saare orders dikhane ke liye

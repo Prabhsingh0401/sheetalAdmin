@@ -9,7 +9,7 @@ const handleResponse = async (res) => {
 export const getProducts = async (page = 1, limit = 10, search = "") => {
   const res = await fetch(
     `${API_BASE_URL}/products/all?page=${page}&limit=${limit}&search=${search}`,
-    { credentials: "include" }
+    { credentials: "include" },
   );
   return handleResponse(res);
 };
@@ -61,6 +61,13 @@ export const bulkImportProducts = async (file) => {
 
 export const getProductDetails = async (id) => {
   const res = await fetch(`${API_BASE_URL}/products/detail/${id}`, {
+    credentials: "include",
+  });
+  return handleResponse(res);
+};
+
+export const getLowStockProducts = async () => {
+  const res = await fetch(`${API_BASE_URL}/products/admin/low-stock`, {
     credentials: "include",
   });
   return handleResponse(res);

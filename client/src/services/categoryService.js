@@ -13,7 +13,7 @@ const handleResponse = async (res) => {
 export const getCategories = async (page = 1, limit = 10, search = "") => {
   const res = await fetch(
     `${API_BASE_URL}/categories/admin/all?page=${page}&limit=${limit}&search=${search}`,
-    { credentials: "include" }
+    { credentials: "include" },
   );
   return handleResponse(res);
 };
@@ -22,7 +22,7 @@ export const getCategories = async (page = 1, limit = 10, search = "") => {
    Add Category (Handles Files)
    ========================= */
 export const addCategory = async (formData) => {
-  // NOTE: Jab hum FormData bhejte hain, toh "Content-Type" header 
+  // NOTE: Jab hum FormData bhejte hain, toh "Content-Type" header
   // manually set NAHI karte, browser khud boundary set karta hai.
   const res = await fetch(`${API_BASE_URL}/categories/admin`, {
     method: "POST",
@@ -62,15 +62,15 @@ export const deleteCategory = async (id) => {
    Reorder Categories
    ========================= */
 export const reorderCategories = async (orderedIds) => {
-    const res = await fetch(`${API_BASE_URL}/categories/admin/reorder`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ orderedIds }),
-    });
-    return handleResponse(res);
+  const res = await fetch(`${API_BASE_URL}/categories/admin/reorder`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ orderedIds }),
+  });
+  return handleResponse(res);
 };
 
 /* =========================

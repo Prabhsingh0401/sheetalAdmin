@@ -28,60 +28,78 @@ import searchRoutes from "./routes/search.routes.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
 const app = express();
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
-const logDir = 'logs';
+const logDir = "logs";
 if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir);
+  fs.mkdirSync(logDir);
 }
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(sanitizeBody);
 
-
 const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 15,
-    message: { success: false, message: "Auth limit reached. Try after an hour." }
+  windowMs: 60 * 60 * 1000,
+  max: 15,
+  message: {
+    success: false,
+    message: "Auth limit reached. Try after an hour.",
+  },
 });
 
 app.use("/api/v1/auth", authLimiter);
 
 app.use(
-    cors({
-        origin: (origin, callback) => {
-            const allowedOrigins = ["http://localhost:3000", "http://localhost:4000", "http://192.168.0.227:3000", "http://192.168.1.9:3000" , "http://192.168.0.227:4000", "https://sheetal-admin.vercel.app", "https://www.sheetal-admin.vercel.app", "https://sheetal-omega.vercel.app" , "https://www.sheetal-omega.vercel.app"];
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
-        credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    })
+  cors({
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "http://localhost:4000",
+        "http://192.168.0.227:3000",
+        "http://192.168.1.9:3000",
+        "http://192.168.0.227:4000",
+        "https://sheetal-admin.vercel.app",
+        "https://www.sheetal-admin.vercel.app",
+        "https://sheetal-omega.vercel.app",
+        "https://www.sheetal-omega.vercel.app",
+      ];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  }),
 );
 
-const logStream = fs.createWriteStream(path.join(process.cwd(), "logs/access.log"), { flags: "a" });
+const logStream = fs.createWriteStream(
+  path.join(process.cwd(), "logs/access.log"),
+  { flags: "a" },
+);
 
 if (config.mode === "development") {
-    app.use(morgan("dev"));
+  app.use(morgan("dev"));
 } else {
-    app.use(morgan("combined", { stream: logStream }));
+  app.use(morgan("combined", { stream: logStream }));
 }
 
 app.use(cookieParser());
 
 // Custom middleware to conditionally parse JSON and URL-encoded data
 const parseJsonAndUrlEncoded = (req, res, next) => {
-    if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
-        return next();
-    }
-    express.json()(req, res, (err) => {
-        if (err) return next(err);
-        express.urlencoded({ extended: true })(req, res, next);
-    });
+  if (
+    req.headers["content-type"] &&
+    req.headers["content-type"].includes("multipart/form-data")
+  ) {
+    return next();
+  }
+  express.json()(req, res, (err) => {
+    if (err) return next(err);
+    express.urlencoded({ extended: true })(req, res, next);
+  });
 };
 
 app.use(parseJsonAndUrlEncoded);
@@ -104,19 +122,19 @@ app.use("/api/v1/size-chart", sizeChartRoutes);
 app.use("/api/v1/search", searchRoutes);
 
 app.get("/", (req, res) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logger.info(`Root route accessed from IP: ${clientIp}`);
-    res.status(200).json({
-        success: true,
-        timestamp: new Date().toISOString(),
-        localTime: new Date().toLocaleString(),
-        message: "Server is running"
-    });
+  const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  logger.info(`Root route accessed from IP: ${clientIp}`);
+  res.status(200).json({
+    success: true,
+    timestamp: new Date().toISOString(),
+    localTime: new Date().toLocaleString(),
+    message: "Server is running",
+  });
 });
 
 // 404 Fix
 app.use((req, res) => {
-    res.status(404).json({ success: false, message: "API Route Not Found" });
+  res.status(404).json({ success: false, message: "API Route Not Found" });
 });
 
 app.use(errorHandler);

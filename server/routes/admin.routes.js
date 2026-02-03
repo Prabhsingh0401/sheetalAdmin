@@ -4,6 +4,11 @@ import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/dashboard-stats", isAuthenticated, isAdmin, getAdminDashboardStats);
+router.get(
+  "/dashboard-stats",
+  isAuthenticated,
+  isAdmin,
+  getAdminDashboardStats,
+);
 
 export default router;

@@ -10,7 +10,7 @@ export const initializeAuth = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 const authSlice = createSlice({
@@ -62,12 +62,7 @@ const authSlice = createSlice({
   },
 });
 
-export const {
-  setCredentials,
-  logout,
-  setLoading,
-  setError,
-} = authSlice.actions;
+export const { setCredentials, logout, setLoading, setError } =
+  authSlice.actions;
 
 export default authSlice.reducer;
-

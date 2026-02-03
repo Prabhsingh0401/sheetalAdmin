@@ -1,6 +1,17 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import { Eye, Edit3, Search, RefreshCw, ChevronLeft, ChevronRight, Package, Plus, Truck, Hash } from "lucide-react";
+import {
+  Eye,
+  Edit3,
+  Search,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Plus,
+  Truck,
+  Hash,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import OrderModal from "./OrderModal";
@@ -15,7 +26,10 @@ export default function OrderTable({ refreshStats }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
+  const [sortConfig, setSortConfig] = useState({
+    key: "createdAt",
+    direction: "desc",
+  });
 
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,7 +37,9 @@ export default function OrderTable({ refreshStats }) {
   const [viewOrder, setViewOrder] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const fetchOrders = async (isRefresh = false) => {
     setLoading(true);
@@ -44,41 +60,62 @@ export default function OrderTable({ refreshStats }) {
   const filteredData = useMemo(() => {
     return orders
       .filter((o) => {
-        const customerMatch = o.shippingAddress?.fullName?.toLowerCase().includes(search.toLowerCase());
+        const customerMatch = o.shippingAddress?.fullName
+          ?.toLowerCase()
+          .includes(search.toLowerCase());
         const idMatch = o._id.toLowerCase().includes(search.toLowerCase());
-        const statusMatch = statusFilter === "All" || o.orderStatus === statusFilter;
+        const statusMatch =
+          statusFilter === "All" || o.orderStatus === statusFilter;
         return (customerMatch || idMatch) && statusMatch;
       })
       .sort((a, b) => {
         const aVal = a[sortConfig.key] || "";
         const bVal = b[sortConfig.key] || "";
-        return sortConfig.direction === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+        return sortConfig.direction === "asc"
+          ? aVal > bVal
+            ? 1
+            : -1
+          : aVal < bVal
+            ? 1
+            : -1;
       });
   }, [orders, search, statusFilter, sortConfig]);
 
-  useEffect(() => { setCurrentPage(1); }, [search, statusFilter, rowsPerPage]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, rowsPerPage]);
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-  const paginatedData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage,
+  );
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case "Delivered": return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      case "Processing": return "bg-amber-100 text-amber-700 border-amber-200";
-      case "Shipped": return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Cancelled": return "bg-rose-100 text-rose-700 border-rose-200";
-      default: return "bg-slate-100 text-slate-700 border-slate-200";
+      case "Delivered":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "Processing":
+        return "bg-amber-100 text-amber-700 border-amber-200";
+      case "Shipped":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "Cancelled":
+        return "bg-rose-100 text-rose-700 border-rose-200";
+      default:
+        return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm text-slate-900 overflow-hidden">
-
       {/* Header Toolbar */}
       <div className="p-5 flex flex-wrap justify-between items-center gap-4 bg-white">
         <div className="flex flex-wrap gap-3 flex-1 items-center">
           <div className="relative w-full max-w-sm">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
             <input
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-4 focus:ring-slate-100 focus:border-slate-400 outline-none transition-all"
               placeholder="Search ID or Customer..."
@@ -99,7 +136,11 @@ export default function OrderTable({ refreshStats }) {
             <option value="Cancelled">Cancelled</option>
           </select>
 
-          <button onClick={() => fetchOrders(true)} disabled={loading} className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all">
+          <button
+            onClick={() => fetchOrders(true)}
+            disabled={loading}
+            className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+          >
             <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
@@ -117,22 +158,44 @@ export default function OrderTable({ refreshStats }) {
         <table className="w-full text-sm text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-y border-slate-100">
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Info</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Order Details</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Amount</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Status</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Actions</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                Info
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                Order Details
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                Amount
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                Status
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {paginatedData.length > 0 ? (
               paginatedData.map((o, i) => (
-                <tr key={o._id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr
+                  key={o._id}
+                  className="hover:bg-slate-50/50 transition-colors group"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-inner ${o.orderStatus === 'Shipped' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-white'
-                        }`}>
-                        {o.orderStatus === 'Shipped' ? <Truck size={14} /> : <Package size={14} />}
+                      <div
+                        className={`w-9 h-9 rounded-full flex items-center justify-center shadow-inner ${
+                          o.orderStatus === "Shipped"
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-900 text-white"
+                        }`}
+                      >
+                        {o.orderStatus === "Shipped" ? (
+                          <Truck size={14} />
+                        ) : (
+                          <Package size={14} />
+                        )}
                       </div>
                     </div>
                   </td>
@@ -141,24 +204,43 @@ export default function OrderTable({ refreshStats }) {
                       {o._id}
                     </p>
                     <p className="text-[11px] text-slate-400 mt-1 font-medium italic">
-                      {o.shippingAddress?.fullName} • {o.orderItems?.length} items
+                      {o.shippingAddress?.fullName} • {o.orderItems?.length}{" "}
+                      items
                     </p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <p className="font-black text-slate-900 tracking-tight">₹{o.totalPrice?.toLocaleString()}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{o.paymentInfo?.method}</p>
+                    <p className="font-black text-slate-900 tracking-tight">
+                      ₹{o.totalPrice?.toLocaleString()}
+                    </p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                      {o.paymentInfo?.method}
+                    </p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusStyle(o.orderStatus)}`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusStyle(o.orderStatus)}`}
+                    >
                       {o.orderStatus}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setViewOrder(o); setShowDrawer(true); }} className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all">
+                      <button
+                        onClick={() => {
+                          setViewOrder(o);
+                          setShowDrawer(true);
+                        }}
+                        className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all"
+                      >
                         <Eye size={16} />
                       </button>
-                      <button onClick={() => { setEditData(o); setShowStatusModal(true); }} className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all">
+                      <button
+                        onClick={() => {
+                          setEditData(o);
+                          setShowStatusModal(true);
+                        }}
+                        className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
+                      >
                         <Edit3 size={16} />
                       </button>
                     </div>
@@ -182,25 +264,42 @@ export default function OrderTable({ refreshStats }) {
       {/* Footer Pagination */}
       <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rows</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Rows
+          </span>
           <select
             value={rowsPerPage}
             onChange={(e) => setRowsPerPage(Number(e.target.value))}
             className="text-xs font-black text-slate-900 bg-transparent outline-none cursor-pointer"
           >
-            {[10, 25, 50].map(v => <option key={v} value={v}>{v}</option>)}
+            {[10, 25, 50].map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="flex flex-col items-center gap-3">
           <div className="text-[11px] font-medium text-slate-500 tracking-tight">
-            Showing <span className="font-bold text-slate-900">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * rowsPerPage, filteredData.length)}</span> of <span className="font-bold text-slate-900">{filteredData.length}</span>
+            Showing{" "}
+            <span className="font-bold text-slate-900">
+              {(currentPage - 1) * rowsPerPage + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-bold text-slate-900">
+              {Math.min(currentPage * rowsPerPage, filteredData.length)}
+            </span>{" "}
+            of{" "}
+            <span className="font-bold text-slate-900">
+              {filteredData.length}
+            </span>
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
+              onClick={() => setCurrentPage((p) => p - 1)}
               className="p-2 border border-slate-200 rounded-xl bg-white disabled:opacity-30 hover:bg-slate-100 transition-all shadow-sm"
             >
               <ChevronLeft size={16} />
@@ -211,8 +310,11 @@ export default function OrderTable({ refreshStats }) {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`h-9 min-w-[36px] rounded-xl text-xs font-black transition-all ${currentPage === i + 1 ? "bg-slate-900 text-white shadow-lg" : "bg-white border border-slate-200 text-slate-500 hover:border-slate-400"
-                    }`}
+                  className={`h-9 min-w-[36px] rounded-xl text-xs font-black transition-all ${
+                    currentPage === i + 1
+                      ? "bg-slate-900 text-white shadow-lg"
+                      : "bg-white border border-slate-200 text-slate-500 hover:border-slate-400"
+                  }`}
                 >
                   {i + 1}
                 </button>
@@ -221,7 +323,7 @@ export default function OrderTable({ refreshStats }) {
 
             <button
               disabled={currentPage === totalPages || totalPages === 0}
-              onClick={() => setCurrentPage(p => p + 1)}
+              onClick={() => setCurrentPage((p) => p + 1)}
               className="p-2 border border-slate-200 rounded-xl bg-white disabled:opacity-30 hover:bg-slate-100 transition-all shadow-sm"
             >
               <ChevronRight size={16} />
@@ -230,9 +332,22 @@ export default function OrderTable({ refreshStats }) {
         </div>
       </div>
 
-      <CreateOrderModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={fetchOrders} />
-      <OrderModal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)} onSuccess={fetchOrders} initialData={editData} />
-      <ViewOrderDrawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} order={viewOrder} />
+      <CreateOrderModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={fetchOrders}
+      />
+      <OrderModal
+        isOpen={showStatusModal}
+        onClose={() => setShowStatusModal(false)}
+        onSuccess={fetchOrders}
+        initialData={editData}
+      />
+      <ViewOrderDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        order={viewOrder}
+      />
     </div>
   );
 }

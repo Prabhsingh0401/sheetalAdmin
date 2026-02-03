@@ -4,15 +4,15 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import HardBreak from "@tiptap/extension-hard-break";
-import { 
-  Bold, 
-  Italic, 
-  List, 
-  Heading2, 
-  Heading3, 
-  Undo, 
-  Redo, 
-  Underline as UnderlineIcon 
+import {
+  Bold,
+  Italic,
+  List,
+  Heading2,
+  Heading3,
+  Undo,
+  Redo,
+  Underline as UnderlineIcon,
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -23,19 +23,19 @@ const TiptapEditor = ({ value, onChange }) => {
         heading: { levels: [2, 3] },
         bulletList: {
           HTMLAttributes: {
-            class: 'list-disc pl-6 my-2',
+            class: "list-disc pl-6 my-2",
           },
           keepMarks: true,
           keepAttributes: false,
         },
         orderedList: {
           HTMLAttributes: {
-            class: 'list-decimal pl-6 my-2',
+            class: "list-decimal pl-6 my-2",
           },
         },
         listItem: {
           HTMLAttributes: {
-            class: 'ml-2',
+            class: "ml-2",
           },
         },
       }),
@@ -48,7 +48,8 @@ const TiptapEditor = ({ value, onChange }) => {
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "focus:outline-none min-h-[250px] p-4 bg-white rounded-b-lg max-w-none overflow-y-auto",
+        class:
+          "focus:outline-none min-h-[250px] p-4 bg-white rounded-b-lg max-w-none overflow-y-auto",
       },
     },
     onUpdate: ({ editor }) => {
@@ -82,7 +83,9 @@ const TiptapEditor = ({ value, onChange }) => {
       <div className="flex flex-wrap gap-1 p-2 bg-slate-100 border-b border-slate-400 items-center">
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
           className={btnClass(editor.isActive("heading", { level: 2 }))}
           aria-label="Heading 2"
         >
@@ -91,7 +94,9 @@ const TiptapEditor = ({ value, onChange }) => {
 
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
           className={btnClass(editor.isActive("heading", { level: 3 }))}
           aria-label="Heading 3"
         >
@@ -160,7 +165,7 @@ const TiptapEditor = ({ value, onChange }) => {
       </div>
 
       <EditorContent editor={editor} />
-      
+
       {/* Add custom CSS for bullet lists */}
       <style jsx global>{`
         .ProseMirror ul {
@@ -168,17 +173,17 @@ const TiptapEditor = ({ value, onChange }) => {
           padding-left: 1.5rem;
           margin: 0.5rem 0;
         }
-        
+
         .ProseMirror ol {
           list-style-type: decimal;
           padding-left: 1.5rem;
           margin: 0.5rem 0;
         }
-        
+
         .ProseMirror li {
           margin-left: 0.5rem;
         }
-        
+
         .ProseMirror li p {
           margin: 0;
         }

@@ -11,9 +11,12 @@ export const getUserById = async (id) => {
 };
 
 export const getUsers = async (page = 1, limit = 10, search = "") => {
-  const res = await fetch(`${API_BASE_URL}/users/admin/all?page=${page}&limit=${limit}&search=${search}`, {
-    credentials: "include",
-  });
+  const res = await fetch(
+    `${API_BASE_URL}/users/admin/all?page=${page}&limit=${limit}&search=${search}`,
+    {
+      credentials: "include",
+    },
+  );
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.message || "Failed to fetch users");
@@ -57,7 +60,6 @@ export const deleteUser = async (id) => {
   }
   return true;
 };
-
 
 export const getUserStats = async () => {
   const res = await fetch(`${API_BASE_URL}/users/admin/stats`, {

@@ -5,15 +5,23 @@ import { uploadTo } from "../middlewares/multer.middleware.js";
 
 const router = express.Router();
 
-router.route("/how-to-measure")
-    .put(isAuthenticated, isAdmin, uploadTo("sizeChart").single("howToMeasureImage"), sizeChartController.uploadHowToMeasureImage);
+router
+  .route("/how-to-measure")
+  .put(
+    isAuthenticated,
+    isAdmin,
+    uploadTo("sizeChart").single("howToMeasureImage"),
+    sizeChartController.uploadHowToMeasureImage,
+  );
 
-router.route("/")
-    .get(sizeChartController.getSizeChart)
-    .post(isAuthenticated, isAdmin, sizeChartController.addSize);
+router
+  .route("/")
+  .get(sizeChartController.getSizeChart)
+  .post(isAuthenticated, isAdmin, sizeChartController.addSize);
 
-router.route("/:id")
-    .put(isAuthenticated, isAdmin, sizeChartController.updateSize)
-    .delete(isAuthenticated, isAdmin, sizeChartController.deleteSize);
+router
+  .route("/:id")
+  .put(isAuthenticated, isAdmin, sizeChartController.updateSize)
+  .delete(isAuthenticated, isAdmin, sizeChartController.deleteSize);
 
 export default router;

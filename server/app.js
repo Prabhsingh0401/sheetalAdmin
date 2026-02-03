@@ -5,19 +5,19 @@ import { seedAdmin } from "./scripts/seedAdmin.js";
 import initializeFirebase from "./config/firebase.js";
 
 const startServer = async () => {
-    try {
-        initializeFirebase();
-        await connectDB();
-        await seedAdmin(); 
-        
-        const PORT = config.port;
-        app.listen(PORT, () => {
-            console.log(`Server running in ${config.nodeEnv} mode on port ${PORT}`);
-        });
-    } catch (error) {
-        console.error("Database connection failed:", error);
-        process.exit(1);
-    }
+  try {
+    initializeFirebase();
+    await connectDB();
+    await seedAdmin();
+
+    const PORT = config.port;
+    app.listen(PORT, () => {
+      console.log(`Server running in ${config.nodeEnv} mode on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    process.exit(1);
+  }
 };
 
 startServer();

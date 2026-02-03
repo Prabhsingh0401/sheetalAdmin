@@ -2,14 +2,29 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Eye, Edit3, Trash2, ArrowUpDown, Search, RefreshCw, ChevronLeft, ChevronRight, UserCircle } from "lucide-react";
+import {
+  Eye,
+  Edit3,
+  Trash2,
+  ArrowUpDown,
+  Search,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  UserCircle,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import AddUserModal from "./AddCustomerModal";
 import ViewUserDrawer from "./ViewCustomerDrawer";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
-import { getUsers, addUser, deleteUser, updateUser } from "@/services/userService";
+import {
+  getUsers,
+  addUser,
+  deleteUser,
+  updateUser,
+} from "@/services/userService";
 
 export default function CustomerTable({ refreshStats }) {
   const [users, setUsers] = useState([]);
@@ -54,7 +69,9 @@ export default function CustomerTable({ refreshStats }) {
   };
 
   const handleAddUser = async (payload) => {
-    const loadingToast = toast.loading(editUser ? "Updating user..." : "Adding user...");
+    const loadingToast = toast.loading(
+      editUser ? "Updating user..." : "Adding user...",
+    );
     try {
       if (editUser) {
         const res = await updateUser(editUser._id, payload);
@@ -123,7 +140,7 @@ export default function CustomerTable({ refreshStats }) {
 
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    currentPage * rowsPerPage,
   );
 
   return (
@@ -132,7 +149,10 @@ export default function CustomerTable({ refreshStats }) {
       <div className="p-4 flex justify-between items-center gap-4 border-b border-slate-100">
         <div className="flex gap-3 flex-1 items-center">
           <div className="relative max-w-md w-full">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            />
             <input
               className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded text-sm text-slate-900 focus:ring-2 focus:ring-slate-200 outline-none"
               placeholder="Search customers..."
@@ -176,8 +196,17 @@ export default function CustomerTable({ refreshStats }) {
           <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
             <tr>
               <th className="px-4 py-4">#</th>
-              <th className="px-4 py-4 cursor-pointer group" onClick={() => handleSort("name")}>
-                <div className="flex items-center gap-1">Name <ArrowUpDown size={14} className="opacity-50 group-hover:opacity-100" /></div>
+              <th
+                className="px-4 py-4 cursor-pointer group"
+                onClick={() => handleSort("name")}
+              >
+                <div className="flex items-center gap-1">
+                  Name{" "}
+                  <ArrowUpDown
+                    size={14}
+                    className="opacity-50 group-hover:opacity-100"
+                  />
+                </div>
               </th>
               <th className="px-4 py-4">Email</th>
               <th className="px-4 py-4">Phone</th>
@@ -188,16 +217,30 @@ export default function CustomerTable({ refreshStats }) {
           <tbody className="divide-y divide-slate-100">
             {paginatedUsers.length > 0 ? (
               paginatedUsers.map((u, i) => (
-                <tr key={u._id} className="hover:bg-slate-50/80 transition-colors">
+                <tr
+                  key={u._id}
+                  className="hover:bg-slate-50/80 transition-colors"
+                >
                   <td className="px-4 py-4 text-slate-500 font-medium">
                     {(currentPage - 1) * rowsPerPage + i + 1}
                   </td>
-                  <td className="px-4 py-4 font-bold text-slate-900">{u.name}</td>
-                  <td className="px-4 py-4 text-slate-600 font-medium">{u.email}</td>
-                  <td className="px-4 py-4 text-slate-600 font-medium">{u.phoneNumber || "-"}</td>
+                  <td className="px-4 py-4 font-bold text-slate-900">
+                    {u.name}
+                  </td>
+                  <td className="px-4 py-4 text-slate-600 font-medium">
+                    {u.email}
+                  </td>
+                  <td className="px-4 py-4 text-slate-600 font-medium">
+                    {u.phoneNumber || "-"}
+                  </td>
                   <td className="px-4 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${u.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-                      }`}>
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        u.status === "Active"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-rose-100 text-rose-800"
+                      }`}
+                    >
                       {u.status}
                     </span>
                   </td>
@@ -210,13 +253,35 @@ export default function CustomerTable({ refreshStats }) {
                       >
                         <UserCircle size={18} />
                       </Link>
-                      <button title="View" className="hover:text-slate-900 transition-colors" onClick={() => { setViewUser(u); setShowDrawer(true); }}>
+                      <button
+                        title="View"
+                        className="hover:text-slate-900 transition-colors"
+                        onClick={() => {
+                          setViewUser(u);
+                          setShowDrawer(true);
+                        }}
+                      >
                         <Eye size={18} />
                       </button>
-                      <button title="Edit" className="hover:text-blue-600 transition-colors" onClick={() => { setEditUser(u); setShowModal(true); }}>
+                      <button
+                        title="Edit"
+                        className="hover:text-blue-600 transition-colors"
+                        onClick={() => {
+                          setEditUser(u);
+                          setShowModal(true);
+                        }}
+                      >
                         <Edit3 size={18} />
                       </button>
-                      <button title="Delete" className="hover:text-rose-600 transition-colors" onClick={() => { setDeleteUserId(u._id); setSelectedUserName(u.name); setShowDeleteModal(true); }}>
+                      <button
+                        title="Delete"
+                        className="hover:text-rose-600 transition-colors"
+                        onClick={() => {
+                          setDeleteUserId(u._id);
+                          setSelectedUserName(u.name);
+                          setShowDeleteModal(true);
+                        }}
+                      >
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -225,8 +290,13 @@ export default function CustomerTable({ refreshStats }) {
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="px-4 py-20 text-center text-slate-500 font-medium italic">
-                  {loading ? "Syncing data..." : "No users found matching your criteria."}
+                <td
+                  colSpan="6"
+                  className="px-4 py-20 text-center text-slate-500 font-medium italic"
+                >
+                  {loading
+                    ? "Syncing data..."
+                    : "No users found matching your criteria."}
                 </td>
               </tr>
             )}
@@ -235,10 +305,11 @@ export default function CustomerTable({ refreshStats }) {
       </div>
 
       <div className="p-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between bg-slate-50/50 gap-4">
-
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Rows per page</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+              Rows per page
+            </span>
             <select
               value={rowsPerPage}
               onChange={(e) => {
@@ -247,19 +318,32 @@ export default function CustomerTable({ refreshStats }) {
               }}
               className="bg-white border border-slate-200 text-xs font-bold text-slate-700 py-1 px-2 rounded-md outline-none cursor-pointer focus:border-slate-400 transition-colors"
             >
-              {[5, 10, 20, 50].map(val => (
-                <option key={val} value={val}>{val}</option>
+              {[5, 10, 20, 50].map((val) => (
+                <option key={val} value={val}>
+                  {val}
+                </option>
               ))}
             </select>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-
           <div className="text-[11px] font-medium text-slate-500">
             {filteredUsers.length > 0 ? (
               <>
-                Showing <span className="font-bold text-slate-900">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * rowsPerPage, filteredUsers.length)}</span> of <span className="font-bold text-slate-900">{filteredUsers.length}</span> results
+                Showing{" "}
+                <span className="font-bold text-slate-900">
+                  {(currentPage - 1) * rowsPerPage + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-bold text-slate-900">
+                  {Math.min(currentPage * rowsPerPage, filteredUsers.length)}
+                </span>{" "}
+                of{" "}
+                <span className="font-bold text-slate-900">
+                  {filteredUsers.length}
+                </span>{" "}
+                results
               </>
             ) : (
               "No results found"
@@ -269,21 +353,25 @@ export default function CustomerTable({ refreshStats }) {
           <div className="flex items-center gap-1">
             <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
               className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors shadow-sm"
             >
               <ChevronLeft size={16} className="text-slate-600" />
             </button>
 
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.ceil(filteredUsers.length / rowsPerPage) }, (_, i) => i + 1).map(page => (
+              {Array.from(
+                { length: Math.ceil(filteredUsers.length / rowsPerPage) },
+                (_, i) => i + 1,
+              ).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all ${currentPage === page
-                    ? "bg-slate-900 text-white shadow-md"
-                    : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                    }`}
+                  className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all ${
+                    currentPage === page
+                      ? "bg-slate-900 text-white shadow-md"
+                      : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                  }`}
                 >
                   {page}
                 </button>
@@ -291,8 +379,10 @@ export default function CustomerTable({ refreshStats }) {
             </div>
 
             <button
-              disabled={currentPage >= Math.ceil(filteredUsers.length / rowsPerPage)}
-              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={
+                currentPage >= Math.ceil(filteredUsers.length / rowsPerPage)
+              }
+              onClick={() => setCurrentPage((prev) => prev + 1)}
               className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors shadow-sm"
             >
               <ChevronRight size={16} className="text-slate-600" />
@@ -301,9 +391,24 @@ export default function CustomerTable({ refreshStats }) {
         </div>
       </div>
 
-      <AddUserModal isOpen={showModal} onClose={() => setShowModal(false)} onAddUser={handleAddUser} editUser={editUser} />
-      <ViewUserDrawer isOpen={showDrawer} onClose={() => setShowDrawer(false)} user={viewUser} />
-      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={confirmDeleteUser} entityName="user" itemName={selectedUserName} />
+      <AddUserModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onAddUser={handleAddUser}
+        editUser={editUser}
+      />
+      <ViewUserDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        user={viewUser}
+      />
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDeleteUser}
+        entityName="user"
+        itemName={selectedUserName}
+      />
     </div>
   );
 }
