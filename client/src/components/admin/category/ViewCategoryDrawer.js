@@ -18,9 +18,9 @@ export default function ViewCategoryDrawer({ isOpen, onClose, category }) {
   // Image URL formatter
   const imageUrl = category.image?.url
     ? `${IMAGE_BASE_URL}/${category.image.url.replace(/\\/g, "/")}`.replace(
-        /([^:]\/)\/+/g,
-        "$1",
-      )
+      /([^:]\/)\/+/g,
+      "$1",
+    )
     : null;
 
   return (
@@ -116,11 +116,10 @@ export default function ViewCategoryDrawer({ isOpen, onClose, category }) {
                   Availability
                 </p>
                 <span
-                  className={`inline-block mt-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                    category.isActive !== false
+                  className={`inline-block mt-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${category.isActive !== false
                       ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                       : "bg-rose-50 text-rose-600 border-rose-100"
-                  }`}
+                    }`}
                 >
                   {category.isActive !== false ? "Active" : "Inactive"}
                 </span>
@@ -139,10 +138,10 @@ export default function ViewCategoryDrawer({ isOpen, onClose, category }) {
                 <p className="text-sm font-bold text-slate-900">
                   {category.createdAt
                     ? new Date(category.createdAt).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      })
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    })
                     : "N/A"}
                 </p>
               </div>
@@ -160,6 +159,25 @@ export default function ViewCategoryDrawer({ isOpen, onClose, category }) {
               </div>
             )}
           </div>
+
+          {/* Subcategories */}
+          {category.subCategories && category.subCategories.length > 0 && (
+            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Layers size={14} /> Subcategories
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {category.subCategories.map((sub, index) => (
+                  <span
+                    key={index}
+                    className="bg-white px-3 py-1 rounded-full text-xs font-medium text-slate-700 border border-slate-200 shadow-sm"
+                  >
+                    {sub}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer Action */}

@@ -17,10 +17,15 @@ const blogSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    bannerImage: { type: String, required: true },
-    contentImage: { type: String },
+    bannerImage: {
+      url: { type: String, required: true },
+      public_id: { type: String },
+    },
+    contentImage: {
+      url: { type: String },
+      public_id: { type: String },
+    },
     imageAlt: { type: String, default: "blog-image" },
-    category: { type: String, required: true, index: true },
     tags: [{ type: String }],
     relatedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     metaTitle: {

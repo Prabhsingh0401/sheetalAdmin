@@ -20,7 +20,6 @@ import ViewBlogDrawer from "./ViewBlogDrawer";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
 import { getBlogs, deleteBlog } from "@/services/blogService";
-import { IMAGE_BASE_URL } from "@/services/api";
 
 export default function BlogTable({ refreshStats }) {
   const [blogs, setBlogs] = useState([]);
@@ -40,7 +39,7 @@ export default function BlogTable({ refreshStats }) {
   const [editData, setEditData] = useState(null);
   const [viewBlog, setViewBlog] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  const [deleteInfo, setDeleteInfo] = useState({ id: null, title: "" });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
@@ -66,7 +65,7 @@ export default function BlogTable({ refreshStats }) {
   const handleDeleteConfirm = async () => {
     const loadingToast = toast.loading("Deleting blog post...");
     try {
-      const res = await deleteBlog(deleteId);
+      const res = await deleteBlog(deleteInfo.id);
       if (res.success) {
         fetchBlogs();
         toast.success("Blog deleted successfully", { id: loadingToast });
@@ -74,7 +73,7 @@ export default function BlogTable({ refreshStats }) {
     } catch (err) {
       toast.error("Failed to delete", { id: loadingToast });
     } finally {
-      setDeleteId(null);
+      setDeleteInfo({ id: null, title: "" });
       setShowDeleteModal(false);
     }
   };
@@ -90,8 +89,7 @@ export default function BlogTable({ refreshStats }) {
     return blogs
       .filter((b) => {
         const searchMatch =
-          b.title?.toLowerCase().includes(search.toLowerCase()) ||
-          b.category?.toLowerCase().includes(search.toLowerCase());
+          b.title?.toLowerCase().includes(search.toLowerCase());
         const statusMatch = statusFilter === "All" || b.status === statusFilter;
         return searchMatch && statusMatch;
       })
@@ -181,7 +179,6 @@ export default function BlogTable({ refreshStats }) {
                   />
                 </div>
               </th>
-              <th className="px-4 py-4">Category</th>
               <th className="px-4 py-4">Author</th>
               <th className="px-4 py-4">Status</th>
               <th className="px-4 py-4 text-right">Actions</th>
@@ -202,10 +199,7 @@ export default function BlogTable({ refreshStats }) {
                     <div className="w-12 h-8 rounded bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
                       {b.bannerImage ? (
                         <img
-                          src={`${IMAGE_BASE_URL}/${b.bannerImage.replace(/\\/g, "/")}`.replace(
-                            /([^:]\/)\/+/g,
-                            "$1",
-                          )}
+                          src={b.bannerImage.url || b.bannerImage}
                           alt=""
                           className="w-full h-full object-cover"
                         />
@@ -219,10 +213,7 @@ export default function BlogTable({ refreshStats }) {
                     <div className="w-12 h-8 rounded bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
                       {b.contentImage ? (
                         <img
-                          src={`${IMAGE_BASE_URL}/${b.contentImage.replace(/\\/g, "/")}`.replace(
-                            /([^:]\/)\/+/g,
-                            "$1",
-                          )}
+                          src={b.contentImage.url || b.contentImage}
                           alt=""
                           className="w-full h-full object-cover"
                         />
@@ -242,12 +233,6 @@ export default function BlogTable({ refreshStats }) {
                     <div className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter truncate">
                       {b.slug}
                     </div>
-                  </td>
-
-                  <td className="px-4 py-4">
-                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-bold border border-slate-200 uppercase">
-                      {b.category}
-                    </span>
                   </td>
 
                   <td className="px-4 py-4 text-slate-600 font-medium">
@@ -288,7 +273,7 @@ export default function BlogTable({ refreshStats }) {
                         title="Delete"
                         className="hover:text-rose-600 transition-colors"
                         onClick={() => {
-                          setDeleteId(b._id);
+                          setDeleteInfo({ id: b._id, title: b.title });
                           setShowDeleteModal(true);
                         }}
                       >
@@ -394,6 +379,8 @@ export default function BlogTable({ refreshStats }) {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
+        entityName="Blog"
+        itemName={deleteInfo.title}
       />
     </div>
   );

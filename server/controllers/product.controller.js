@@ -1,7 +1,7 @@
 import * as productService from "../services/product.service.js";
 import successResponse from "../utils/successResponse.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
-import fs from "fs/promises";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
 const clearFiles = async (files) => {
   if (!files) return;
@@ -13,12 +13,10 @@ const clearFiles = async (files) => {
 
     await Promise.all(
       filesToClear.map(async (file) => {
-        if (file && file.path) {
-          try {
-            await fs.unlink(file.path);
-          } catch (err) {
-            console.error(`Error deleting ${file.path}:`, err.message);
-          }
+        if (file.key) {
+          await deleteS3File(file.key);
+        } else if (file.path) {
+          await deleteFile(file.path);
         }
       }),
     );

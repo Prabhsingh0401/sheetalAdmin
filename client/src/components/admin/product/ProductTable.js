@@ -19,7 +19,6 @@ import ViewProductDrawer from "./ViewProductDrawer";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
 import { getProducts, deleteProduct } from "@/services/productService";
-import { IMAGE_BASE_URL } from "@/services/api";
 
 export default function ProductTable({ refreshStats }) {
   const [products, setProducts] = useState([]);
@@ -131,22 +130,22 @@ export default function ProductTable({ refreshStats }) {
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
             />
-            
-                      <input
-                          className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-slate-200 outline-none"
-                          placeholder="Search products..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                        />
-                      </div>
-            
-                      <button
-                        onClick={() => fetchProducts(true)}
-                        disabled={loading}
-                        className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
-                      >
-                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-                      </button>
+
+            <input
+              className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-slate-200 outline-none"
+              placeholder="Search products..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <button
+            onClick={() => fetchProducts(true)}
+            disabled={loading}
+            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+          >
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+          </button>
         </div>
 
         <button
@@ -178,7 +177,9 @@ export default function ProductTable({ refreshStats }) {
                   />
                 </div>
               </th>
+              <th className="px-4 py-4">Tags</th>
               <th className="px-4 py-4">Category</th>
+              <th className="px-4 py-4">Sub Category</th>
               <th className="px-4 py-4">Status</th>
               <th className="px-4 py-4 text-right">Actions</th>
             </tr>
@@ -204,10 +205,7 @@ export default function ProductTable({ refreshStats }) {
                     >
                       {p.images?.[0]?.url ? (
                         <img
-                          src={`${IMAGE_BASE_URL}/${p.images[0].url.replace(/\\/g, "/")}`.replace(
-                            /([^:]\/)\/+/g,
-                            "$1",
-                          )}
+                          src={p.images[0].url.replace(/\\/g, "/")}
                           alt=""
                           className="w-full h-full object-cover"
                         />
@@ -226,11 +224,49 @@ export default function ProductTable({ refreshStats }) {
                     </div>
                   </td>
 
+                  <td className="px-4 py-4">
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {p.wearType?.slice(0, 2).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-purple-100 text-purple-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {p.occasion?.slice(0, 2).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-pink-100 text-pink-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {p.tags?.slice(0, 1).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-slate-100 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {(p.wearType?.length > 2 || p.occasion?.length > 2 || p.tags?.length > 1) && (
+                        <span className="text-[9px] text-slate-400 font-medium">+more</span>
+                      )}
+                    </div>
+                  </td>
+
                   <td className="px-4 py-4 text-slate-600 font-medium">
                     {p.category?.name || (
                       <span className="text-slate-400 text-xs italic">
                         Uncategorized
                       </span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-4 text-slate-600 font-medium">
+                    {p.subCategory || (
+                      <span className="text-slate-400 text-xs">-</span>
                     )}
                   </td>
 
@@ -274,7 +310,7 @@ export default function ProductTable({ refreshStats }) {
             ) : (
               <tr>
                 <td
-                  colSpan="6"
+                  colSpan="7"
                   className="px-4 py-20 text-center text-slate-500 font-medium italic"
                 >
                   {loading ? "Syncing data..." : "No products found."}

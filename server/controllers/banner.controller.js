@@ -8,14 +8,16 @@ import {
   reorderBannersService,
 } from "../services/banner.service.js";
 import successResponse from "../utils/successResponse.js";
-import fs from "fs";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
-const safeUnlink = async (path) => {
-  if (path) {
-    try {
-      await fs.promises.unlink(path);
-    } catch (err) {
-      console.error(`Failed to delete file: ${err.message}`);
+const cleanupFiles = async (files) => {
+  if (!files) return;
+  const fileArray = Object.values(files).flat();
+  for (const file of fileArray) {
+    if (file.key) {
+      await deleteS3File(file.key);
+    } else if (file.path) {
+      await deleteFile(file.path);
     }
   }
 };
@@ -45,10 +47,7 @@ export const createBanner = async (req, res, next) => {
       req.files,
     );
     if (!result.success) {
-      if (req.files.desktopImage)
-        await safeUnlink(req.files.desktopImage[0].path);
-      if (req.files.mobileImage)
-        await safeUnlink(req.files.mobileImage[0].path);
+      await cleanupFiles(req.files);
       return res.status(400).json(result);
     }
     return successResponse(
@@ -58,10 +57,7 @@ export const createBanner = async (req, res, next) => {
       "Banner created successfully",
     );
   } catch (error) {
-    if (req.files.desktopImage)
-      await safeUnlink(req.files.desktopImage[0].path);
-    if (req.files.mobileImage)
-      await safeUnlink(req.files.mobileImage[0].path);
+    await cleanupFiles(req.files);
     next(error);
   }
 };
@@ -122,10 +118,7 @@ export const updateBanner = async (req, res, next) => {
       req.files,
     );
     if (!result.success) {
-      if (req.files.desktopImage)
-        await safeUnlink(req.files.desktopImage[0].path);
-      if (req.files.mobileImage)
-        await safeUnlink(req.files.mobileImage[0].path);
+      await cleanupFiles(req.files);
       return res.status(400).json(result);
     }
     return successResponse(
@@ -135,10 +128,7 @@ export const updateBanner = async (req, res, next) => {
       "Banner updated successfully",
     );
   } catch (error) {
-    if (req.files.desktopImage)
-      await safeUnlink(req.files.desktopImage[0].path);
-    if (req.files.mobileImage)
-      await safeUnlink(req.files.mobileImage[0].path);
+    await cleanupFiles(req.files);
     next(error);
   }
 };

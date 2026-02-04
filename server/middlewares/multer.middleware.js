@@ -1,34 +1,75 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import multerS3 from "multer-s3";
+import s3 from "../config/s3.js";
+import { config } from "../config/config.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 
 export const uploadTo = (folderName) => {
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath = `uploads/${folderName}`;
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      cb(
-        null,
-        `${folderName}-${uniqueSuffix}${path.extname(file.originalname)}`,
-      );
-    },
-  });
+  const isTemp = folderName.startsWith("temp");
+
+  let storage;
+
+  if (isTemp) {
+    // Local storage for temp files (e.g., Excel imports)
+    storage = multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = `uploads/${folderName}`;
+        if (!fs.existsSync(uploadPath)) {
+          fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(
+          null,
+          `${folderName}-${uniqueSuffix}${path.extname(file.originalname)}`,
+        );
+      },
+    });
+  } else {
+    // S3 storage for assets
+    storage = multerS3({
+      s3: s3,
+      bucket: config.aws.bucketName,
+      metadata: function (req, file, cb) {
+        cb(null, { fieldName: file.fieldname });
+      },
+      key: function (req, file, cb) {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        const fileName = `${folderName}/${folderName}-${uniqueSuffix}${path.extname(file.originalname)}`;
+        cb(null, fileName);
+      },
+      contentType: multerS3.AUTO_CONTENT_TYPE,
+    });
+  }
 
   const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|mp4|webm|mov/;
-    const isExtValid = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const isMimeValid = allowedTypes.test(file.mimetype);
+    // Basic filter - allow images, videos, and excel for specific routes
+    const allowedTypes = /jpeg|jpg|png|webp|mp4|webm|mov|xlsx|xls|csv/;
+    // You might want to be more specific based on folderName if needed
+    // For now, this generic check or the one below is fine.
 
-    if (isExtValid && isMimeValid) {
+    // Check extension
+    const extname = path.extname(file.originalname).toLowerCase();
+
+    // For temp/excel, allow spreadsheet extensions
+    if (folderName === 'temp/excel') {
+      if (['.xlsx', '.xls', '.csv'].includes(extname)) {
+        return cb(null, true);
+      }
+    }
+
+    const isExtValid = /jpeg|jpg|png|webp|mp4|webm|mov/.test(extname);
+    const isMimeValid = /image|video/.test(file.mimetype);
+
+    if (folderName === 'temp/excel') {
+      // Fallback if specific check above failed but we want to fail strict
+      // Actually the above if returns, so here we just check for images/videos
+      cb(ErrorResponse("Only excel files are allowed for this route.", 400), false);
+    } else if (isExtValid && isMimeValid) {
       cb(null, true);
     } else {
       cb(ErrorResponse("Only images and videos are allowed.", 400), false);

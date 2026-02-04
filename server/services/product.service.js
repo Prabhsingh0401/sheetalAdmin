@@ -1,8 +1,10 @@
 import Review from "../models/review.model.js";
 import Product from "../models/product.model.js";
 import slugify from "slugify";
-import { deleteFile } from "../utils/fileHelper.js";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
+import { config } from "../config/config.js";
 import xlsx from "xlsx";
+import mongoose from "mongoose";
 
 export const getAllProductsService = async (queryStr) => {
   const {
@@ -11,9 +13,13 @@ export const getAllProductsService = async (queryStr) => {
     search,
     sort,
     category,
+    subCategory,
     status,
     color,
     brand,
+    wearType,
+    occasion,
+    tags,
   } = queryStr;
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -29,7 +35,12 @@ export const getAllProductsService = async (queryStr) => {
   }
 
   if (category && category !== "All") {
-    filter.category = category;
+    // Convert string to ObjectId for proper MongoDB comparison
+    filter.category = new mongoose.Types.ObjectId(category);
+  }
+
+  if (subCategory && subCategory !== "All") {
+    filter.subCategory = subCategory;
   }
 
   if (brand && brand !== "All") {
@@ -42,6 +53,18 @@ export const getAllProductsService = async (queryStr) => {
 
   if (color) {
     filter["variants.color.name"] = { $regex: color, $options: "i" };
+  }
+
+  if (wearType) {
+    filter.wearType = { $in: Array.isArray(wearType) ? wearType : [wearType] };
+  }
+
+  if (occasion) {
+    filter.occasion = { $in: Array.isArray(occasion) ? occasion : [occasion] };
+  }
+
+  if (tags) {
+    filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
   }
 
   const pipeline = [
@@ -173,32 +196,49 @@ export const createProductService = async (data, files, userId) => {
       typeof data.displayCollections === "string"
         ? JSON.parse(data.displayCollections)
         : data.displayCollections,
+    wearType:
+      typeof data.wearType === "string"
+        ? JSON.parse(data.wearType)
+        : data.wearType,
+    occasion:
+      typeof data.occasion === "string"
+        ? JSON.parse(data.occasion)
+        : data.occasion,
+    tags:
+      typeof data.tags === "string"
+        ? JSON.parse(data.tags)
+        : data.tags,
   };
 
   if (parsedData.sizeChart === "null" || !parsedData.sizeChart)
     parsedData.sizeChart = null;
   if (parsedData.category === "null" || !parsedData.category)
     parsedData.category = null;
+  if (parsedData.subCategory === "null" || !parsedData.subCategory)
+    parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
 
   const mainImage = {
-    url: files?.mainImage ? files.mainImage[0].path.replace(/\\/g, "/") : "",
+    url: files?.mainImage ? (files.mainImage[0].location || files.mainImage[0].path) : "",
+    public_id: files?.mainImage ? (files.mainImage[0].key || files.mainImage[0].filename) : "",
     alt: data.mainImageAlt || `${parsedData.name} main image`,
   };
 
   const hoverImage = {
-    url: files?.hoverImage ? files.hoverImage[0].path.replace(/\\/g, "/") : "",
+    url: files?.hoverImage ? (files.hoverImage[0].location || files.hoverImage[0].path) : "",
+    public_id: files?.hoverImage ? (files.hoverImage[0].key || files.hoverImage[0].filename) : "",
     alt: data.hoverImageAlt || `${parsedData.name} hover image`,
   };
 
   const ogImage = files?.ogImage
-    ? files.ogImage[0].path.replace(/\\/g, "/")
+    ? (files.ogImage[0].location || files.ogImage[0].path)
     : "";
 
   let galleryImages = [];
   if (files?.images) {
     galleryImages = files.images.map((file, index) => ({
-      url: file.path.replace(/\\/g, "/"),
+      url: file.location || file.path,
+      public_id: file.key || file.filename,
       alt: `${parsedData.name} gallery ${index + 1}`,
       isDefault: false,
     }));
@@ -226,14 +266,16 @@ export const createProductService = async (data, files, userId) => {
       totalStock += variantStock; // Add to master stock
 
       if (v.hasNewImage === true && uploadedVariantFiles[variantFileIndex]) {
-        const filePath = uploadedVariantFiles[variantFileIndex].path.replace(
-          /\\/g,
-          "/",
-        );
+        const file = uploadedVariantFiles[variantFileIndex];
+        const v_image = {
+          url: file.location || file.path,
+          public_id: file.key || file.filename,
+        };
         variantFileIndex++;
         const { hasNewImage, ...rest } = v;
-        return { ...rest, sizes: processedSizes, v_image: filePath }; // Return variant with processed sizes and image
+        return { ...rest, sizes: processedSizes, v_image: v_image };
       }
+
       const { hasNewImage, ...rest } = v;
       return { ...rest, sizes: processedSizes }; // Return variant with processed sizes
     });
@@ -246,7 +288,10 @@ export const createProductService = async (data, files, userId) => {
     hoverImage,
     ogImage,
     images: galleryImages,
-    video: files?.video ? files.video[0].path.replace(/\\/g, "/") : "",
+    video: files?.video ? {
+      url: files.video[0].location || files.video[0].path,
+      public_id: files.video[0].key || files.video[0].filename
+    } : null,
     stock: totalStock, // Set master stock
     createdBy: userId,
   });
@@ -281,12 +326,26 @@ export const updateProductService = async (id, data, files) => {
       typeof data.eventTags === "string"
         ? JSON.parse(data.eventTags)
         : data.eventTags,
+    wearType:
+      typeof data.wearType === "string"
+        ? JSON.parse(data.wearType)
+        : data.wearType,
+    occasion:
+      typeof data.occasion === "string"
+        ? JSON.parse(data.occasion)
+        : data.occasion,
+    tags:
+      typeof data.tags === "string"
+        ? JSON.parse(data.tags)
+        : data.tags,
   };
 
   if (parsedData.sizeChart === "null" || !parsedData.sizeChart)
     parsedData.sizeChart = null;
   if (parsedData.category === "null" || !parsedData.category)
     parsedData.category = null;
+  if (parsedData.subCategory === "null" || !parsedData.subCategory)
+    parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
 
   if (parsedData.name) {
@@ -294,8 +353,13 @@ export const updateProductService = async (id, data, files) => {
   }
 
   if (files && files["mainImage"]?.[0]) {
+    // Delete old
+    if (product.mainImage?.public_id) await deleteS3File(product.mainImage.public_id);
+    else if (product.mainImage?.url && !product.mainImage.url.startsWith("http")) await deleteFile(product.mainImage.url);
+
     parsedData.mainImage = {
-      url: files["mainImage"][0].path.replace(/\\/g, "/"),
+      url: files["mainImage"][0].location || files["mainImage"][0].path,
+      public_id: files["mainImage"][0].key || files["mainImage"][0].filename,
       alt: data.mainImageAlt || parsedData.name,
     };
   } else if (data.mainImageAlt) {
@@ -303,8 +367,13 @@ export const updateProductService = async (id, data, files) => {
   }
 
   if (files && files["hoverImage"]?.[0]) {
+    // Delete old
+    if (product.hoverImage?.public_id) await deleteS3File(product.hoverImage.public_id);
+    else if (product.hoverImage?.url && !product.hoverImage.url.startsWith("http")) await deleteFile(product.hoverImage.url);
+
     parsedData.hoverImage = {
-      url: files["hoverImage"][0].path.replace(/\\/g, "/"),
+      url: files["hoverImage"][0].location || files["hoverImage"][0].path,
+      public_id: files["hoverImage"][0].key || files["hoverImage"][0].filename,
       alt: data.hoverImageAlt || parsedData.name,
     };
   } else if (data.hoverImageAlt) {
@@ -312,13 +381,19 @@ export const updateProductService = async (id, data, files) => {
   }
 
   if (files && files["video"]?.[0]) {
-    parsedData.video = files["video"][0].path.replace(/\\/g, "/");
+    if (product.video?.public_id) await deleteS3File(product.video.public_id);
+    else if (product.video?.url && !product.video.url.startsWith("http")) await deleteFile(product.video.url);
+
+    parsedData.video = {
+      url: files["video"][0].location || files["video"][0].path,
+      public_id: files["video"][0].key || files["video"][0].filename
+    };
   } else if (data.existingVideo) {
-    parsedData.video = data.existingVideo;
+    // Keep existing
   }
 
   if (files && files["ogImage"]?.[0]) {
-    parsedData.ogImage = files["ogImage"][0].path.replace(/\\/g, "/");
+    parsedData.ogImage = files["ogImage"][0].location || files["ogImage"][0].path;
   } else if (data.existingOgImage) {
     parsedData.ogImage = data.existingOgImage;
   }
@@ -346,14 +421,16 @@ export const updateProductService = async (id, data, files) => {
       totalStock += variantStock; // Add to master stock
 
       if (v.hasNewImage === true && uploadedVariantFiles[variantFileIndex]) {
-        const filePath = uploadedVariantFiles[variantFileIndex].path.replace(
-          /\\/g,
-          "/",
-        );
+        const file = uploadedVariantFiles[variantFileIndex];
+        const v_image = {
+          url: file.location || file.path,
+          public_id: file.key || file.filename,
+        };
         variantFileIndex++;
         const { hasNewImage, ...rest } = v;
-        return { ...rest, sizes: processedSizes, v_image: filePath }; // Return variant with processed sizes and image
+        return { ...rest, sizes: processedSizes, v_image: v_image };
       }
+
       const { hasNewImage, ...rest } = v;
       return { ...rest, sizes: processedSizes }; // Return variant with processed sizes
     });
@@ -369,7 +446,8 @@ export const updateProductService = async (id, data, files) => {
   let newGalleryImages = [];
   if (files && files["images"]) {
     newGalleryImages = files["images"].map((file, index) => ({
-      url: file.path.replace(/\\/g, "/"),
+      url: file.location || file.path,
+      public_id: file.key || file.filename,
       alt: `${parsedData.name} gallery ${existingImages.length + index + 1}`,
       isDefault: false,
     }));
@@ -389,9 +467,21 @@ export const deleteProductService = async (id) => {
   const product = await Product.findById(id);
   if (!product) return { success: false, statusCode: 404 };
 
-  if (product.mainImage?.url) deleteFile(product.mainImage.url);
-  if (product.hoverImage?.url) deleteFile(product.hoverImage.url);
-  product.images?.forEach((img) => deleteFile(img.url));
+  if (product.mainImage?.public_id) await deleteS3File(product.mainImage.public_id);
+  else if (product.mainImage?.url && !product.mainImage.url.startsWith("http")) await deleteFile(product.mainImage.url);
+
+  if (product.hoverImage?.public_id) await deleteS3File(product.hoverImage.public_id);
+  else if (product.hoverImage?.url && !product.hoverImage.url.startsWith("http")) await deleteFile(product.hoverImage.url);
+
+  if (product.images) {
+    for (const img of product.images) {
+      if (img.public_id) await deleteS3File(img.public_id);
+      else if (img.url && !img.url.startsWith("http")) await deleteFile(img.url);
+    }
+  }
+
+  if (product.video?.public_id) await deleteS3File(product.video.public_id);
+  else if (product.video?.url && !product.video.url.startsWith("http")) await deleteFile(product.video.url);
 
   await product.deleteOne();
   return { success: true };
@@ -413,49 +503,49 @@ export const getLowStockProductsService = async () => {
       },
     },
     {
-      
-            $group: {
-              _id: {
-                productId: "$_id",
-                name: "$name",
-                color: "$variants.color.name",
-                v_sku: "$variants.v_sku",
-              },
-              mainImage: { $first: "$mainImage" },
-              sizes: {
-                $push: {
-                  name: "$variants.sizes.name",
-                  stock: "$variants.sizes.stock",
-                },
-              },
-            },
+
+      $group: {
+        _id: {
+          productId: "$_id",
+          name: "$name",
+          color: "$variants.color.name",
+          v_sku: "$variants.v_sku",
+        },
+        mainImage: { $first: "$mainImage" },
+        sizes: {
+          $push: {
+            name: "$variants.sizes.name",
+            stock: "$variants.sizes.stock",
           },
-          {
-            $group: {
-              _id: "$_id.productId",
-              name: { $first: "$_id.name" },
-              mainImage: { $first: "$mainImage" },
-              lowStockVariants: {
-                $push: {
-                  color: "$_id.color",
-                  v_sku: "$_id.v_sku",
-                  sizes: "$sizes",
-                },
-              },
-            },
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$_id.productId",
+        name: { $first: "$_id.name" },
+        mainImage: { $first: "$mainImage" },
+        lowStockVariants: {
+          $push: {
+            color: "$_id.color",
+            v_sku: "$_id.v_sku",
+            sizes: "$sizes",
           },
-          {
-            $project: {
-              _id: 1,
-              name: 1,
-              mainImage: 1,
-              lowStockVariants: 1,
-            },
-          },
-        ]);
-      
-        return { success: true, data: lowStockProducts };
-      };
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        mainImage: 1,
+        lowStockVariants: 1,
+      },
+    },
+  ]);
+
+  return { success: true, data: lowStockProducts };
+};
 
 export const getProductReviewsService = async (productId) => {
   const reviews = await Review.find({ product: productId, isApproved: true })

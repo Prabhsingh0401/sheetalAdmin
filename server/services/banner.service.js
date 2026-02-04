@@ -1,5 +1,5 @@
 import Banner from "../models/banner.model.js";
-import fs from "fs";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
 export const createBannerService = async (data, files) => {
   const { title, link, status, expiresAt } = data;
@@ -9,14 +9,14 @@ export const createBannerService = async (data, files) => {
   const image = {};
   if (files.desktopImage) {
     image.desktop = {
-      url: files.desktopImage[0].path,
-      public_id: files.desktopImage[0].filename,
+      url: files.desktopImage[0].location || files.desktopImage[0].path,
+      public_id: files.desktopImage[0].key || files.desktopImage[0].filename,
     };
   }
   if (files.mobileImage) {
     image.mobile = {
-      url: files.mobileImage[0].path,
-      public_id: files.mobileImage[0].filename,
+      url: files.mobileImage[0].location || files.mobileImage[0].path,
+      public_id: files.mobileImage[0].key || files.mobileImage[0].filename,
     };
   }
 
@@ -92,34 +92,30 @@ export const updateBannerService = async (id, data, files) => {
   };
 
   if (files.desktopImage) {
-    if (banner.image.desktop?.url) {
-      try {
-        await fs.promises.unlink(banner.image.desktop.url);
-      } catch (err) {
-        console.error(
-          `Failed to delete old desktop banner image: ${err.message}`,
-        );
+    if (banner.image.desktop?.public_id) {
+      if (banner.image.desktop.url?.startsWith("http")) {
+        await deleteS3File(banner.image.desktop.public_id);
+      } else {
+        await deleteFile(banner.image.desktop.url);
       }
     }
     updateData.image.desktop = {
-      url: files.desktopImage[0].path,
-      public_id: files.desktopImage[0].filename,
+      url: files.desktopImage[0].location || files.desktopImage[0].path,
+      public_id: files.desktopImage[0].key || files.desktopImage[0].filename,
     };
   }
 
   if (files.mobileImage) {
-    if (banner.image.mobile?.url) {
-      try {
-        await fs.promises.unlink(banner.image.mobile.url);
-      } catch (err) {
-        console.error(
-          `Failed to delete old mobile banner image: ${err.message}`,
-        );
+    if (banner.image.mobile?.public_id) {
+      if (banner.image.mobile.url?.startsWith("http")) {
+        await deleteS3File(banner.image.mobile.public_id);
+      } else {
+        await deleteFile(banner.image.mobile.url);
       }
     }
     updateData.image.mobile = {
-      url: files.mobileImage[0].path,
-      public_id: files.mobileImage[0].filename,
+      url: files.mobileImage[0].location || files.mobileImage[0].path,
+      public_id: files.mobileImage[0].key || files.mobileImage[0].filename,
     };
   }
 
@@ -135,19 +131,19 @@ export const deleteBannerService = async (id) => {
   const banner = await Banner.findById(id);
   if (!banner) return { success: false, message: "Banner not found" };
 
-  if (banner.image.desktop?.url) {
-    try {
-      await fs.promises.unlink(banner.image.desktop.url);
-    } catch (err) {
-      console.error(`Failed to delete desktop banner image: ${err.message}`);
+  if (banner.image.desktop?.public_id) {
+    if (banner.image.desktop.url?.startsWith("http")) {
+      await deleteS3File(banner.image.desktop.public_id);
+    } else {
+      await deleteFile(banner.image.desktop.url);
     }
   }
 
-  if (banner.image.mobile?.url) {
-    try {
-      await fs.promises.unlink(banner.image.mobile.url);
-    } catch (err) {
-      console.error(`Failed to delete mobile banner image: ${err.message}`);
+  if (banner.image.mobile?.public_id) {
+    if (banner.image.mobile.url?.startsWith("http")) {
+      await deleteS3File(banner.image.mobile.public_id);
+    } else {
+      await deleteFile(banner.image.mobile.url);
     }
   }
 

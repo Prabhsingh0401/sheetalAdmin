@@ -1,15 +1,17 @@
 import * as categoryService from "../services/category.service.js";
 import successResponse from "../utils/successResponse.js";
-import fs from "fs";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
-const safeUnlink = (path) => {
-  if (path && fs.existsSync(path)) fs.unlinkSync(path);
-};
-
-const cleanupFiles = (files) => {
+const cleanupFiles = async (files) => {
   if (!files) return;
-  if (files.mainImage) safeUnlink(files.mainImage[0].path);
-  if (files.bannerImage) safeUnlink(files.bannerImage[0].path);
+  const fileArray = Object.values(files).flat();
+  for (const file of fileArray) {
+    if (file.key) {
+      await deleteS3File(file.key);
+    } else if (file.path) {
+      await deleteFile(file.path);
+    }
+  }
 };
 
 export const createCategory = async (req, res, next) => {

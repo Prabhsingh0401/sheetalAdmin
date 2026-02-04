@@ -40,6 +40,7 @@ const categorySchema = new mongoose.Schema(
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     metaTitle: { type: String, trim: true },
     metaDescription: { type: String, trim: true },
+    subCategories: { type: [String], default: [] },
   },
   { timestamps: true },
 );

@@ -14,7 +14,6 @@ import {
   BadgePercent,
   Ruler,
 } from "lucide-react";
-import { IMAGE_BASE_URL } from "@/services/api";
 
 export default function ViewProductDrawer({ isOpen, onClose, product }) {
   if (!product) return null;
@@ -54,7 +53,7 @@ export default function ViewProductDrawer({ isOpen, onClose, product }) {
           <div className="grid grid-cols-4 gap-2">
             <div className="col-span-4 aspect-[16/9] rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
               <img
-                src={`${IMAGE_BASE_URL}/${product.images?.[0]?.url}`}
+                src={product.images?.[0]?.url}
                 className="w-full h-full object-cover"
                 alt="Main"
               />
@@ -65,7 +64,7 @@ export default function ViewProductDrawer({ isOpen, onClose, product }) {
                 className="aspect-square rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm"
               >
                 <img
-                  src={`${IMAGE_BASE_URL}/${img.url}`}
+                  src={img.url}
                   className="w-full h-full object-cover"
                   alt={`Gallery ${idx}`}
                 />
@@ -116,6 +115,19 @@ export default function ViewProductDrawer({ isOpen, onClose, product }) {
                 {product.category?.name || "Uncategorized"}
               </span>
             </div>
+            {product.subCategory && (
+              <div className="flex justify-between items-center border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <Tag size={16} className="text-slate-400" />
+                  <span className="text-xs font-bold text-slate-700 uppercase">
+                    Sub Category
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full uppercase">
+                  {product.subCategory}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className="text-slate-400" />

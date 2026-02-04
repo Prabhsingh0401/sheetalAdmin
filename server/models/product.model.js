@@ -33,6 +33,23 @@ const productSchema = new mongoose.Schema(
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     stock: { type: Number, required: true, default: 0 },
 
+    // Product categorization and filtering
+    wearType: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    occasion: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    tags: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+
     displayCollections: { type: [String], default: [], index: true },
     eventTags: { type: [String], default: [], index: true },
 
@@ -52,7 +69,10 @@ const productSchema = new mongoose.Schema(
             discountPrice: { type: Number, default: 0 },
           },
         ],
-        v_image: { type: String },
+        v_image: {
+          url: { type: String },
+          public_id: { type: String },
+        },
       },
     ],
 
@@ -70,21 +90,25 @@ const productSchema = new mongoose.Schema(
 
     mainImage: {
       url: { type: String, required: true },
+      public_id: { type: String },
       alt: { type: String, default: "product main image" },
     },
     hoverImage: {
       url: { type: String },
+      public_id: { type: String },
       alt: { type: String, default: "product hover image" },
     },
     images: [
       {
         url: { type: String, required: true },
+        public_id: { type: String },
         alt: { type: String, default: "product gallery image" },
         isDefault: { type: Boolean, default: false },
       },
     ],
     video: {
       url: { type: String },
+      public_id: { type: String },
       mimeType: { type: String, default: "video/mp4" },
       size: { type: Number },
     },
@@ -99,6 +123,11 @@ const productSchema = new mongoose.Schema(
       ref: "Category",
       required: true,
     },
+    subCategory: {
+      type: String,
+      default: null,
+      index: true,
+    },
     sizeChart: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SizeChart",
@@ -112,6 +141,9 @@ productSchema.index({
   name: "text",
   sku: "text",
   eventTags: "text",
+  wearType: "text",
+  occasion: "text",
+  tags: "text",
   metaKeywords: "text",
   materialCare: "text",
 });

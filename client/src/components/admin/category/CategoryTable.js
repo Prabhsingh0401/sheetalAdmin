@@ -83,10 +83,14 @@ function SortableCategoryRow({ category, onEdit, onView, onDelete }) {
         >
           {category.mainImage?.url ? (
             <img
-              src={`${IMAGE_BASE_URL}/${category.mainImage.url.replace(/\\/g, "/")}`.replace(
-                /([^:]\/)\/+/g,
-                "",
-              )}
+              src={
+                category.mainImage.url.startsWith("http")
+                  ? category.mainImage.url
+                  : `${IMAGE_BASE_URL}/${category.mainImage.url.replace(/\\/g, "/")}`.replace(
+                    /([^:]\/)\/+/g,
+                    "",
+                  )
+              }
               alt="Main"
               className="w-full h-full object-cover"
             />
@@ -96,6 +100,29 @@ function SortableCategoryRow({ category, onEdit, onView, onDelete }) {
         </div>
       </td>
       <td className="px-4 py-3 font-bold text-slate-900">{category.name}</td>
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap gap-1">
+          {category.subCategories && category.subCategories.length > 0 ? (
+            <>
+              {category.subCategories.slice(0, 3).map((sub, idx) => (
+                <span
+                  key={idx}
+                  className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] border border-slate-200"
+                >
+                  {sub}
+                </span>
+              ))}
+              {category.subCategories.length > 3 && (
+                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] border border-slate-200">
+                  +{category.subCategories.length - 3}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-slate-400 text-xs">-</span>
+          )}
+        </div>
+      </td>
       <td className="px-4 py-3">
         <span
           className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${category.isActive !== false ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}
@@ -298,12 +325,13 @@ export default function CategoryTable({ refreshStats }) {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-900 font-bold border-b border-slate-200 uppercase text-[11px] tracking-wider">
               <tr>
-                <th className="px-4 py-4 w-12 text-center"></th>{" "}
+                <th className="px-4 py-4 w-12 text-center"></th>
                 {/* Drag handle column */}
                 <th className="px-4 py-4 w-16 text-center">Main Image</th>
                 <th className="px-4 py-4">
                   <div className="flex items-center gap-1">Name</div>
                 </th>
+                <th className="px-4 py-4">Subcategories</th>
                 <th className="px-4 py-4">Status</th>
                 <th className="px-4 py-4 text-right">Actions</th>
               </tr>
@@ -337,7 +365,6 @@ export default function CategoryTable({ refreshStats }) {
                       colSpan="5"
                       className="px-4 py-20 text-center text-slate-500 font-medium italic"
                     >
-                      {" "}
                       {/* colSpan adjusted to 5 */}
                       {loading ? "Syncing data..." : "No categories found."}
                     </td>

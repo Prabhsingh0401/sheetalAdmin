@@ -1,0 +1,314 @@
+import React from "react";
+import { Plus, Trash2, Layers, Shirt, X } from "lucide-react";
+
+export default function InventoryParams({
+    formData,
+    setFormData,
+    emptyVariant,
+}) {
+    return (
+        <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-md">
+                <div className="bg-slate-900 px-5 py-4 flex justify-between items-center text-white">
+                    <div className="flex items-center gap-3">
+                        <Layers size={20} className="text-blue-400" />
+                        <div>
+                            <h3 className="text-sm font-bold uppercase tracking-wider">
+                                Manage Variants
+                            </h3>
+                            <p className="text-[10px] text-slate-400">
+                                Configure size, color, and specific images
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setFormData((p) => ({
+                                ...p,
+                                variants: [...p.variants, { ...emptyVariant }],
+                            }))
+                        }
+                        className="bg-white text-slate-900 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 text-xs font-bold"
+                    >
+                        <Plus size={16} /> Add Variant
+                    </button>
+                </div>
+
+                <div className="p-5 space-y-6">
+                    {formData.variants.map((v, i) => (
+                        <div
+                            key={i}
+                            className="group p-5 bg-slate-50 border border-slate-200 rounded-2xl relative hover:border-slate-400 transition-all"
+                        >
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setFormData({
+                                        ...formData,
+                                        variants: formData.variants.filter((_, idx) => idx !== i),
+                                    })
+                                }
+                                className="absolute -top-2 -right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">
+                                        Variant SKU
+                                    </label>
+                                    <input
+                                        className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs font-bold uppercase focus:ring-2 focus:ring-slate-900 outline-none"
+                                        placeholder="e.g. TSHIRT-RED"
+                                        value={v.v_sku}
+                                        onChange={(e) => {
+                                            const up = [...formData.variants];
+                                            up[i].v_sku = e.target.value.toUpperCase();
+                                            setFormData({ ...formData, variants: up });
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">
+                                        Color Name
+                                    </label>
+                                    <input
+                                        className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs font-medium"
+                                        placeholder="Red, Navy..."
+                                        value={v.color?.name}
+                                        onChange={(e) => {
+                                            const up = [...formData.variants];
+                                            up[i].color.name = e.target.value;
+                                            setFormData({ ...formData, variants: up });
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">
+                                        Color Hex
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="color"
+                                            className="w-10 h-9 border-none bg-transparent cursor-pointer"
+                                            value={v.color?.code}
+                                            onChange={(e) => {
+                                                const up = [...formData.variants];
+                                                up[i].color.code = e.target.value;
+                                                setFormData({ ...formData, variants: up });
+                                            }}
+                                        />
+                                        <input
+                                            className="flex-1 bg-white border border-slate-300 px-2 py-2 rounded-lg text-[10px] font-mono uppercase"
+                                            value={v.color?.code}
+                                            onChange={(e) => {
+                                                const up = [...formData.variants];
+                                                up[i].color.code = e.target.value;
+                                                setFormData({ ...formData, variants: up });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">
+                                        Variant Image
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        {v.v_image ? (
+                                            <div className="relative w-10 h-10 rounded border border-slate-300 overflow-hidden bg-white">
+                                                <img
+                                                    src={
+                                                        v.v_image instanceof File
+                                                            ? URL.createObjectURL(v.v_image)
+                                                            : v.v_image
+                                                                ? v.v_image.url || v.v_image
+                                                                : "/placeholder.png"
+                                                    }
+                                                    className="w-full h-full object-cover"
+                                                    alt="variant-preview"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = "/placeholder.png";
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const up = [...formData.variants];
+                                                        up[i].v_image = "";
+                                                        setFormData({
+                                                            ...formData,
+                                                            variants: up,
+                                                        });
+                                                    }}
+                                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition text-white"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <label className="w-10 h-10 flex items-center justify-center border-2 border-dashed border-slate-300 rounded cursor-pointer hover:bg-white transition text-slate-400">
+                                                <Plus size={14} />
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const up = [...formData.variants];
+                                                        up[i].v_image = e.target.files[0];
+                                                        setFormData({
+                                                            ...formData,
+                                                            variants: up,
+                                                        });
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                        <span className="text-[9px] text-slate-400 leading-tight">
+                                            Image for this color
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">
+                                        Sizes for this variant
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const up = [...formData.variants];
+                                            up[i].sizes.push({ name: "", stock: 0 });
+                                            setFormData({ ...formData, variants: up });
+                                        }}
+                                        className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold"
+                                    >
+                                        Add Size
+                                    </button>
+                                </div>
+                                <div className="space-y-2">
+                                    {v.sizes.map((s, s_idx) => (
+                                        <div key={s_idx} className="flex items-end gap-2">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-grow">
+                                                {/* Size Name */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-bold text-slate-500 uppercase">
+                                                        Size
+                                                    </label>
+                                                    <input
+                                                        className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                        placeholder="e.g. M, L, XL"
+                                                        value={s.name}
+                                                        onChange={(e) => {
+                                                            const up = [...formData.variants];
+                                                            up[i].sizes[s_idx].name = e.target.value;
+                                                            setFormData({
+                                                                ...formData,
+                                                                variants: up,
+                                                            });
+                                                        }}
+                                                    />
+                                                </div>
+                                                {/* Stock */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-bold text-slate-500 uppercase">
+                                                        Stock
+                                                    </label>
+                                                    <input
+                                                        className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                        placeholder="Stock"
+                                                        type="number"
+                                                        value={s.stock}
+                                                        onChange={(e) => {
+                                                            const up = [...formData.variants];
+                                                            up[i].sizes[s_idx].stock = Number(e.target.value);
+                                                            setFormData({
+                                                                ...formData,
+                                                                variants: up,
+                                                            });
+                                                        }}
+                                                    />
+                                                </div>
+                                                {/* MRP Price */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-bold text-slate-500 uppercase">
+                                                        MRP (₹)
+                                                    </label>
+                                                    <input
+                                                        className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                        placeholder="MRP (₹)"
+                                                        type="number"
+                                                        value={s.price}
+                                                        onChange={(e) => {
+                                                            const up = [...formData.variants];
+                                                            up[i].sizes[s_idx].price = Number(e.target.value);
+                                                            setFormData({
+                                                                ...formData,
+                                                                variants: up,
+                                                            });
+                                                        }}
+                                                    />
+                                                </div>
+                                                {/* Discount Price */}
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-bold text-slate-500 uppercase">
+                                                        Disc. (₹)
+                                                    </label>
+                                                    <input
+                                                        className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                                                        placeholder="Disc. Price (₹)"
+                                                        type="number"
+                                                        value={s.discountPrice}
+                                                        onChange={(e) => {
+                                                            const up = [...formData.variants];
+                                                            up[i].sizes[s_idx].discountPrice = Number(
+                                                                e.target.value,
+                                                            );
+                                                            setFormData({
+                                                                ...formData,
+                                                                variants: up,
+                                                            });
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Delete Button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const up = [...formData.variants];
+                                                    up[i].sizes.splice(s_idx, 1);
+                                                    setFormData({ ...formData, variants: up });
+                                                }}
+                                                className="text-red-500 p-2 flex-shrink-0"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {formData.variants.length === 0 && (
+                        <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            <Shirt size={48} className="mx-auto text-slate-300 mb-3" />
+                            <p className="text-slate-500 text-sm font-medium">
+                                No variants added yet
+                            </p>
+                            <p className="text-slate-400 text-xs">
+                                Click the button above to add sizes and colors
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}

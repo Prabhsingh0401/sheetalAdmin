@@ -9,10 +9,9 @@ import {
   Edit3,
 } from "lucide-react";
 import { addBanner, updateBanner } from "@/services/bannerService";
-import { getCategories } from "@/services/categoryService"; 
+import { getCategories } from "@/services/categoryService";
 import { getProducts } from "@/services/productService";
 import toast from "react-hot-toast";
-import { IMAGE_BASE_URL } from "@/services/api";
 
 export default function BannerModal({
   isOpen,
@@ -108,22 +107,12 @@ export default function BannerModal({
         }
 
         if (initialData?.image?.desktop?.url) {
-          const fullUrl =
-            `${IMAGE_BASE_URL}/${initialData.image.desktop.url.replace(/\\/g, "/")}`.replace(
-              /([^:]\/)\/+/g,
-              "$1",
-            );
-          setDesktopPreview(fullUrl);
+          setDesktopPreview(initialData.image.desktop.url);
         } else {
           setDesktopPreview(null);
         }
         if (initialData?.image?.mobile?.url) {
-          const fullUrl =
-            `${IMAGE_BASE_URL}/${initialData.image.mobile.url.replace(/\\/g, "/")}`.replace(
-              /([^:]\/)\/+/g,
-              "$1",
-            );
-          setMobilePreview(fullUrl);
+          setMobilePreview(initialData.image.mobile.url);
         } else {
           setMobilePreview(null);
         }
@@ -416,7 +405,7 @@ export default function BannerModal({
               )}
             </div>
           </div>
-          
+
           {/* --- ACTIONS --- */}
           <div className="px-6 pb-6 pt-4 flex items-center gap-3">
             <button

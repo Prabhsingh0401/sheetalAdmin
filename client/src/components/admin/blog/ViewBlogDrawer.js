@@ -1,6 +1,5 @@
 "use client";
 
-import { IMAGE_BASE_URL } from "@/services/api";
 import {
   X,
   Tag,
@@ -13,12 +12,7 @@ import {
 
 export default function ViewBlogDrawer({ isOpen, onClose, blog }) {
   if (!blog) return null;
-  const imageUrl = blog.bannerImage
-    ? `${IMAGE_BASE_URL}/${blog.bannerImage.replace(/\\/g, "/")}`.replace(
-        /([^:]\/)\/+/g,
-        "$1",
-      )
-    : null;
+  const imageUrl = blog.bannerImage?.url || blog.bannerImage || null;
 
   return (
     <>
@@ -83,33 +77,17 @@ export default function ViewBlogDrawer({ isOpen, onClose, blog }) {
           </div>
 
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
-                  <User size={18} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Author
-                  </p>
-                  <p className="text-xs font-bold text-slate-900">
-                    {blog.author?.name || "Admin"}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+              <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
+                <User size={18} />
               </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
-                  <Tag size={18} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Category
-                  </p>
-                  <p className="text-xs font-bold text-slate-900">
-                    {blog.category || "General"}
-                  </p>
-                </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Author
+                </p>
+                <p className="text-xs font-bold text-slate-900">
+                  {blog.author?.name || "Admin"}
+                </p>
               </div>
             </div>
 

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { X, Newspaper, Edit3, Loader2, Info, ImageIcon } from "lucide-react";
 import { addBlog, updateBlog } from "@/services/blogService";
 import { toast } from "react-hot-toast";
-import { IMAGE_BASE_URL } from "@/services/api";
 import TiptapEditor from "@/components/TiptapEditor";
 
 export default function BlogModal({
@@ -21,7 +20,6 @@ export default function BlogModal({
     title: "",
     content: "",
     excerpt: "",
-    category: "",
     tags: "",
     isPublished: true,
     status: "Active",
@@ -35,7 +33,6 @@ export default function BlogModal({
         title: initialData?.title || "",
         content: initialData?.content || "",
         excerpt: initialData?.excerpt || "",
-        category: initialData?.category || "",
         tags: initialData?.tags?.join(", ") || "",
         isPublished: initialData?.isPublished ?? true,
         status: initialData?.status || "Active",
@@ -44,23 +41,13 @@ export default function BlogModal({
       });
 
       if (initialData?.bannerImage) {
-        const fullUrl =
-          `${IMAGE_BASE_URL}/${initialData.bannerImage.replace(/\\/g, "/")}`.replace(
-            /([^:]\/)\/+/g,
-            "$1",
-          );
-        setBannerPreview(fullUrl);
+        setBannerPreview(initialData.bannerImage.url || initialData.bannerImage);
       } else {
         setBannerPreview(null);
       }
 
       if (initialData?.contentImage) {
-        const fullUrl =
-          `${IMAGE_BASE_URL}/${initialData.contentImage.replace(/\\/g, "/")}`.replace(
-            /([^:]\/)\/+/g,
-            "$1",
-          );
-        setContentImagePreview(fullUrl);
+        setContentImagePreview(initialData.contentImage.url || initialData.contentImage);
       } else {
         setContentImagePreview(null);
       }
@@ -239,20 +226,6 @@ export default function BlogModal({
           </div>
 
           <div className="grid grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Category
-              </label>
-              <input
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                placeholder="e.g. Technology"
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-                required
-              />
-            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Status

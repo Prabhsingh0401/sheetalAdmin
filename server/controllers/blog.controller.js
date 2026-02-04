@@ -1,16 +1,15 @@
 import * as blogService from "../services/blog.service.js";
 import successResponse from "../utils/successResponse.js";
-import fs from "fs";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
-const clearBlogFiles = (files) => {
+const cleanupFiles = async (files) => {
   if (!files) return;
-  for (const key in files) {
-    if (Array.isArray(files[key])) {
-      files[key].forEach((file) => {
-        if (file && fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
-      });
+  const fileArray = Object.values(files).flat();
+  for (const file of fileArray) {
+    if (file.key) {
+      await deleteS3File(file.key);
+    } else if (file.path) {
+      await deleteFile(file.path);
     }
   }
 };
@@ -23,12 +22,12 @@ export const createBlog = async (req, res, next) => {
       req.user._id,
     );
     if (!result.success) {
-      clearBlogFiles(req.files);
+      await cleanupFiles(req.files);
       return res.status(400).json(result);
     }
     successResponse(res, 201, result.data, "Blog post created successfully");
   } catch (error) {
-    clearBlogFiles(req.files);
+    await cleanupFiles(req.files);
     next(error);
   }
 };
@@ -65,12 +64,12 @@ export const updateBlog = async (req, res, next) => {
       req.files,
     );
     if (!result.success) {
-      clearBlogFiles(req.files);
+      await cleanupFiles(req.files);
       return res.status(400).json(result);
     }
     successResponse(res, 200, result.data, "Blog post updated successfully");
   } catch (error) {
-    clearBlogFiles(req.files);
+    await cleanupFiles(req.files);
     next(error);
   }
 };

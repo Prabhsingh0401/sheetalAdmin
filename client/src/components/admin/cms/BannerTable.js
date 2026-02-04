@@ -31,7 +31,6 @@ import BannerModal from "./BannerModal";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
 import { getBanners, deleteBanner, reorderBanners } from "@/services/bannerService";
-import { IMAGE_BASE_URL } from "@/services/api";
 
 function SortableBannerRow({ banner, onEdit, onDelete }) {
   const {
@@ -52,15 +51,15 @@ function SortableBannerRow({ banner, onEdit, onDelete }) {
 
   return (
     <tr ref={setNodeRef} style={style} {...attributes} className="hover:bg-slate-50/80 transition-colors bg-white"><td className="px-4 py-3 text-slate-500 font-medium text-center touch-none">
-        <button {...listeners} className="cursor-grab p-2 hover:bg-slate-200 rounded-lg">
-          <GripVertical size={16} />
-        </button>
-      </td><td className="px-4 py-4">
+      <button {...listeners} className="cursor-grab p-2 hover:bg-slate-200 rounded-lg">
+        <GripVertical size={16} />
+      </button>
+    </td><td className="px-4 py-4">
         <div className="flex gap-2">
           {banner.image?.desktop?.url && (
             <div className="w-16 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden">
               <img
-                src={`${IMAGE_BASE_URL}/${banner.image.desktop.url.replace(/\\/g, "/")}`}
+                src={banner.image.desktop.url}
                 alt="desktop"
                 className="w-full h-full object-cover"
               />
@@ -69,7 +68,7 @@ function SortableBannerRow({ banner, onEdit, onDelete }) {
           {banner.image?.mobile?.url && (
             <div className="w-10 h-10 mx-auto rounded-lg bg-slate-100 border border-slate-200 overflow-hidden">
               <img
-                src={`${IMAGE_BASE_URL}/${banner.image.mobile.url.replace(/\\/g, "/")}`}
+                src={banner.image.mobile.url}
                 alt="mobile"
                 className="w-full h-full object-cover"
               />
@@ -83,9 +82,8 @@ function SortableBannerRow({ banner, onEdit, onDelete }) {
         </div>
       </td><td className="px-4 py-4">
         <span
-          className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-            banner.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
-          }`}
+          className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${banner.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+            }`}
         >
           {banner.status}
         </span>
@@ -264,8 +262,8 @@ export default function BannerTable({ refreshStats }) {
                   ))
                 ) : (
                   <tr><td colSpan="5" className="px-4 py-20 text-center text-slate-500 font-medium italic">
-                      {loading ? "Syncing data..." : "No banners found."}
-                    </td></tr>
+                    {loading ? "Syncing data..." : "No banners found."}
+                  </td></tr>
                 )}
               </SortableContext>
             </tbody>

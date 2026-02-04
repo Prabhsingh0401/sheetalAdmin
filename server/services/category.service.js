@@ -1,7 +1,7 @@
 import Category from "../models/category.model.js";
 import Product from "../models/product.model.js";
 import slugify from "slugify";
-import fs from "fs";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 
 export const createCategoryService = async (data, files) => {
@@ -14,6 +14,7 @@ export const createCategoryService = async (data, files) => {
     metaDescription,
     status,
     categoryBanner,
+    subCategories,
   } = data;
 
   if (!name) return { success: false, message: "Category name is required" };
@@ -22,6 +23,20 @@ export const createCategoryService = async (data, files) => {
   if (exists) return { success: false, message: "Category already exists" };
 
   const slug = slugify(name, { lower: true });
+
+  let parsedSubCategories = [];
+  if (subCategories) {
+    if (Array.isArray(subCategories)) {
+      parsedSubCategories = subCategories;
+    } else if (typeof subCategories === "string") {
+      try {
+        const parsed = JSON.parse(subCategories);
+        parsedSubCategories = Array.isArray(parsed) ? parsed : [subCategories];
+      } catch (e) {
+        parsedSubCategories = [subCategories];
+      }
+    }
+  }
 
   const newCategoryData = {
     name,
@@ -33,19 +48,21 @@ export const createCategoryService = async (data, files) => {
     isActive: status === "Active",
     metaTitle,
     metaDescription,
+    metaDescription,
     categoryBanner,
+    subCategories: parsedSubCategories,
   };
 
   if (files && files.mainImage) {
     newCategoryData.mainImage = {
-      url: files.mainImage[0].path,
-      public_id: files.mainImage[0].filename,
+      url: files.mainImage[0].location || files.mainImage[0].path,
+      public_id: files.mainImage[0].key || files.mainImage[0].filename,
     };
   }
   if (files && files.bannerImage) {
     newCategoryData.bannerImage = {
-      url: files.bannerImage[0].path,
-      public_id: files.bannerImage[0].filename,
+      url: files.bannerImage[0].location || files.bannerImage[0].path,
+      public_id: files.bannerImage[0].key || files.bannerImage[0].filename,
     };
   }
 
@@ -60,16 +77,16 @@ export const createCategoryService = async (data, files) => {
 
 export const getAllCategoriesService = async () => {
   const categories = await Category.find({ isActive: true })
-    .select("name slug mainImage bannerImage parentCategory")
+    .select("name slug mainImage bannerImage parentCategory subCategories")
     .populate("parentCategory", "name")
     .sort({ order: 1 });
 
   const categoriesWithFullUrls = categories.map((category) => {
     const data = category.toObject();
-    if (data.mainImage && data.mainImage.url) {
+    if (data.mainImage && data.mainImage.url && !data.mainImage.url.startsWith("http")) {
       data.mainImage.url = `${config.baseUrl}/${data.mainImage.url.replace(/\\/g, "/")}`;
     }
-    if (data.bannerImage && data.bannerImage.url) {
+    if (data.bannerImage && data.bannerImage.url && !data.bannerImage.url.startsWith("http")) {
       data.bannerImage.url = `${config.baseUrl}/${data.bannerImage.url.replace(/\\/g, "/")}`;
     }
     return data;
@@ -177,6 +194,21 @@ export const updateCategoryService = async (id, data, files) => {
     metaDescription: data.metaDescription,
   };
 
+  if (data.subCategories !== undefined) {
+    let parsedSubCategories = [];
+    if (Array.isArray(data.subCategories)) {
+      parsedSubCategories = data.subCategories;
+    } else if (typeof data.subCategories === "string") {
+      try {
+        const parsed = JSON.parse(data.subCategories);
+        parsedSubCategories = Array.isArray(parsed) ? parsed : [data.subCategories];
+      } catch (e) {
+        parsedSubCategories = [data.subCategories];
+      }
+    }
+    updateData.subCategories = parsedSubCategories;
+  }
+
   if (data.name) {
     updateData.slug = slugify(data.name, { lower: true });
   }
@@ -187,30 +219,30 @@ export const updateCategoryService = async (id, data, files) => {
   }
 
   if (files && files.mainImage) {
-    if (category.mainImage?.url && fs.existsSync(category.mainImage.url)) {
-      try {
-        fs.unlinkSync(category.mainImage.url);
-      } catch (e) {
-        console.error("File deletion error for mainImage");
-      }
+    if (category.mainImage?.public_id && !category.mainImage.url.startsWith("http")) {
+      // Old local file
+      await deleteFile(category.mainImage.url);
+    } else if (category.mainImage?.public_id) {
+      // S3 file
+      await deleteS3File(category.mainImage.public_id);
     }
+
     updateData.mainImage = {
-      url: files.mainImage[0].path,
-      public_id: files.mainImage[0].filename,
+      url: files.mainImage[0].location || files.mainImage[0].path,
+      public_id: files.mainImage[0].key || files.mainImage[0].filename,
     };
   }
 
   if (files && files.bannerImage) {
-    if (category.bannerImage?.url && fs.existsSync(category.bannerImage.url)) {
-      try {
-        fs.unlinkSync(category.bannerImage.url);
-      } catch (e) {
-        console.error("File deletion error for bannerImage");
-      }
+    if (category.bannerImage?.public_id && !category.bannerImage.url.startsWith("http")) {
+      await deleteFile(category.bannerImage.url);
+    } else if (category.bannerImage?.public_id) {
+      await deleteS3File(category.bannerImage.public_id);
     }
+
     updateData.bannerImage = {
-      url: files.bannerImage[0].path,
-      public_id: files.bannerImage[0].filename,
+      url: files.bannerImage[0].location || files.bannerImage[0].path,
+      public_id: files.bannerImage[0].key || files.bannerImage[0].filename,
     };
   }
 
@@ -248,20 +280,20 @@ export const deleteCategoryService = async (id) => {
   }
 
   // Delete main image if it exists
-  if (category.mainImage?.url && fs.existsSync(category.mainImage.url)) {
-    try {
-      fs.unlinkSync(category.mainImage.url);
-    } catch (e) {
-      console.error("Main image deletion error:", e);
+  if (category.mainImage?.public_id) {
+    if (category.mainImage.url.startsWith("http")) {
+      await deleteS3File(category.mainImage.public_id);
+    } else {
+      await deleteFile(category.mainImage.url);
     }
   }
 
   // Delete banner image if it exists
-  if (category.bannerImage?.url && fs.existsSync(category.bannerImage.url)) {
-    try {
-      fs.unlinkSync(category.bannerImage.url);
-    } catch (e) {
-      console.error("Banner image deletion error:", e);
+  if (category.bannerImage?.public_id) {
+    if (category.bannerImage.url.startsWith("http")) {
+      await deleteS3File(category.bannerImage.public_id);
+    } else {
+      await deleteFile(category.bannerImage.url);
     }
   }
 

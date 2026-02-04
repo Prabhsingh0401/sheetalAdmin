@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getLowStockProducts } from "@/services/productService";
 import { AlertTriangle, X } from "lucide-react";
-import { IMAGE_BASE_URL } from "@/services/api";
 
 interface LowStockSize {
   name: string;
@@ -76,7 +75,7 @@ const LowStockNotification: React.FC = () => {
                 <div className="flex gap-4">
                   {product.mainImage?.url ? (
                     <img
-                      src={`${IMAGE_BASE_URL}/${product.mainImage.url}`}
+                      src={product.mainImage.url}
                       alt={product.mainImage.alt || product.name}
                       className="w-16 h-16 rounded-lg object-cover border"
                     />
@@ -109,11 +108,10 @@ const LowStockNotification: React.FC = () => {
                             </div>
 
                             <span
-                              className={`font-semibold ${
-                                size.stock < 3
+                              className={`font-semibold ${size.stock < 3
                                   ? "text-red-600"
                                   : "text-amber-700"
-                              }`}
+                                }`}
                             >
                               {size.stock}
                             </span>
