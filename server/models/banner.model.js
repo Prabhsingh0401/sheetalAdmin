@@ -33,12 +33,11 @@ const bannerSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-bannerSchema.pre("save", function (next) {
-  if (!this.image.desktop?.url && !this.image.mobile?.url) {
-    return next(new Error("At least one banner image is required"));
+bannerSchema.pre("save", function () {
+  if (!this.image?.desktop?.url && !this.image?.mobile?.url) {
+    throw new Error("At least one banner image is required");
   }
   this.isActive = this.status === "Active";
-  next();
 });
 
 const Banner = mongoose.models.Banner || mongoose.model("Banner", bannerSchema);

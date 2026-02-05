@@ -2,37 +2,57 @@ import Banner from "../models/banner.model.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
 export const createBannerService = async (data, files) => {
-  const { title, link, status, expiresAt } = data;
+  try {
+    const { title, link, status, expiresAt } = data;
 
-  if (!title) return { success: false, message: "Banner title is required" };
+    if (!title) return { success: false, message: "Banner title is required" };
 
-  const image = {};
-  if (files.desktopImage) {
-    image.desktop = {
-      url: files.desktopImage[0].location || files.desktopImage[0].path,
-      public_id: files.desktopImage[0].key || files.desktopImage[0].filename,
+    // Validate files object exists
+    if (!files || typeof files !== 'object') {
+      return { success: false, message: "No files uploaded" };
+    }
+
+    const image = {};
+
+    // Safely check and process desktop image
+    if (files.desktopImage && Array.isArray(files.desktopImage) && files.desktopImage.length > 0) {
+      image.desktop = {
+        url: files.desktopImage[0].location || files.desktopImage[0].path,
+        public_id: files.desktopImage[0].key || files.desktopImage[0].filename,
+      };
+    }
+
+    // Safely check and process mobile image
+    if (files.mobileImage && Array.isArray(files.mobileImage) && files.mobileImage.length > 0) {
+      image.mobile = {
+        url: files.mobileImage[0].location || files.mobileImage[0].path,
+        public_id: files.mobileImage[0].key || files.mobileImage[0].filename,
+      };
+    }
+
+    // Find the maximum order value
+    const maxOrderBanner = await Banner.findOne().sort({ order: -1 });
+    const newOrder = maxOrderBanner ? maxOrderBanner.order + 1 : 1;
+
+    // Create new banner
+    const newBanner = await Banner.create({
+      title,
+      link: link || "/",
+      status: status || "Active",
+      image,
+      order: newOrder,
+      expiresAt: expiresAt || null,
+    });
+
+    return { success: true, data: newBanner };
+  } catch (error) {
+    console.error("Error in createBannerService:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to create banner",
+      error: error.toString()
     };
   }
-  if (files.mobileImage) {
-    image.mobile = {
-      url: files.mobileImage[0].location || files.mobileImage[0].path,
-      public_id: files.mobileImage[0].key || files.mobileImage[0].filename,
-    };
-  }
-
-  const maxOrderBanner = await Banner.findOne().sort({ order: -1 });
-  const newOrder = maxOrderBanner ? maxOrderBanner.order + 1 : 1;
-
-  const newBanner = await Banner.create({
-    title,
-    link: link || "/",
-    status: status || "Active",
-    image,
-    order: newOrder,
-    expiresAt: expiresAt || null,
-  });
-
-  return { success: true, data: newBanner };
 };
 
 export const getAllBannersService = async () => {
@@ -80,51 +100,68 @@ export const getBannerStatsService = async () => {
 };
 
 export const updateBannerService = async (id, data, files) => {
-  const banner = await Banner.findById(id);
-  if (!banner) return { success: false, message: "Banner not found" };
+  try {
+    const banner = await Banner.findById(id);
+    if (!banner) return { success: false, message: "Banner not found" };
 
-  const updateData = {
-    title: data.title,
-    link: data.link,
-    status: data.status,
-    image: banner.image,
-    expiresAt: data.expiresAt || null,
-  };
+    const updateData = {
+      title: data.title,
+      link: data.link,
+      status: data.status,
+      image: banner.image || {}, // Ensure image object exists
+      expiresAt: data.expiresAt || null,
+    };
 
-  if (files.desktopImage) {
-    if (banner.image.desktop?.public_id) {
-      if (banner.image.desktop.url?.startsWith("http")) {
-        await deleteS3File(banner.image.desktop.public_id);
-      } else {
-        await deleteFile(banner.image.desktop.url);
+    // Only process files if files object exists and is valid
+    if (files && typeof files === 'object') {
+      // Process desktop image if provided
+      if (files.desktopImage && Array.isArray(files.desktopImage) && files.desktopImage.length > 0) {
+        // Delete old desktop image if exists
+        if (banner.image?.desktop?.public_id) {
+          if (banner.image.desktop.url?.startsWith("http")) {
+            await deleteS3File(banner.image.desktop.public_id);
+          } else {
+            await deleteFile(banner.image.desktop.url);
+          }
+        }
+        updateData.image.desktop = {
+          url: files.desktopImage[0].location || files.desktopImage[0].path,
+          public_id: files.desktopImage[0].key || files.desktopImage[0].filename,
+        };
+      }
+
+      // Process mobile image if provided
+      if (files.mobileImage && Array.isArray(files.mobileImage) && files.mobileImage.length > 0) {
+        // Delete old mobile image if exists
+        if (banner.image?.mobile?.public_id) {
+          if (banner.image.mobile.url?.startsWith("http")) {
+            await deleteS3File(banner.image.mobile.public_id);
+          } else {
+            await deleteFile(banner.image.mobile.url);
+          }
+        }
+        updateData.image.mobile = {
+          url: files.mobileImage[0].location || files.mobileImage[0].path,
+          public_id: files.mobileImage[0].key || files.mobileImage[0].filename,
+        };
       }
     }
-    updateData.image.desktop = {
-      url: files.desktopImage[0].location || files.desktopImage[0].path,
-      public_id: files.desktopImage[0].key || files.desktopImage[0].filename,
+
+    const updated = await Banner.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true },
+    );
+    
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("Error in updateBannerService:", error);
+    return { 
+      success: false, 
+      message: error.message || "Failed to update banner",
+      error: error.toString()
     };
   }
-
-  if (files.mobileImage) {
-    if (banner.image.mobile?.public_id) {
-      if (banner.image.mobile.url?.startsWith("http")) {
-        await deleteS3File(banner.image.mobile.public_id);
-      } else {
-        await deleteFile(banner.image.mobile.url);
-      }
-    }
-    updateData.image.mobile = {
-      url: files.mobileImage[0].location || files.mobileImage[0].path,
-      public_id: files.mobileImage[0].key || files.mobileImage[0].filename,
-    };
-  }
-
-  const updated = await Banner.findByIdAndUpdate(
-    id,
-    { $set: updateData },
-    { new: true },
-  );
-  return { success: true, data: updated };
 };
 
 export const deleteBannerService = async (id) => {
