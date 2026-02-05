@@ -48,23 +48,34 @@ export default function BannerModal({
     const fetchData = async () => {
       try {
         // Fetch Categories
-        const categoriesRes = await getCategories();
+        const categoriesRes = await getCategories(1, 1000, "");
+        console.log("Categories Response:", categoriesRes);
         if (categoriesRes.success) {
-          setAllCategories(categoriesRes.data.categories); // Corrected access
+          // Handle different possible response structures
+          const categories = categoriesRes.data?.categories || categoriesRes.categories || [];
+          setAllCategories(Array.isArray(categories) ? categories : []);
         } else {
           toast.error("Could not load categories.");
+          setAllCategories([]);
         }
 
         // Fetch Products
-        const productsRes = await getProducts();
+        const productsRes = await getProducts(1, 1000, "");
+        console.log("Products Response:", productsRes);
         if (productsRes.success) {
-          setAllProducts(productsRes.products); // Corrected access
+          // Handle different possible response structures
+          const products = productsRes.products || productsRes.data?.products || [];
+          setAllProducts(Array.isArray(products) ? products : []);
         } else {
           toast.error("Could not load products.");
+          setAllProducts([]);
         }
       } catch (error) {
         console.error("Failed to fetch categories or products:", error);
         toast.error("Failed to load link options.");
+        // Ensure arrays are set even on error
+        setAllCategories([]);
+        setAllProducts([]);
       }
     };
     if (isOpen) {
@@ -367,7 +378,7 @@ export default function BannerModal({
                     className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
                   >
                     <option value="">-- Select a Category --</option>
-                    {allCategories.map((cat) => (
+                    {Array.isArray(allCategories) && allCategories.map((cat) => (
                       <option key={cat._id} value={cat.slug}>{cat.name}</option>
                     ))}
                   </select>
@@ -382,7 +393,7 @@ export default function BannerModal({
                     className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none cursor-pointer appearance-none"
                   >
                     <option value="">-- Select a Product --</option>
-                    {allProducts.map((p) => (
+                    {Array.isArray(allProducts) && allProducts.map((p) => (
                       <option key={p._id} value={p.slug}>{p.name}</option>
                     ))}
                   </select>
