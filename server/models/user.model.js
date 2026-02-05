@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
 
 const addressSchema = new mongoose.Schema({
-  fullName: { type: String, required: true, trim: true },
+  firstName: { type: String, required: true, trim: true },
+  lastName: { type: String, required: true, trim: true },
+  phoneNumber: { type: String, required: true, trim: true },
   addressLine1: { type: String, required: true },
   city: { type: String, required: true },
   state: { type: String, required: true },
@@ -41,6 +43,7 @@ const userSchema = new mongoose.Schema(
     gender: { type: String, enum: ["Male", "Female"], trim: true }, // New field
     dateOfBirth: { type: Date }, // New field
     profilePicture: { type: String, default: "" }, // New field
+    profilePictureKey: { type: String, default: "" }, // For S3 file deletion
     role: { type: String, enum: ["user", "admin", "guest"], default: "user" },
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     isGuest: { type: Boolean, default: false },

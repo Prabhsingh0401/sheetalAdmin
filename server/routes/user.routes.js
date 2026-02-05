@@ -11,6 +11,10 @@ import {
   getSingleUserDetails,
   toggleWishlist,
   getWishlist,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
 } from "../controllers/user.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js"; // Import uploadTo
@@ -30,6 +34,12 @@ router.put(
 ); // Added multer middleware
 router.post("/wishlist", isAuthenticated, toggleWishlist);
 router.get("/wishlist", isAuthenticated, getWishlist);
+
+// Address Routes
+router.post("/address", isAuthenticated, addAddress);
+router.put("/address/:addressId", isAuthenticated, updateAddress);
+router.delete("/address/:addressId", isAuthenticated, deleteAddress);
+router.put("/address/:addressId/default", isAuthenticated, setDefaultAddress);
 
 // admin routes
 router.get("/admin/all", isAuthenticated, isAdmin, getAllUsers);

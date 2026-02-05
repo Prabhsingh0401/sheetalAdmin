@@ -6,7 +6,7 @@ export const getCartByUserIdService = async (userId) => {
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "items.product",
     model: "Product",
-    select: "name mainImage.url category",
+    select: "name mainImage.url category slug",
     populate: {
       path: "category",
       model: "Category",

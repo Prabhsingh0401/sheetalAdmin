@@ -63,3 +63,4 @@
 {"level":"info","message":"S3 Object successfully deleted: blogs/blogs-1770211028885-481577193.png","timestamp":"2026-02-04T13:17:09.550Z"}
 {"level":"info","message":"S3 Object successfully deleted: blogs/blogs-1770211949523-350341590.jpg","timestamp":"2026-02-04T13:47:24.869Z"}
 {"level":"info","message":"S3 Object successfully deleted: blogs/blogs-1770211949536-157767956.png","timestamp":"2026-02-04T13:47:28.771Z"}
+{"level":"info","message":"File successfully delete hui: uploads/users/users-1769673374551-927053896.jpg","timestamp":"2026-02-05T06:54:48.530Z"}

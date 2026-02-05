@@ -135,6 +135,7 @@ export default function UserDetailPage() {
           count={user.phoneNumber || "N/A"}
           icon={<Phone size={20} />}
           color="amber"
+          valueClassName="text-lg truncate"
         />
       </div>
 
@@ -294,11 +295,10 @@ export default function UserDetailPage() {
                             Status
                           </p>
                           <span
-                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${
-                              order.status === "Delivered"
+                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${order.status === "Delivered"
                                 ? "bg-emerald-100 text-emerald-700"
                                 : "bg-amber-100 text-amber-700"
-                            }`}
+                              }`}
                           >
                             {order.status || "Processing"}
                           </span>
@@ -362,10 +362,10 @@ export default function UserDetailPage() {
 
                       <div className="space-y-1">
                         <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
-                          {addr.street}
+                          {addr.addressLine1}
                         </p>
                         <p className="text-xs font-bold text-slate-500 italic">
-                          {addr.city}, {addr.state} — {addr.zipCode}
+                          {addr.city}, {addr.state} — {addr.postalCode}
                         </p>
                       </div>
 
@@ -409,7 +409,7 @@ export default function UserDetailPage() {
   );
 }
 
-function StatCard({ title, count, icon, color }) {
+function StatCard({ title, count, icon, color, valueClassName = "" }) {
   const colors = {
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
     emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
@@ -424,7 +424,9 @@ function StatCard({ title, count, icon, color }) {
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
           {title}
         </p>
-        <p className="text-2xl font-black text-slate-900 mt-1.5 leading-none">
+        <p
+          className={`text-2xl font-black text-slate-900 mt-1.5 leading-none ${valueClassName}`}
+        >
           {count.toLocaleString()}
         </p>
       </div>

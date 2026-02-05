@@ -62,7 +62,11 @@ export default function CouponModal({
         buyQuantity: initialData?.buyQuantity || 1,
         getQuantity: initialData?.getQuantity || 1,
         scope: initialData?.scope || "All",
-        applicableIds: initialData?.applicableIds || [],
+        applicableIds: initialData?.applicableIds
+          ? initialData.applicableIds.map((id) =>
+            typeof id === "object" ? id._id : id,
+          )
+          : [],
         minOrderAmount: initialData?.minOrderAmount || "",
         maxDiscountAmount: initialData?.maxDiscountAmount || "",
         startDate: initialData?.startDate

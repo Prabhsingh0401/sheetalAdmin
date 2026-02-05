@@ -14,6 +14,11 @@ export const createCouponService = async (data) => {
         };
     }
 
+    // Enforce Category scope if applicableIds are provided
+    if (data.applicableIds && data.applicableIds.length > 0) {
+      data.scope = "Category";
+    }
+
     const coupon = await Coupon.create({ ...data, code });
     return { success: true, data: coupon };
   } catch (error) {
@@ -25,6 +30,11 @@ export const updateCouponService = async (id, updateData) => {
   try {
     if (updateData.code) {
       updateData.code = updateData.code.toUpperCase();
+    }
+
+    // Enforce Category scope if applicableIds are provided
+    if (updateData.applicableIds && updateData.applicableIds.length > 0) {
+      updateData.scope = "Category";
     }
 
     const coupon = await Coupon.findByIdAndUpdate(
@@ -73,6 +83,8 @@ export const applyCouponService = async (
 
     if (coupon.scope === "Category") {
       applicableItems = cartItems.filter((item) =>
+        item.product &&
+        item.product.category &&
         coupon.applicableIds.some(
           (id) => id.toString() === item.product.category._id.toString(),
         ),
@@ -123,54 +135,93 @@ export const applyCouponService = async (
         break;
 
       case "BOGO":
-        const bogoApplicableItems =
-          coupon.scope === "Category" ? applicableItems : cartItems;
+        // 1. Determine applicable items based on scope
+        // Use Category scope if explicitly set OR if applicableIds are present (safeguard for BOGO)
+        const isCategoryScope =
+          coupon.scope === "Category" ||
+          (coupon.applicableIds && coupon.applicableIds.length > 0);
+
+        const bogoApplicableItems = isCategoryScope
+          ? cartItems.filter((item) => {
+            const product = item.product;
+            if (!product || !product.category) return false;
+
+            // Handle both populated category object and direct ID string
+            const categoryId = product.category._id || product.category;
+
+            return coupon.applicableIds.some(
+              (id) => id.toString() === categoryId.toString(),
+            );
+          })
+          : cartItems;
+
+        // 2. Check minimum quantity requirement (Buy X + Get Y)
+        // Calculate TOTAL QUANTITY of applicable items, not just line item count.
+        const totalApplicableQuantity = bogoApplicableItems.reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        );
 
         if (
-          bogoApplicableItems.length <
+          totalApplicableQuantity <
           coupon.buyQuantity + coupon.getQuantity
         ) {
           return {
             success: false,
             statusCode: 400,
-            message: `BOGO requires at least ${coupon.buyQuantity + coupon.getQuantity} items from the applicable category in cart`,
+            message: `BOGO requires at least ${coupon.buyQuantity + coupon.getQuantity
+              } qualifying items in cart`,
           };
         }
 
-        // Sort items by effective price to find the cheapest ones
+        // 3. Sort items by effective price to find the cheapest ones
+        // We want to make the CHEAPEST units free.
         const sortedItems = [...bogoApplicableItems].sort(
-          (a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price),
+          (a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price)
         );
 
         let bogoDiscount = 0;
-        const freeItemsCount = coupon.getQuantity;
+        let remainingFreeUnits = coupon.getQuantity;
 
-        // Calculate total BOGO discount first
-        for (let i = 0; i < freeItemsCount && i < sortedItems.length; i++) {
-          const freeItem = sortedItems[i];
-          const freeItemPrice =
-            (freeItem.discountPrice ?? freeItem.price) * freeItem.quantity;
-          bogoDiscount += freeItemPrice;
+        // 4. Calculate total BOGO discount (Unit-based calculation)
+        // Iterate through cheapest items and make them free until we reach getQuantity limit
+        for (const item of sortedItems) {
+          if (remainingFreeUnits <= 0) break;
+
+          const itemPrice = item.discountPrice ?? item.price;
+          // How many units of this item can we make free?
+          // Either all of them, or however many free units we have left.
+          const unitsToDiscount = Math.min(item.quantity, remainingFreeUnits);
+
+          bogoDiscount += unitsToDiscount * itemPrice;
+          remainingFreeUnits -= unitsToDiscount;
         }
 
-        // Apply max discount cap if exists
+        // 5. Apply max discount cap if exists
         let finalBogoDiscount = bogoDiscount;
         if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
           finalBogoDiscount = Math.min(bogoDiscount, coupon.maxDiscountAmount);
         }
 
-        // Now distribute the final discount among items proportionally
+        // 6. Distribute the final discount among items proportionally
         if (bogoDiscount > 0) {
           const discountRatio = finalBogoDiscount / bogoDiscount; // Ratio to apply if capped
 
-          for (let i = 0; i < freeItemsCount && i < sortedItems.length; i++) {
-            const freeItem = sortedItems[i];
-            const freeItemPrice =
-              (freeItem.discountPrice ?? freeItem.price) * freeItem.quantity;
-            // Apply the ratio if discount was capped
-            itemWiseDiscount[freeItem._id] = Math.round(
-              freeItemPrice * discountRatio,
-            );
+          // Reset for distribution
+          remainingFreeUnits = coupon.getQuantity;
+
+          for (const item of sortedItems) {
+            if (remainingFreeUnits <= 0) break;
+
+            const itemPrice = item.discountPrice ?? item.price;
+            const unitsToDiscount = Math.min(item.quantity, remainingFreeUnits);
+
+            // Calculate proportional discount for this specific line item
+            // based on how many units of it were considered "free"
+            const itemTotalDiscount = (unitsToDiscount * itemPrice) * discountRatio;
+
+            itemWiseDiscount[item._id] = Math.round(itemTotalDiscount);
+            remainingFreeUnits -= unitsToDiscount;
           }
         }
 

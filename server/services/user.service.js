@@ -2,7 +2,7 @@ import User from "../models/user.model.js";
 import Order from "../models/order.model.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import { deleteFile } from "../utils/fileHelper.js"; // Import deleteFile
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js"; // Import deleteFile and deleteS3File
 
 export const getWishlistService = async (userId) => {
   const user = await User.findById(userId).populate({
@@ -55,17 +55,33 @@ export const updateProfileService = async (
   profilePictureFile,
 ) => {
   if (data.role) delete data.role; // Prevent role from being updated
+  if (data.profilePictureKey) delete data.profilePictureKey; // Prevent manual update of S3 key
 
   const user = await User.findById(userId); // Get existing user to check for old profile picture
   if (!user)
     return { success: false, statusCode: 404, message: "User not found" };
 
   if (profilePictureFile) {
-    // If an old profile picture exists and is not the default, delete it
-    if (user.profilePicture && user.profilePicture !== "") {
-      deleteFile(user.profilePicture);
+    // If an old profile picture exists
+    if (user.profilePicture) {
+      if (user.profilePictureKey) {
+        await deleteS3File(user.profilePictureKey);
+      } else if (user.profilePicture.startsWith("http")) {
+        // Try to extract key from URL if key not stored
+        try {
+          const url = new URL(user.profilePicture);
+          const key = url.pathname.substring(1);
+          await deleteS3File(key);
+        } catch (error) {
+          console.error("Error parsing S3 URL:", error);
+        }
+      } else {
+        // Fallback for local files
+        await deleteFile(user.profilePicture);
+      }
     }
-    data.profilePicture = profilePictureFile.path.replace(/\\/g, "/");
+    data.profilePicture = profilePictureFile.location;
+    data.profilePictureKey = profilePictureFile.key;
   }
 
   const updatedUser = await User.findByIdAndUpdate(userId, data, {
@@ -210,5 +226,94 @@ export const getSingleUserDetailsService = async (userId) => {
       orders: orders || [],
       totalSpent: totalSpent,
     },
+  };
+};
+
+// Address Management Services
+export const addAddressService = async (userId, addressData) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    return { success: false, statusCode: 404, message: "User not found" };
+  }
+
+  // If this is the first address or set as default, handle that logic
+  if (addressData.isDefault || user.addresses.length === 0) {
+    user.addresses.forEach((addr) => (addr.isDefault = false));
+    addressData.isDefault = true;
+  }
+
+  user.addresses.push(addressData);
+  await user.save();
+
+  return {
+    success: true,
+    message: "Address added successfully",
+    data: user.addresses
+  };
+};
+
+export const updateAddressService = async (userId, addressId, addressData) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    return { success: false, statusCode: 404, message: "User not found" };
+  }
+
+  const address = user.addresses.id(addressId);
+  if (!address) {
+    return { success: false, statusCode: 404, message: "Address not found" };
+  }
+
+  if (addressData.isDefault) {
+    user.addresses.forEach(addr => addr.isDefault = false);
+  }
+
+  address.set(addressData);
+
+  await user.save();
+
+  return {
+    success: true,
+    message: "Address updated successfully",
+    data: user.addresses
+  };
+};
+
+export const deleteAddressService = async (userId, addressId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    return { success: false, statusCode: 404, message: "User not found" };
+  }
+
+  // Use pull to remove subdocument
+  user.addresses.pull({ _id: addressId });
+  await user.save();
+
+  return {
+    success: true,
+    message: "Address deleted successfully",
+    data: user.addresses
+  };
+};
+
+export const setDefaultAddressService = async (userId, addressId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    return { success: false, statusCode: 404, message: "User not found" };
+  }
+
+  const address = user.addresses.id(addressId);
+  if (!address) {
+    return { success: false, statusCode: 404, message: "Address not found" };
+  }
+
+  user.addresses.forEach(addr => addr.isDefault = false);
+  address.isDefault = true;
+
+  await user.save();
+
+  return {
+    success: true,
+    message: "Default address updated successfully",
+    data: user.addresses
   };
 };

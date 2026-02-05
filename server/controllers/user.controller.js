@@ -144,17 +144,64 @@ export const guestLogin = async (req, res, next) => {
 export const getSingleUserDetails = async (req, res, next) => {
   try {
     const result = await userService.getSingleUserDetailsService(req.params.id);
-
-    if (!result.success) {
-      return res.status(result.statusCode).json(result);
-    }
-
+    if (!result.success) return res.status(result.statusCode).json(result);
     return successResponse(
       res,
       200,
       result.data,
       "User full details retrieved successfully",
     );
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Address Controllers
+export const addAddress = async (req, res, next) => {
+  try {
+    const result = await userService.addAddressService(req.user._id, req.body);
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 201, result.data, result.message);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateAddress = async (req, res, next) => {
+  try {
+    const result = await userService.updateAddressService(
+      req.user._id,
+      req.params.addressId,
+      req.body
+    );
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 200, result.data, result.message);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteAddress = async (req, res, next) => {
+  try {
+    const result = await userService.deleteAddressService(
+      req.user._id,
+      req.params.addressId
+    );
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 200, result.data, result.message);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const setDefaultAddress = async (req, res, next) => {
+  try {
+    const result = await userService.setDefaultAddressService(
+      req.user._id,
+      req.params.addressId
+    );
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 200, result.data, result.message);
   } catch (err) {
     next(err);
   }
