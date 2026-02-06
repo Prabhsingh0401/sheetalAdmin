@@ -19,6 +19,16 @@ export const getCategories = async (page = 1, limit = 10, search = "") => {
 };
 
 /* =========================
+   Get All Categories (Public)
+   ========================= */
+export const fetchAllCategories = async () => {
+  const res = await fetch(`${API_BASE_URL}/categories`, {
+    headers: { "Content-Type": "application/json" }
+  });
+  return handleResponse(res);
+};
+
+/* =========================
    Add Category (Handles Files)
    ========================= */
 export const addCategory = async (formData) => {

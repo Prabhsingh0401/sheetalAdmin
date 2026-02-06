@@ -20,3 +20,8 @@ export const updateSettings = async (data) => {
     });
     return response.data;
 };
+
+// Explicitly save Navbar Layout to avoid partial update ambiguity and improved readability
+export const saveNavbarLayout = async (layout) => {
+    return await updateSettings({ navbarLayout: layout });
+};
