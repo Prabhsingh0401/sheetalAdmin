@@ -111,7 +111,7 @@ export default function BlogModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[95vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-[90vw] overflow-hidden border border-slate-200 flex flex-col max-h-[95vh]">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div
@@ -137,7 +137,8 @@ export default function BlogModal({
             <X size={20} />
           </button>
         </div>
-
+        <div className="flex space-x-10">
+        <div>          
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
@@ -262,18 +263,6 @@ export default function BlogModal({
             </p>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Main Content
-            </label>
-            <div className="border border-slate-400 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-slate-900 focus-within:border-slate-900 transition">
-              <TiptapEditor
-                value={formData.content}
-                onChange={(html) => setFormData({ ...formData, content: html })}
-              />
-            </div>
-          </div>
-
           <div className="flex flex-col gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -308,7 +297,19 @@ export default function BlogModal({
             </div>
           </div>
         </form>
-
+        </div>
+        <div className="space-y-1.5 mt-5 mr-5">
+            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Main Content
+            </label>
+            <div className="border border-slate-400 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-slate-900 focus-within:border-slate-900 transition">
+              <TiptapEditor
+                value={formData.content}
+                onChange={(html) => setFormData({ ...formData, content: html })}
+              />
+            </div>
+          </div>
+          </div>
         <div className="px-6 py-4 border-t border-slate-100 flex items-center gap-3 bg-white">
           <button
             type="button"

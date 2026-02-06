@@ -14,9 +14,16 @@ export const createCouponService = async (data) => {
         };
     }
 
-    // Enforce Category scope if applicableIds are provided
+    // Enforce Scope and ModelRef based on applicableIds
     if (data.applicableIds && data.applicableIds.length > 0) {
-      data.scope = "Category";
+      if (data.scope === "Specific_Product") {
+        data.modelRef = "Product";
+      } else {
+        data.scope = "Category";
+        data.modelRef = "Category";
+      }
+    } else {
+      data.modelRef = "None";
     }
 
     const coupon = await Coupon.create({ ...data, code });
@@ -32,9 +39,17 @@ export const updateCouponService = async (id, updateData) => {
       updateData.code = updateData.code.toUpperCase();
     }
 
-    // Enforce Category scope if applicableIds are provided
+    // Enforce Scope and ModelRef based on applicableIds
     if (updateData.applicableIds && updateData.applicableIds.length > 0) {
-      updateData.scope = "Category";
+      if (updateData.scope === "Specific_Product") {
+        updateData.modelRef = "Product";
+      } else {
+        updateData.scope = "Category";
+        updateData.modelRef = "Category";
+      }
+    } else if (updateData.scope === "All") {
+      updateData.modelRef = "None";
+      updateData.applicableIds = [];
     }
 
     const coupon = await Coupon.findByIdAndUpdate(
@@ -82,12 +97,26 @@ export const applyCouponService = async (
     let itemWiseDiscount = {}; // Initialize itemWiseDiscount
 
     if (coupon.scope === "Category") {
-      applicableItems = cartItems.filter((item) =>
-        item.product &&
-        item.product.category &&
-        coupon.applicableIds.some(
-          (id) => id.toString() === item.product.category._id.toString(),
-        ),
+      applicableItems = cartItems.filter(
+        (item) =>
+          item.product &&
+          item.product.category &&
+          coupon.applicableIds.some(
+            (id) => id.toString() === item.product.category._id.toString(),
+          ),
+      );
+      applicableTotal = applicableItems.reduce(
+        (sum, item) => sum + (item.discountPrice ?? item.price) * item.quantity,
+        0,
+      );
+    } else if (coupon.scope === "Specific_Product") {
+      applicableItems = cartItems.filter(
+        (item) =>
+          item.product &&
+          coupon.applicableIds.some(
+            (id) =>
+              id.toString() === (item.product._id || item.product).toString(),
+          ),
       );
       applicableTotal = applicableItems.reduce(
         (sum, item) => sum + (item.discountPrice ?? item.price) * item.quantity,
@@ -136,13 +165,13 @@ export const applyCouponService = async (
 
       case "BOGO":
         // 1. Determine applicable items based on scope
-        // Use Category scope if explicitly set OR if applicableIds are present (safeguard for BOGO)
-        const isCategoryScope =
-          coupon.scope === "Category" ||
-          (coupon.applicableIds && coupon.applicableIds.length > 0);
+        const isCategoryScope = coupon.scope === "Category";
+        const isProductScope = coupon.scope === "Specific_Product";
 
-        const bogoApplicableItems = isCategoryScope
-          ? cartItems.filter((item) => {
+        let bogoApplicableItems = cartItems;
+
+        if (isCategoryScope) {
+          bogoApplicableItems = cartItems.filter((item) => {
             const product = item.product;
             if (!product || !product.category) return false;
 
@@ -152,8 +181,17 @@ export const applyCouponService = async (
             return coupon.applicableIds.some(
               (id) => id.toString() === categoryId.toString(),
             );
-          })
-          : cartItems;
+          });
+        } else if (isProductScope) {
+          bogoApplicableItems = cartItems.filter((item) => {
+            const product = item.product;
+            if (!product) return false;
+            const productId = product._id || product;
+            return coupon.applicableIds.some(
+              (id) => id.toString() === productId.toString(),
+            );
+          });
+        }
 
         // 2. Check minimum quantity requirement (Buy X + Get Y)
         // Calculate TOTAL QUANTITY of applicable items, not just line item count.
@@ -271,7 +309,6 @@ export const getAllCouponsService = async ({ page, limit, search }) => {
       Coupon.find(query)
         .populate({
           path: "applicableIds",
-          model: "Category", // Explicitly populate as Category
           select: "name", // Only retrieve the name field
         })
         .sort("-createdAt")

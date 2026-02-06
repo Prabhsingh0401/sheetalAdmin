@@ -238,6 +238,14 @@ export default function CouponTable({ refreshStats }) {
                       <span className="text-[10px] text-slate-400">
                         Min: ₹{c.minOrderAmount || 0}
                       </span>
+                      <span className="text-[10px] text-blue-600 font-semibold mt-1">
+                        Scope:{" "}
+                        {c.scope === "All"
+                          ? "All Products"
+                          : c.scope === "Category"
+                            ? `Category (${c.applicableIds?.length || 0})`
+                            : `Specific Products (${c.applicableIds?.length || 0})`}
+                      </span>
                     </div>
                   </td>
 
@@ -275,8 +283,8 @@ export default function CouponTable({ refreshStats }) {
                   <td className="px-4 py-4">
                     <span
                       className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${c.isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-rose-50 text-rose-700 border-rose-200"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border-rose-200"
                         }`}
                     >
                       {c.isActive ? "Live" : "Paused"}

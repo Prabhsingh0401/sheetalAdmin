@@ -11,12 +11,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageIcon,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import ProductModal from "./ProductModal";
 import ViewProductDrawer from "./ViewProductDrawer";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
+import SettingsModal from "./SettingsModal";
 
 import { getProducts, deleteProduct } from "@/services/productService";
 
@@ -40,6 +42,7 @@ export default function ProductTable({ refreshStats }) {
   const [deleteId, setDeleteId] = useState(null);
   const [selectedProductName, setSelectedProductName] = useState(null); // New state for selected product name
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -149,11 +152,19 @@ export default function ProductTable({ refreshStats }) {
         </div>
 
         <button
+          onClick={() => setShowSettingsModal(true)}
+          className="p-2.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+          title="Global Settings"
+        >
+          <SettingsIcon size={18} />
+        </button>
+
+        <button
           onClick={() => {
             setEditData(null);
             setShowModal(true);
           }}
-          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95"
+          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
         >
           + Add Product
         </button>
@@ -338,6 +349,10 @@ export default function ProductTable({ refreshStats }) {
         onConfirm={handleDeleteConfirm}
         entityName="product"
         itemName={selectedProductName}
+      />
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
       />
     </div>
   );

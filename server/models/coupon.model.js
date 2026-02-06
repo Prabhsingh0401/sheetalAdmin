@@ -29,7 +29,13 @@ const couponSchema = new mongoose.Schema(
       enum: ["All", "Category", "Specific_Product"],
       default: "All",
     },
-    applicableIds: [{ type: mongoose.Schema.Types.ObjectId }],
+    modelRef: {
+      type: String,
+      required: true,
+      enum: ["Category", "Product", "None"],
+      default: "None",
+    },
+    applicableIds: [{ type: mongoose.Schema.Types.ObjectId, refPath: "modelRef" }],
     usageLimitPerUser: { type: Number, default: 1 },
     totalUsageLimit: { type: Number, required: true },
     usedCount: { type: Number, default: 0 },
@@ -88,6 +94,31 @@ couponSchema.methods.isValid = function (userId, orderAmount, cartItems = []) {
       return {
         valid: false,
         message: `Minimum cart value of ₹${this.minOrderAmount} required for the applicable category items.`,
+      };
+    }
+  } else if (this.scope === "Specific_Product") {
+    const productItems = cartItems.filter(
+      (item) =>
+        item.product &&
+        this.applicableIds.some(
+          (id) => id.toString() === item.product._id.toString(),
+        ),
+    );
+    if (productItems.length === 0) {
+      return {
+        valid: false,
+        message: "Coupon not valid for items in your cart",
+      };
+    }
+    const productTotal = productItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+
+    if (productTotal < this.minOrderAmount) {
+      return {
+        valid: false,
+        message: `Minimum cart value of ₹${this.minOrderAmount} required for the applicable products.`,
       };
     }
   } else {
