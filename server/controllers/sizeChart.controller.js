@@ -1,6 +1,6 @@
 import * as sizeChartService from "../services/sizeChart.service.js";
 import successResponse from "../utils/successResponse.js";
-import { deleteFile } from "../utils/fileHelper.js"; // Needed for cleanup if the service handles old image deletion
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
 export const uploadHowToMeasureImage = async (req, res, next) => {
   try {
@@ -10,7 +10,7 @@ export const uploadHowToMeasureImage = async (req, res, next) => {
         .json({ success: false, message: "No image file uploaded." });
     }
     const sizeChart = await sizeChartService.uploadHowToMeasureImageService(
-      req.file.path,
+      req.file,
     );
     return successResponse(
       res,
@@ -21,7 +21,13 @@ export const uploadHowToMeasureImage = async (req, res, next) => {
   } catch (error) {
     // If an error occurs during processing, clean up the uploaded file
     if (req.file) {
-      deleteFile(req.file.path);
+      if (req.file.key) {
+        // S3 file
+        await deleteS3File(req.file.key);
+      } else {
+        // Local file
+        deleteFile(req.file.path);
+      }
     }
     next(error);
   }

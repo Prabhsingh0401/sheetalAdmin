@@ -1,16 +1,25 @@
 import SizeChart from "../models/sizechart.model.js";
-import { deleteFile } from "../utils/fileHelper.js";
+import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
 // Upload how to measure image
-export const uploadHowToMeasureImageService = async (filePath) => {
+export const uploadHowToMeasureImageService = async (file) => {
   let sizeChart = await getSizeChartService();
 
   // If an old image exists, delete it
-  if (sizeChart.howToMeasureImage) {
-    deleteFile(sizeChart.howToMeasureImage);
+  if (sizeChart.howToMeasureImage?.public_id) {
+    if (sizeChart.howToMeasureImage.url.startsWith("http")) {
+      // S3 file
+      await deleteS3File(sizeChart.howToMeasureImage.public_id);
+    } else {
+      // Old local file
+      await deleteFile(sizeChart.howToMeasureImage.url);
+    }
   }
 
-  sizeChart.howToMeasureImage = filePath.replace(/\\/g, "/");
+  sizeChart.howToMeasureImage = {
+    url: file.location || file.path,
+    public_id: file.key || file.filename,
+  };
   await sizeChart.save();
   return sizeChart;
 };

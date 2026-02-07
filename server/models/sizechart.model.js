@@ -13,7 +13,8 @@ const sizeChartSchema = new mongoose.Schema(
       },
     ],
     howToMeasureImage: {
-      type: String,
+      url: { type: String, default: "" },
+      public_id: { type: String },
     },
   },
   { timestamps: true },

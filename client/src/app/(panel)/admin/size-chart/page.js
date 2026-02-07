@@ -11,7 +11,7 @@ import {
   deleteSize,
 } from "@/services/sizeChartService";
 import { Edit, Trash2, Save, X, Plus, Image as ImageIcon } from "lucide-react";
-import { IMAGE_BASE_URL } from "@/services/api";
+import { IMAGE_BASE_URL, getApiImageUrl } from "@/services/api";
 import toast from "react-hot-toast";
 
 export default function SizeChartPage() {
@@ -278,11 +278,7 @@ export default function SizeChartPage() {
         isOpen={isHowToMeasureModalOpen}
         onClose={() => setIsHowToMeasureModalOpen(false)}
         onSuccess={handleHowToMeasureSuccess}
-        currentImage={
-          sizeChart.howToMeasureImage
-            ? `${IMAGE_BASE_URL}/${sizeChart.howToMeasureImage.startsWith("/") ? sizeChart.howToMeasureImage.substring(1) : sizeChart.howToMeasureImage}`
-            : null
-        }
+        currentImage={getApiImageUrl(sizeChart.howToMeasureImage)}
       />
     </div>
   );
