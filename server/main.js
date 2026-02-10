@@ -58,6 +58,7 @@ app.use(
         "http://localhost:4000",
         "http://192.168.0.227:3000",
         "http://192.168.1.9:3000",
+        "http://192.168.0.141:3000",
         "http://192.168.0.227:4000",
         "https://sheetal-admin.vercel.app",
         "https://www.sheetal-admin.vercel.app",

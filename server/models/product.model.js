@@ -128,6 +128,7 @@ const productSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    viewCount: { type: Number, default: 0, index: true },
     sizeChart: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SizeChart",

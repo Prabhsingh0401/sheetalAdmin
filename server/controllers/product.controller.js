@@ -208,3 +208,22 @@ export const getLowStockProducts = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getTrendingProducts = async (req, res, next) => {
+  try {
+    const result = await productService.getTrendingProductsService();
+    return successResponse(res, 200, result.products, "Trending products fetched");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const incrementViewCount = async (req, res, next) => {
+  try {
+    const result = await productService.incrementViewCountService(req.params.id);
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 200, null, "View count incremented");
+  } catch (error) {
+    next(error);
+  }
+};

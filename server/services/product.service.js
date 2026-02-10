@@ -144,12 +144,8 @@ export const getAllProductsService = async (queryStr) => {
 };
 
 export const getNewArrivalsService = async () => {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
   const products = await Product.find({
     isActive: true,
-    createdAt: { $gte: sevenDaysAgo },
   })
     .sort({ createdAt: -1 })
     .limit(10)
@@ -667,4 +663,29 @@ export const deleteReviewService = async (productId, reviewId) => {
   }
 
   return { success: true };
+};
+
+export const incrementViewCountService = async (id) => {
+  const query = id.match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+
+  const product = await Product.findOneAndUpdate(
+    query,
+    { $inc: { viewCount: 1 } },
+    { new: true }
+  );
+
+  if (!product) {
+    return { success: false, statusCode: 404 };
+  }
+  return { success: true };
+};
+
+export const getTrendingProductsService = async () => {
+  const products = await Product.find({ isActive: true })
+    .sort({ viewCount: -1 })
+    .limit(10)
+    .populate("category", "name slug")
+    .lean();
+
+  return { success: true, products };
 };

@@ -12,6 +12,8 @@ import {
   bulkImportProducts,
   getNewArrivals,
   getLowStockProducts,
+  getTrendingProducts,
+  incrementViewCount,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
@@ -23,6 +25,8 @@ const router = express.Router();
 router.get("/", getAllProducts);
 router.get("/all", getAllProducts);
 router.get("/new-arrivals", getNewArrivals);
+router.get("/trending", getTrendingProducts);
+router.post("/view/:id", incrementViewCount);
 router.get("/detail/:id", getProductDetails);
 router.get("/reviews", getProductReviews);
 router.get("/:id", getProductDetails); // Allow fetching by ID/Slug directly
