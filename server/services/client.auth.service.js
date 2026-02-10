@@ -17,16 +17,30 @@ const sendOtp = async (phoneNumber) => {
 
 const verifyFirebaseIdToken = async (idToken) => {
   const decodedToken = await admin.auth().verifyIdToken(idToken);
-  const phoneNumber = decodedToken.phone_number;
+  const { phone_number: phoneNumber, email, name, picture } = decodedToken;
 
-  if (!phoneNumber) {
-    throw new Error("Phone number not found in Firebase ID token.");
+  if (!phoneNumber && !email) {
+    throw new Error("Neither phone number nor email found in Firebase ID token.");
   }
 
-  let user = await User.findOne({ phoneNumber });
+  let user = null;
+
+  if (phoneNumber) {
+    user = await User.findOne({ phoneNumber });
+  }
+
+  if (!user && email) {
+    user = await User.findOne({ email });
+  }
 
   if (!user) {
-    user = await User.create({ phoneNumber });
+    user = await User.create({
+      phoneNumber,
+      email,
+      name: name || undefined,
+      profilePicture: picture || undefined,
+      isVerified: !!email || !!phoneNumber,
+    });
   }
 
   const token = signToken({ id: user._id, role: user.role });
@@ -35,14 +49,14 @@ const verifyFirebaseIdToken = async (idToken) => {
     user: {
       id: user._id,
       phoneNumber: user.phoneNumber,
-      email: user.email, // Added
+      email: user.email,
       role: user.role,
-      fullName: user.name, // Assuming 'name' in model maps to 'fullName' on frontend
-      alternativeMobileNumber: user.alternativeMobileNumber, // Added
-      gender: user.gender, // Added
+      fullName: user.name,
+      alternativeMobileNumber: user.alternativeMobileNumber,
+      gender: user.gender,
       dateOfBirth: user.dateOfBirth
         ? user.dateOfBirth.toISOString().split("T")[0]
-        : undefined, // Added, formatted to YYYY-MM-DD
+        : undefined, // Formatted to YYYY-MM-DD
     },
     token,
   };
