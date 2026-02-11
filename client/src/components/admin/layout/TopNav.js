@@ -11,12 +11,14 @@ import {
   X,
 } from "lucide-react";
 import useLogoutModal from "@/hooks/useLogoutModal";
+import ChangePasswordModal from "@/components/admin/common/ChangePasswordModal";
 
 export default function TopNav({ storeName = "Admin", setIsOpen }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchDrop, setShowSearchDrop] = useState(false);
   const [showUserDrop, setShowUserDrop] = useState(false);
   const [showNotifyDrop, setShowNotifyDrop] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const navRef = useRef(null);
   const { openModal, LogoutModal } = useLogoutModal();
@@ -107,44 +109,6 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* 
-                    <div className="relative">
-                        <button
-                            onClick={() => {
-                                setShowNotifyDrop(!showNotifyDrop);
-                                setShowUserDrop(false);
-                                setShowSearchDrop(false);
-                            }}
-                            className={`p-2.5 rounded-xl transition-all ${showNotifyDrop ? 'bg-emerald-50 text-emerald-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                        >
-                            <Bell size={20} />
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white shadow-[0_0_5px_#10b981]"></span>
-                        </button>
-
-                        {showNotifyDrop && (
-                            <div className="absolute top-full right-0 mt-3 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                    <h4 className="font-bold text-sm text-slate-800 tracking-tight">Recent Notifications</h4>
-                                    <button onClick={() => setShowNotifyDrop(false)}><X size={14} className="text-slate-400" /></button>
-                                </div>
-                                <div className="max-h-80 overflow-y-auto">
-                                    {[1, 2, 3].map((_, i) => (
-                                        <div key={i} className="p-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 flex gap-4 cursor-pointer transition-colors">
-                                            <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                                                <CheckCircle2 size={18} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs font-bold text-slate-800 tracking-tight leading-none">New Order #44321</p>
-                                                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">Rahul Verma just purchased iPhone 15 Pro.</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                */}
-
           <div className="relative border-l border-slate-200 pl-4 ml-2">
             <button
               onClick={() => {
@@ -169,10 +133,13 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
 
             {showUserDrop && (
               <div className="absolute top-full right-0 mt-3 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* <button className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group">
-                                    <Settings size={16} className="text-slate-400 group-hover:text-emerald-500" /> Dashboard Settings
-                                </button> */}
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group">
+                <button
+                  onClick={() => {
+                    setIsPasswordModalOpen(true);
+                    setShowUserDrop(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group"
+                >
                   <User
                     size={16}
                     className="text-slate-400 group-hover:text-emerald-500"
@@ -193,6 +160,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
       </header>
 
       <LogoutModal />
+      <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
     </>
   );
 }

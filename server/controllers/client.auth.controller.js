@@ -1,6 +1,8 @@
 import {
   sendOtp as sendOtpService,
   verifyFirebaseIdToken as verifyFirebaseIdTokenService,
+  sendEmailOtp as sendEmailOtpService,
+  verifyEmailOtp as verifyEmailOtpService,
 } from "../services/client.auth.service.js";
 import { verifyToken } from "../utils/jwt.js";
 
@@ -8,6 +10,26 @@ const sendOtp = async (req, res, next) => {
   try {
     const { phoneNumber } = req.body;
     const result = await sendOtpService(phoneNumber);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendEmailOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await sendEmailOtpService(email);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyEmailOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    const result = await verifyEmailOtpService(email, otp);
     res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);
@@ -41,4 +63,4 @@ const verifyFirebaseIdTokenController = async (req, res, next) => {
   }
 };
 
-export { sendOtp, verifyFirebaseIdTokenController };
+export { sendOtp, verifyFirebaseIdTokenController, sendEmailOtp, verifyEmailOtp };

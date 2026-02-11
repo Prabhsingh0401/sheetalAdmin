@@ -56,6 +56,8 @@ app.use(
       const allowedOrigins = [
         "http://localhost:3000",
         "http://localhost:4000",
+        "http://localhost:3001",
+        "http://localhost:3002",
         "http://192.168.0.227:3000",
         "http://192.168.1.9:3000",
         "http://192.168.0.141:3000",
@@ -73,7 +75,12 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Cookie",
+      "X-Session-Token",
+    ],
   }),
 );
 

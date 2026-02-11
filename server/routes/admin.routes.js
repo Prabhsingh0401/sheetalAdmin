@@ -1,5 +1,5 @@
 import express from "express";
-import { getAdminDashboardStats } from "../controllers/admin.controller.js";
+import { getAdminDashboardStats, changePassword } from "../controllers/admin.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
@@ -9,6 +9,13 @@ router.get(
   isAuthenticated,
   isAdmin,
   getAdminDashboardStats,
+);
+
+router.put(
+  "/change-password",
+  isAuthenticated,
+  isAdmin,
+  changePassword
 );
 
 export default router;

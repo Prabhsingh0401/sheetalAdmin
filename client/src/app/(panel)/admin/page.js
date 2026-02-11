@@ -48,6 +48,9 @@ export default function AdminDashboard() {
     activeUsers: 0,
     totalOrders: 0,
     todayOrders: 0,
+    totalProducts: 0,
+    latestUsers: [],
+    stockData: [],
   });
 
   useEffect(() => {
@@ -74,7 +77,22 @@ export default function AdminDashboard() {
     }).format(amount);
   };
 
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800)
+      return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
   const scrollStyle = "overflow-y-auto pr-2 custom-scrollbar";
+
 
   return (
     <div className="min-h-screen w-full animate-in fade-in duration-500 ">
@@ -95,14 +113,14 @@ export default function AdminDashboard() {
               color: "text-emerald-700",
               bg: "bg-emerald-100",
             },
-            {
-              label: "Total Orders",
-              val: stats.totalOrders.toLocaleString(),
-              status: `+${stats.todayOrders} Today`,
-              icon: <ShoppingCart size={20} />,
-              color: "text-blue-700",
-              bg: "bg-blue-100",
-            },
+            // {
+            //   label: "Total Orders",
+            //   val: stats.totalOrders.toLocaleString(),
+            //   status: `+${stats.todayOrders} Today`,
+            //   icon: <ShoppingCart size={20} />,
+            //   color: "text-blue-700",
+            //   bg: "bg-blue-100",
+            // },
             {
               label: "Active Users",
               val: stats.activeUsers.toLocaleString(),
@@ -112,10 +130,10 @@ export default function AdminDashboard() {
               bg: "bg-indigo-100",
             },
             {
-              label: "Total Customers",
-              val: stats.totalUsers.toLocaleString(),
-              status: "Lifetime Growth",
-              icon: <UserPlus size={20} />,
+              label: "Total Products",
+              val: stats.totalProducts?.toLocaleString() || "0",
+              status: "In Inventory",
+              icon: <Package size={20} />,
               color: "text-orange-700",
               bg: "bg-orange-100",
             },
@@ -146,137 +164,8 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
-          {/* Sales Graph */}
-          <div className="lg:col-span-7 bg-white p-6 md:p-8 rounded-[32px] border border-slate-200 shadow-sm flex flex-col h-[500px]">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">
-                  Revenue Flow
-                </h3>
-                <p className="text-sm font-medium text-emerald-600">
-                  Performance is up by 12%
-                </p>
-              </div>
-              <select
-                value={view}
-                onChange={(e) => setView(e.target.value)}
-                className="bg-white border border-slate-300 text-slate-900 text-xs font-bold px-4 py-2 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer shadow-sm hover:border-slate-400 transition-all appearance-none"
-                style={{ minWidth: "140px" }}
-              >
-                <option
-                  value="weekly"
-                  className="text-slate-900 font-bold bg-white"
-                >
-                  WEEKLY REPORT
-                </option>
-                <option
-                  value="monthly"
-                  className="text-slate-900 font-bold bg-white"
-                >
-                  MONTHLY REPORT
-                </option>
-              </select>
-            </div>
-            <div className="flex-1 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={dataOptions[view]}
-                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fontWeight: 600, fill: "#64748b" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fontWeight: 600, fill: "#64748b" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "16px",
-                      border: "none",
-                      boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="#6366f1"
-                    strokeWidth={4}
-                    fill="url(#colorSales)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Recent Activity Table */}
-          <div className="lg:col-span-5 bg-white rounded-[32px] border border-slate-200 shadow-sm flex flex-col h-[500px] overflow-hidden">
-            <div className="p-7 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-900">
-                Recent Activity
-              </h3>
-              <Link
-                href="/orders"
-                className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white transition-all"
-              >
-                <ArrowRight size={18} />
-              </Link>
-            </div>
-            <div className={`flex-1 ${scrollStyle}`}>
-              <table className="w-full">
-                <thead className="bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wider sticky top-0">
-                  <tr>
-                    <th className="px-6 py-4 text-left">Customer</th>
-                    <th className="px-6 py-4 text-left">Status</th>
-                    <th className="px-6 py-4 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {[...Array(8)].map((_, i) => (
-                    <tr key={i} className="hover:bg-slate-50 transition-all">
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-900">
-                          User_{i + 100}
-                        </p>
-                        <p className="text-xs text-slate-500 font-medium">
-                          Order #TXN-99{i}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase">
-                          Processing
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">
-                        ₹2,499
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
         {/* Bottom Row Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 pb-10">
           {/* Registrations */}
           <div className="bg-white p-7 rounded-[32px] border border-slate-200 shadow-sm h-[400px] flex flex-col">
             <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2 text-lg">
@@ -284,25 +173,31 @@ export default function AdminDashboard() {
               Registrations
             </h3>
             <div className={`flex-1 ${scrollStyle} space-y-4`}>
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
-                    U
+              {stats.latestUsers && stats.latestUsers.length > 0 ? (
+                stats.latestUsers.map((user, i) => (
+                  <div
+                    key={user._id || i}
+                    className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm uppercase">
+                      {user.name ? user.name.charAt(0) : "U"}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-900 truncate">
+                        {user.name || "New Customer"}
+                      </p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Joined {formatTimeAgo(user.createdAt)}
+                      </p>
+                    </div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-900">
-                      New Customer
-                    </p>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Joined 2h ago
-                    </p>
-                  </div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-center text-slate-500 text-sm py-4">
+                  No new registrations
+                </p>
+              )}
             </div>
           </div>
 
@@ -312,29 +207,59 @@ export default function AdminDashboard() {
               <Package size={20} className="text-blue-500" /> Stock Analytics
             </h3>
             <div className={`flex-1 ${scrollStyle} space-y-5`}>
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="p-4 bg-slate-50 rounded-2xl border border-slate-100"
-                >
-                  <div className="flex justify-between items-center mb-3">
-                    <p className="text-sm font-bold text-slate-800">
-                      Product Line {i + 1}
+              {stats.stockData && stats.stockData.length > 0 ? (
+                stats.stockData.map((product, i) => (
+                  <div
+                    key={product._id || i}
+                    className="p-4 bg-slate-50 rounded-2xl border border-slate-100"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="text-sm font-bold text-slate-800 truncate max-w-[150px]">
+                        {product.name}
+                      </p>
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${product.stock < 10
+                            ? "text-red-700 bg-red-100"
+                            : product.stock < 50
+                              ? "text-orange-700 bg-orange-100"
+                              : "text-emerald-700 bg-emerald-100"
+                          }`}
+                      >
+                        {product.stock < 10
+                          ? "Low Stock"
+                          : product.stock < 50
+                            ? "Medium"
+                            : "Healthy"}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full w-full rounded-full transition-all duration-500 ${product.stock < 10
+                            ? "bg-red-500"
+                            : product.stock < 50
+                              ? "bg-orange-500"
+                              : "bg-emerald-500"
+                          }`}
+                        style={{
+                          width: `${Math.min((product.stock / 100) * 100, 100)}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-2 font-medium text-right">
+                      {product.stock} units available
                     </p>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full uppercase">
-                      Healthy
-                    </span>
                   </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div className="bg-indigo-600 h-full w-[80%] rounded-full"></div>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-center text-slate-500 text-sm py-4">
+                  No stock data available
+                </p>
+              )}
             </div>
           </div>
 
           {/* Feedback */}
-          <div className="bg-white p-7 rounded-[32px] border border-slate-200 shadow-sm h-[400px] flex flex-col">
+          {/* <div className="bg-white p-7 rounded-[32px] border border-slate-200 shadow-sm h-[400px] flex flex-col">
             <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2 text-lg">
               <Star size={20} className="text-orange-500" /> Recent Feedback
             </h3>
@@ -354,7 +279,7 @@ export default function AdminDashboard() {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
