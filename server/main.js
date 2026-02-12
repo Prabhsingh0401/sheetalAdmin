@@ -25,6 +25,8 @@ import cartRoutes from "./routes/cart.routes.js";
 import sizeChartRoutes from "./routes/sizeChart.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
+import lookbookRoutes from "./routes/lookbook.routes.js";
+import pagesRoutes from "./routes/pages.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -130,6 +132,8 @@ app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/size-chart", sizeChartRoutes);
 app.use("/api/v1/search", searchRoutes);
 app.use("/api/v1/settings", settingsRoutes);
+app.use("/api/v1/lookbooks", lookbookRoutes);
+app.use("/api/v1/pages", pagesRoutes);
 
 app.get("/", (req, res) => {
   const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;

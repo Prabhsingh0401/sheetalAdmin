@@ -33,14 +33,14 @@ export default function CMSPage() {
       link: "/admin/cms/pages",
       color: "emerald",
     },
-    {
-      title: "Blog Posts",
-      description: "Manage articles (Redirects to WordPress)",
-      icon: <ExternalLink size={24} />,
-      link: "/admin/cms/blog",
-      external: true,
-      color: "orange",
-    },
+    // {
+    //   title: "Blog Posts",
+    //   description: "Manage articles (Redirects to WordPress)",
+    //   icon: <ExternalLink size={24} />,
+    //   link: "/admin/cms/blog",
+    //   external: true,
+    //   color: "orange",
+    // },
   ];
 
   return (
