@@ -2,6 +2,7 @@ import * as productService from "../services/product.service.js";
 import successResponse from "../utils/successResponse.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
+import fs from "fs";
 
 const clearFiles = async (files) => {
   if (!files) return;
@@ -90,25 +91,39 @@ export const getProductStats = async (req, res, next) => {
 
 export const bulkImportProducts = async (req, res, next) => {
   try {
-    if (!req.file)
+    if (!req.files || !req.files.file)
       return res
         .status(400)
         .json({ success: false, message: "Excel file is required" });
 
     const result = await productService.bulkImportService(
-      req.file.path,
+      req.files,
       req.user._id,
     );
-    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    // Cleanup handled inside service now
+    // if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
     return successResponse(
       res,
       200,
-      result.data,
-      "Bulk products imported successfully",
+      { imported: result.data.length, errors: result.errors },
+      result.errors?.length > 0 ? "Import completed with warnings" : "All products imported successfully",
     );
   } catch (error) {
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    next(error);
+  }
+};
+
+export const getSampleExcel = async (req, res, next) => {
+  try {
+    const filePath = "dummy_product_upload.xlsx";
+    if (fs.existsSync(filePath)) {
+      res.download(filePath, "product_import_template.xlsx");
+    } else {
+      res.status(404).json({ success: false, message: "Sample file not found" });
+    }
+  } catch (error) {
     next(error);
   }
 };

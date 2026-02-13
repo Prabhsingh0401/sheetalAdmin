@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ImageIcon,
   Settings as SettingsIcon,
+  UploadCloud,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -19,6 +20,7 @@ import ProductModal from "./ProductModal";
 import ViewProductDrawer from "./ViewProductDrawer";
 import DeleteConfirmModal from "../common/DeleteConfirmModal";
 import SettingsModal from "./SettingsModal";
+import BulkImportModal from "./BulkImportModal";
 
 import { getProducts, deleteProduct } from "@/services/productService";
 
@@ -43,6 +45,7 @@ export default function ProductTable({ refreshStats }) {
   const [selectedProductName, setSelectedProductName] = useState(null); // New state for selected product name
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -157,6 +160,14 @@ export default function ProductTable({ refreshStats }) {
           title="Global Settings"
         >
           <SettingsIcon size={18} />
+        </button>
+
+        <button
+          onClick={() => setShowBulkImportModal(true)}
+          className="p-2.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+          title="Bulk Import"
+        >
+          <UploadCloud size={18} />
         </button>
 
         <button
@@ -353,6 +364,11 @@ export default function ProductTable({ refreshStats }) {
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+      />
+      <BulkImportModal
+        isOpen={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        onSuccess={fetchProducts}
       />
     </div>
   );

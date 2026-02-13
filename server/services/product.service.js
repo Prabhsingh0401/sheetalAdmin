@@ -1,7 +1,8 @@
 import Review from "../models/review.model.js";
 import Product from "../models/product.model.js";
 import slugify from "slugify";
-import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
+import Category from "../models/category.model.js";
+import { deleteFile, deleteS3File, uploadS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 import xlsx from "xlsx";
 import mongoose from "mongoose";
@@ -553,26 +554,179 @@ export const getProductReviewsService = async (productId) => {
     : { success: false, statusCode: 404 };
 };
 
-export const bulkImportService = async (filePath, userId) => {
-  const workbook = xlsx.readFile(filePath);
+export const bulkImportService = async (files, userId) => {
+  const excelFile = files.file ? files.file[0] : null;
+  const imageFiles = files.images || [];
+
+  if (!excelFile) {
+    throw new Error("Excel file is required");
+  }
+
+  const workbook = xlsx.readFile(excelFile.path);
   const rawData = xlsx.utils.sheet_to_json(
     workbook.Sheets[workbook.SheetNames[0]],
   );
 
-  const productsToInsert = rawData.map((item) => ({
-    ...item,
-    sku: item.SKU?.toString().toUpperCase(),
-    slug: slugify(item.Name || "product", { lower: true, strict: true }),
-    createdBy: userId,
-    status: "Active",
-    price: Number(item.Price || 0),
-    stock: Number(item.Stock || 0),
-    category: item.CategoryId,
-    sizeChart: item.SizeChartId || null,
-  }));
+  const productsToInsert = [];
+  const errors = [];
 
-  const data = await Product.insertMany(productsToInsert);
-  return { success: true, data };
+  // Create a map of uploaded images for quick lookup
+  // Filename -> File Object
+  const imageMap = new Map();
+  imageFiles.forEach(file => {
+      imageMap.set(file.originalname, file);
+  });
+
+  // Pre-fetch all categories to avoid N+1 queries
+  const allCategories = await Category.find({}).lean();
+  const categoryMap = new Map(); // Name -> _id
+  allCategories.forEach(c => {
+      categoryMap.set(c.name.toLowerCase().trim(), c._id);
+  });
+
+  for (let i = 0; i < rawData.length; i++) {
+    const item = rawData[i];
+    const rowIndex = i + 2; // Excel row index (1-based, plus header)
+
+    try {
+        // 1. Data Cleaning
+        const name = item.Name?.trim();
+        const sku = item.SKU?.toString().trim().toUpperCase();
+        if (!name || !sku) {
+            errors.push(`Row ${rowIndex}: Name or SKU missing`);
+            continue;
+        }
+
+        // 2. Category Lookup
+        let categoryId = null;
+        if (item.Category) {
+            const catName = item.Category.trim().toLowerCase();
+            categoryId = categoryMap.get(catName);
+            // If not found, create new? For now, leave null or maybe implement creation later.
+        }
+
+        // 3. Image Processing Helper
+        const processImage = async (filename, folder = "products") => {
+            if (!filename) return null;
+            const file = imageMap.get(filename.trim());
+            if (file) {
+                // Upload to S3
+                const s3Result = await uploadS3File(file.path, folder);
+                return {
+                    url: s3Result.url,
+                    public_id: s3Result.public_id
+                };
+            }
+            return null;
+        };
+
+        // 4. Process Main Images
+        const mainImage = await processImage(item.MainImage);
+        const hoverImage = await processImage(item.HoverImage);
+
+        // 5. Process Gallery Images
+        let galleryImages = [];
+        if (item.Images) {
+            const imageNames = item.Images.split(',').map(s => s.trim());
+            for (const imgName of imageNames) {
+                 const img = await processImage(imgName);
+                 if (img) galleryImages.push(img);
+            }
+        }
+
+        // 6. Process Variants
+        let variants = [];
+        if (item.Variants) {
+            try {
+                const parsedVariants = JSON.parse(item.Variants);
+                for (const v of parsedVariants) {
+                     let v_image = null;
+                     if (v.imageFilename) {
+                         v_image = await processImage(v.imageFilename);
+                         delete v.imageFilename; // Remove temp field
+                     }
+                     // Ensure variant matches schema structure
+                     variants.push({
+                         ...v,
+                         v_image: v_image || undefined
+                     });
+                }
+            } catch (e) {
+                errors.push(`Row ${rowIndex}: Invalid Variants JSON`);
+            }
+        }
+
+        // 7. slug generation
+        let slug = slugify(name, { lower: true, strict: true });
+        // Check uniqueness simplistic way (better to handle with retry or suffix)
+        // For bulk, let's append SKU if needed or just trust slugify for now.
+
+        // 8. Construct Product Object
+        const product = {
+             name: name,
+             sku: sku,
+             slug: slug,
+             description: item.Description,
+             shortDescription: item.ShortDescription,
+             materialCare: item.MaterialCare,
+             category: categoryId,
+             subCategory: item.SubCategory,
+             price: Number(item.Price) || 0,
+             stock: Number(item.Stock) || 0,
+             status: item.Status || "Active",
+             wearType: item.WearType?.split(',').map(s => s.trim()) || [],
+             occasion: item.Occasion?.split(',').map(s => s.trim()) || [],
+             tags: item.Tags?.split(',').map(s => s.trim()) || [],
+             mainImage: mainImage || { url: "", public_id: "" }, // Schema might require url
+             hoverImage: hoverImage || { url: "", public_id: "" },
+             images: galleryImages,
+             variants: variants,
+             createdBy: userId
+        };
+
+        productsToInsert.push(product);
+
+    } catch (err) {
+        errors.push(`Row ${rowIndex}: Error processing - ${err.message}`);
+    }
+  }
+
+  // Insert valid products
+  let inserted = [];
+  if (productsToInsert.length > 0) {
+      try {
+        // Use ordered: false to continue inserting even if some fail (e.g. dup key)
+        inserted = await Product.insertMany(productsToInsert, { ordered: false });
+      } catch (err) {
+          // If some failed, err.insertedDocs contains the successful ones
+          if (err.insertedDocs) {
+              inserted = err.insertedDocs;
+          }
+          // Log errors for duplicates etc
+          errors.push(`Database Insert Error: Some products might be duplicates.`);
+      }
+  }
+
+  // Cleanup Temp Files
+  // Delete the excel file
+  try {
+      if (excelFile && excelFile.path) await deleteFile(excelFile.path);
+      // We don't delete separate images here because multer logic put them in temp/bulk
+      // We should probably clean up the whole folder or specific files.
+      // Since we map generic files, let's delete all files uploaded in this request.
+      const allFiles = [excelFile, ...imageFiles];
+      for (const f of allFiles) {
+          if (f.path) await deleteFile(f.path);
+      }
+  } catch (e) {
+      console.error("Cleanup error", e);
+  }
+
+  return { 
+      success: true, 
+      data: inserted, 
+      errors: errors 
+  };
 };
 
 export const addReviewService = async (productId, user, rating, comment) => {

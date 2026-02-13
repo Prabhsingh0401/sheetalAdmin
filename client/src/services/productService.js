@@ -59,6 +59,14 @@ export const bulkImportProducts = async (file) => {
   return handleResponse(res);
 };
 
+export const downloadSampleExcel = async () => {
+  const res = await fetch(`${API_BASE_URL}/products/admin/sample-excel`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to download sample file");
+  return res.blob();
+};
+
 export const getProductDetails = async (id) => {
   const res = await fetch(`${API_BASE_URL}/products/detail/${id}`, {
     credentials: "include",

@@ -62,6 +62,15 @@ export const uploadTo = (folderName) => {
       }
     }
 
+    // For temp/bulk, allow spreadsheet AND images
+    if (folderName === 'temp/bulk') {
+      const isSpreadsheet = ['.xlsx', '.xls', '.csv'].includes(extname);
+      const isImage = /jpeg|jpg|png|webp/.test(extname) && /image/.test(file.mimetype);
+      if (isSpreadsheet || isImage) {
+        return cb(null, true);
+      }
+    }
+
     const isExtValid = /jpeg|jpg|png|webp|mp4|webm|mov/.test(extname);
     const isMimeValid = /image|video/.test(file.mimetype);
 

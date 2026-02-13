@@ -14,6 +14,7 @@ import {
   getLowStockProducts,
   getTrendingProducts,
   incrementViewCount,
+  getSampleExcel,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
@@ -40,9 +41,14 @@ router.post(
   "/admin/import",
   isAuthenticated,
   isAdmin,
-  uploadTo("temp/excel").single("file"),
+  uploadTo("temp/bulk").fields([
+    { name: "file", maxCount: 1 },
+    { name: "images", maxCount: 50 }, // Allow up to 50 images
+  ]),
   bulkImportProducts,
 );
+
+router.get("/admin/sample-excel", isAuthenticated, isAdmin, getSampleExcel);
 
 router.post(
   "/admin/new",
