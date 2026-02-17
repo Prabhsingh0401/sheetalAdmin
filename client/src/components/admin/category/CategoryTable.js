@@ -124,6 +124,14 @@ function SortableCategoryRow({ category, onEdit, onView, onDelete }) {
         </div>
       </td>
       <td className="px-4 py-3">
+        <div className="flex flex-col gap-1 text-[10px]">
+          {category.productType?.length > 0 && <div className="truncate max-w-[150px]"><span className="font-bold text-indigo-600">Type:</span> {category.productType.join(", ")}</div>}
+          {category.fabric?.length > 0 && <div className="truncate max-w-[150px]"><span className="font-bold text-teal-600">Fabric:</span> {category.fabric.join(", ")}</div>}
+          {category.style?.length > 0 && <div className="truncate max-w-[150px]"><span className="font-bold text-orange-600">Style:</span> {category.style.join(", ")}</div>}
+          {category.work?.length > 0 && <div className="truncate max-w-[150px]"><span className="font-bold text-rose-600">Work:</span> {category.work.join(", ")}</div>}
+        </div>
+      </td>
+      <td className="px-4 py-3">
         <span
           className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${category.isActive !== false ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}
         >
@@ -332,6 +340,7 @@ export default function CategoryTable({ refreshStats }) {
                   <div className="flex items-center gap-1">Name</div>
                 </th>
                 <th className="px-4 py-4">Subcategories</th>
+                <th className="px-4 py-4">Attributes</th>
                 <th className="px-4 py-4">Status</th>
                 <th className="px-4 py-4 text-right">Actions</th>
               </tr>

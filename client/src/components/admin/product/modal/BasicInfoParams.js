@@ -11,8 +11,11 @@ export default function BasicInfoParams({
     handleAddTag,
     removeTag,
 }) {
+    const selectedCategory = categories.find((c) => c._id === formData.category);
+
     return (
         <div className="space-y-5 animate-in fade-in duration-300">
+
             <InputField
                 label="Product Title"
                 name="name"
@@ -140,90 +143,112 @@ export default function BasicInfoParams({
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {/* Wear Type */}
-                <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
-                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Wear Type (Press Enter)
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.wearType.map((tag, idx) => (
-                            <span
-                                key={idx}
-                                className="flex items-center gap-1 bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider"
-                            >
-                                {tag}{" "}
-                                <button
-                                    type="button"
-                                    onClick={() => removeTag(tag, "wearType")}
-                                >
-                                    <X size={12} />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                    <input
-                        type="text"
-                        onKeyDown={(e) => handleAddTag(e, "wearType")}
-                        placeholder="e.g. Office Wear, Party Wear..."
-                        className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm outline-none"
-                    />
+            {/* General Tags */}
+            <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
+                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Tags (Press Enter)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.tags.map((tag, idx) => (
+                        <span
+                            key={idx}
+                            className="flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider"
+                        >
+                            {tag}{" "}
+                            <button type="button" onClick={() => removeTag(tag, "tags")}>
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
                 </div>
+                <input
+                    type="text"
+                    onKeyDown={(e) => handleAddTag(e, "tags")}
+                    placeholder="e.g. Trending, Premium..."
+                    className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm outline-none"
+                />
+            </div>
 
-                {/* Occasion */}
-                <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
-                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Occasion (Press Enter)
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.occasion.map((tag, idx) => (
-                            <span
-                                key={idx}
-                                className="flex items-center gap-1 bg-pink-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider"
-                            >
-                                {tag}{" "}
-                                <button
-                                    type="button"
-                                    onClick={() => removeTag(tag, "occasion")}
-                                >
-                                    <X size={12} />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                    <input
-                        type="text"
-                        onKeyDown={(e) => handleAddTag(e, "occasion")}
-                        placeholder="e.g. Wedding, Birthday..."
-                        className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm outline-none"
-                    />
-                </div>
+            {/* New Categorization Tags: Type, Fabric, Style, Work */}
+            {/* New Categorization Tags: Type, Fabric, Style, Work */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                {[
+                    { label: "Product Type", key: "productType", color: "bg-indigo-600", lightColor: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+                    { label: "Fabric", key: "fabric", color: "bg-teal-600", lightColor: "bg-teal-50 text-teal-700 border-teal-200" },
+                    { label: "Style", key: "style", color: "bg-orange-600", lightColor: "bg-orange-50 text-orange-700 border-orange-200" },
+                    { label: "Work", key: "work", color: "bg-rose-600", lightColor: "bg-rose-50 text-rose-700 border-rose-200" },
+                    { label: "Wear Type", key: "wearType", color: "bg-purple-600", lightColor: "bg-purple-50 text-purple-700 border-purple-200" },
+                    { label: "Occasion", key: "occasion", color: "bg-pink-600", lightColor: "bg-pink-50 text-pink-700 border-pink-200" },
+                ].map((section) => (
+                    <div
+                        key={section.key}
+                        className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 flex flex-col"
+                    >
+                        <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            {section.label}
+                        </label>
 
-                {/* General Tags */}
-                <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
-                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        Tags (Press Enter)
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.tags.map((tag, idx) => (
-                            <span
-                                key={idx}
-                                className="flex items-center gap-1 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider"
-                            >
-                                {tag}{" "}
-                                <button type="button" onClick={() => removeTag(tag, "tags")}>
-                                    <X size={12} />
-                                </button>
-                            </span>
-                        ))}
+                        {/* Selected Tags */}
+                        <div className="flex flex-wrap gap-2 mb-2 min-h-[24px]">
+                            {formData[section.key].map((tag, idx) => (
+                                <span
+                                    key={idx}
+                                    className={`flex items-center gap-1 ${section.color} text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider shadow-sm`}
+                                >
+                                    {tag}{" "}
+                                    <button
+                                        type="button"
+                                        onClick={() => removeTag(tag, section.key)}
+                                        className="hover:text-slate-200"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Category Suggestions */}
+                        {selectedCategory &&
+                            selectedCategory[section.key] &&
+                            selectedCategory[section.key].length > 0 && (
+                                <div className="mb-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                                        Suggested from {selectedCategory.name}:
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {selectedCategory[section.key].map((catTag, idx) => {
+                                            const isSelected = formData[section.key].includes(catTag);
+                                            if (isSelected) return null; // Don't show if already selected
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!formData[section.key].includes(catTag)) {
+                                                            setFormData((prev) => ({
+                                                                ...prev,
+                                                                [section.key]: [...prev[section.key], catTag],
+                                                            }));
+                                                        }
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${section.lightColor} border hover:shadow-sm`}
+                                                >
+                                                    + {catTag}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                        <input
+                            type="text"
+                            onKeyDown={(e) => handleAddTag(e, section.key)}
+                            placeholder={`Add ${section.label}...`}
+                            className="mt-auto w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-slate-800 transition-colors"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        onKeyDown={(e) => handleAddTag(e, "tags")}
-                        placeholder="e.g. Trending, Premium..."
-                        className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm outline-none"
-                    />
-                </div>
+                ))}
             </div>
         </div>
     );

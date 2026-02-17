@@ -41,6 +41,12 @@ const categorySchema = new mongoose.Schema(
     metaTitle: { type: String, trim: true },
     metaDescription: { type: String, trim: true },
     subCategories: { type: [String], default: [] },
+    style: { type: [String], default: [] },
+    work: { type: [String], default: [] },
+    fabric: { type: [String], default: [] },
+    productType: { type: [String], default: [] },
+    wearType: { type: [String], default: [], index: true },
+    occasion: { type: [String], default: [], index: true },
   },
   { timestamps: true },
 );

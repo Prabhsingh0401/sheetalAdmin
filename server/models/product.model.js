@@ -49,6 +49,26 @@ const productSchema = new mongoose.Schema(
       default: [],
       index: true,
     },
+    style: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    work: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    fabric: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    productType: {
+      type: [String],
+      default: [],
+      index: true,
+    },
 
     displayCollections: { type: [String], default: [], index: true },
     eventTags: { type: [String], default: [], index: true },
@@ -145,6 +165,10 @@ productSchema.index({
   wearType: "text",
   occasion: "text",
   tags: "text",
+  style: "text",
+  work: "text",
+  fabric: "text",
+  productType: "text",
   metaKeywords: "text",
   materialCare: "text",
 });

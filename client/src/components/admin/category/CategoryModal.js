@@ -29,6 +29,12 @@ export default function CategoryModal({
     status: "Active",
     categoryBanner: "",
     subCategories: [],
+    style: [],
+    work: [],
+    fabric: [],
+    productType: [],
+    wearType: [],
+    occasion: [],
     mainImage: null,
     bannerImage: null,
   });
@@ -44,6 +50,12 @@ export default function CategoryModal({
         status: initialData?.isActive !== false ? "Active" : "Inactive",
         categoryBanner: initialData?.categoryBanner || "",
         subCategories: initialData?.subCategories || [],
+        style: initialData?.style || [],
+        work: initialData?.work || [],
+        fabric: initialData?.fabric || [],
+        productType: initialData?.productType || [],
+        wearType: initialData?.wearType || [],
+        occasion: initialData?.occasion || [],
         mainImage: null,
         bannerImage: null,
       });
@@ -118,6 +130,12 @@ export default function CategoryModal({
     data.append("status", formData.status);
     data.append("categoryBanner", formData.categoryBanner); // Append categoryBanner text field
     data.append("subCategories", JSON.stringify(formData.subCategories));
+    data.append("style", JSON.stringify(formData.style));
+    data.append("work", JSON.stringify(formData.work));
+    data.append("fabric", JSON.stringify(formData.fabric));
+    data.append("productType", JSON.stringify(formData.productType));
+    data.append("wearType", JSON.stringify(formData.wearType));
+    data.append("occasion", JSON.stringify(formData.occasion));
 
 
     if (formData.mainImage) data.append("mainImage", formData.mainImage);
@@ -144,7 +162,7 @@ export default function CategoryModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[100] p-4 transition-all">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl overflow-hidden border border-slate-200">
         {/* --- HEADER --- */}
         <div className="px-6 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -173,114 +191,81 @@ export default function CategoryModal({
         </div>
 
         {/* --- FORM --- */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
-          {/* Image Upload Boxes */}
-          <div className="flex space-x-20">
-            <div className="grid grid-cols-1 gap-4 pb-2 ml-2">
-              {/* Main Image Upload Box */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 text-center">
-                  Main Image
-                </label>
-                <div className="relative group w-24 h-24">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, "mainImage")}
-                    className="hidden"
-                    id="main-cat-img"
-                  />
-                  <label
-                    htmlFor="main-cat-img"
-                    className="block w-full h-full rounded-lg border border-slate-400 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-slate-50"
-                  >
-                    {previewMainImage ? (
-                      <img
-                        src={previewMainImage}
-                        alt="Main Image Preview"
-                        className="w-full h-full object-cover"
+        <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+              {/* --- COLUMN 1: Visuals & Status (Span 3) --- */}
+              <div className="lg:col-span-3 space-y-6">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-6">
+                  {/* Main Image */}
+                  <div className="flex flex-col items-center">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                      Main Image
+                    </label>
+                    <div className="relative group w-32 h-32">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(e, "mainImage")}
+                        className="hidden"
+                        id="main-cat-img"
                       />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                        <Upload size={20} />
-                        <span className="text-[9px] mt-1 font-bold uppercase">
-                          Main Image
-                        </span>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
+                      <label
+                        htmlFor="main-cat-img"
+                        className="block w-full h-full rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-white"
+                      >
+                        {previewMainImage ? (
+                          <img
+                            src={previewMainImage}
+                            alt="Main Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <Upload size={24} />
+                            <span className="text-[10px] mt-1 font-bold">UPLOAD</span>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
 
-              {/* Banner Image Upload Box */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 text-center">
-                  Banner Image
-                </label>
-                <div className="relative group w-24 h-24">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, "bannerImage")}
-                    className="hidden"
-                    id="banner-cat-img"
-                  />
-                  <label
-                    htmlFor="banner-cat-img"
-                    className="block w-full h-full rounded-lg border border-slate-400 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-slate-50"
-                  >
-                    {previewBannerImage ? (
-                      <img
-                        src={previewBannerImage}
-                        alt="Banner Image Preview"
-                        className="w-full h-full object-cover"
+                  {/* Banner Image */}
+                  <div className="flex flex-col items-center">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                      Banner Image
+                    </label>
+                    <div className="relative group w-full h-24">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(e, "bannerImage")}
+                        className="hidden"
+                        id="banner-cat-img"
                       />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                        <Upload size={20} />
-                        <span className="text-[9px] mt-1 font-bold uppercase">
-                          Banner Image
-                        </span>
-                      </div>
-                    )}
-                  </label>
+                      <label
+                        htmlFor="banner-cat-img"
+                        className="block w-full h-full rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-900 transition-all cursor-pointer overflow-hidden relative bg-white"
+                      >
+                        {previewBannerImage ? (
+                          <img
+                            src={previewBannerImage}
+                            alt="Banner Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <Upload size={20} />
+                            <span className="text-[10px] mt-1 font-bold">BANNER</span>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="w-full">
-              {/* Category Name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Category Name
-                </label>
-                <input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="e.g. Mens Fashion"
-                  className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-                  required
-                />
-              </div>
 
-              {/* Category Banner Text Field */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Category Banner Text
-                </label>
-                <input
-                  value={formData.categoryBanner}
-                  onChange={(e) =>
-                    setFormData({ ...formData, categoryBanner: e.target.value })
-                  }
-                  placeholder="e.g. Elegant Sarees for Every Occasion"
-                  className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-                />
-              </div>
-
-              {/* Parent & Status Row */}
-              <div className="grid grid-cols-2 gap-4">
+                {/* Status */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                     Status
@@ -290,7 +275,7 @@ export default function CategoryModal({
                     onChange={(e) =>
                       setFormData({ ...formData, status: e.target.value })
                     }
-                    className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none cursor-pointer appearance-none"
+                    className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none font-medium cursor-pointer"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -298,117 +283,192 @@ export default function CategoryModal({
                 </div>
               </div>
 
-              {/* Description */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Description
-                </label>
-                <textarea
-                  rows="2"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Briefly describe the category..."
-                  className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-                ></textarea>
+              {/* --- COLUMN 2: Details (Span 4) --- */}
+              <div className="lg:col-span-4 space-y-5">
+                {/* Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Category Name</label>
+                  <input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Mens Fashion"
+                    className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition font-medium"
+                    required
+                  />
+                </div>
+
+                {/* Banner Text */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Banner Headline</label>
+                  <input
+                    value={formData.categoryBanner}
+                    onChange={(e) => setFormData({ ...formData, categoryBanner: e.target.value })}
+                    placeholder="e.g. Best Sellers 2024"
+                    className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Description</label>
+                  <textarea
+                    rows="4"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Short description..."
+                    className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition resize-none"
+                  ></textarea>
+                </div>
+
+                {/* Subcategories */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Subcategories</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="subcategory-input"
+                      placeholder="Add subcategory..."
+                      className="flex-1 bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm outline-none focus:border-slate-900 transition"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const val = e.target.value.trim();
+                          if (val && !formData.subCategories.includes(val)) {
+                            setFormData((prev) => ({ ...prev, subCategories: [...prev.subCategories, val] }));
+                            e.target.value = "";
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById("subcategory-input");
+                        const val = input.value.trim();
+                        if (val && !formData.subCategories.includes(val)) {
+                          setFormData((prev) => ({ ...prev, subCategories: [...prev.subCategories, val] }));
+                          input.value = "";
+                        }
+                      }}
+                      className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {formData.subCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2 max-h-[120px] overflow-y-auto custom-scrollbar">
+                      {formData.subCategories.map((sub, index) => (
+                        <div key={index} className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-md text-xs font-medium text-slate-700 border border-slate-200">
+                          {sub}
+                          <button
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, subCategories: prev.subCategories.filter((_, i) => i !== index) }))}
+                            className="ml-1 text-slate-400 hover:text-rose-500"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Subcategories */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Subcategories
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="subcategory-input"
-                    placeholder="Add subcategory..."
-                    className="flex-1 bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const val = e.target.value.trim();
-                        if (val && !formData.subCategories.includes(val)) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            subCategories: [...prev.subCategories, val],
-                          }));
-                          e.target.value = "";
-                        }
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const input = document.getElementById("subcategory-input");
-                      const val = input.value.trim();
-                      if (val && !formData.subCategories.includes(val)) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          subCategories: [...prev.subCategories, val],
-                        }));
-                        input.value = "";
-                      }
-                    }}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-black transition"
-                  >
-                    Add
-                  </button>
-                </div>
-                {formData.subCategories.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.subCategories.map((sub, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 bg-slate-100 px-3 py-1 rounded-full text-xs font-medium text-slate-700 border border-slate-200"
-                      >
-                        {sub}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              subCategories: prev.subCategories.filter(
-                                (_, i) => i !== index,
-                              ),
-                            }))
-                          }
-                          className="ml-1 text-slate-400 hover:text-rose-500"
-                        >
-                          <X size={14} />
-                        </button>
+              {/* --- COLUMN 3: Attributes/Tags (Span 5) --- */}
+              <div className="lg:col-span-5">
+                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200 h-full flex flex-col">
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-200 flex items-center justify-between">
+                    <span>Category Attributes</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Manage Tags</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                    {[
+                      { label: "Product Type", key: "productType", color: "text-indigo-600 bg-indigo-50 border-indigo-200" },
+                      { label: "Fabric", key: "fabric", color: "text-teal-600 bg-teal-50 border-teal-200" },
+                      { label: "Style", key: "style", color: "text-orange-600 bg-orange-50 border-orange-200" },
+                      { label: "Work", key: "work", color: "text-rose-600 bg-rose-50 border-rose-200" },
+                      { label: "Wear Type", key: "wearType", color: "text-purple-600 bg-purple-50 border-purple-200" },
+                      { label: "Occasion", key: "occasion", color: "text-pink-600 bg-pink-50 border-pink-200" },
+                    ].map((section) => (
+                      <div key={section.key} className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
+                        <label className="text-[10px] font-bold text-slate-900 uppercase tracking-wider block">
+                          {section.label}
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            id={`input-${section.key}`}
+                            placeholder="Add..."
+                            className="w-full bg-slate-50 border border-slate-200 px-2 py-1.5 rounded-md text-xs outline-none focus:border-slate-800 transition"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const val = e.target.value.trim();
+                                if (val && !formData[section.key].includes(val)) {
+                                  setFormData((prev) => ({ ...prev, [section.key]: [...prev[section.key], val] }));
+                                  e.target.value = "";
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.getElementById(`input-${section.key}`);
+                              const val = input.value.trim();
+                              if (val && !formData[section.key].includes(val)) {
+                                setFormData((prev) => ({ ...prev, [section.key]: [...prev[section.key], val] }));
+                                input.value = "";
+                              }
+                            }}
+                            className="bg-slate-900 text-white px-2 py-1.5 rounded-md text-xs font-bold hover:bg-black transition"
+                          >
+                            +
+                          </button>
+                        </div>
+                        {formData[section.key].length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-[80px] overflow-y-auto custom-scrollbar">
+                            {formData[section.key].map((tag, index) => (
+                              <div key={index} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${section.color}`}>
+                                {tag}
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData((prev) => ({ ...prev, [section.key]: prev[section.key].filter((_, i) => i !== index) }))}
+                                  className="ml-0.5 opacity-60 hover:opacity-100"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
-              {/* --- ACTIONS --- */}
-              <div className="pt-4 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2.5 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`flex-[2] ${initialData ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
-                >
-                  {loading ? (
-                    <Loader2 className="animate-spin" size={18} />
-                  ) : initialData ? (
-                    "Update Details"
-                  ) : (
-                    "Confirm & Add"
-                  )}
-                </button>
-              </div>
+
             </div>
           </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-slate-100 bg-white flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`flex-1 ${initialData ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2 rounded-lg font-bold text-sm transition shadow-md flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : initialData ? "Update Category" : "Create Category"}
+            </button>
+          </div>
         </form>
+
       </div>
     </div>
   );

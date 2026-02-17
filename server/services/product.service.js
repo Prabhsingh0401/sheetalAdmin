@@ -6,6 +6,7 @@ import { deleteFile, deleteS3File, uploadS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 import xlsx from "xlsx";
 import mongoose from "mongoose";
+import { syncToAlgolia, deleteFromAlgolia } from "./algolia.service.js";
 
 export const getAllProductsService = async (queryStr) => {
   const {
@@ -21,6 +22,10 @@ export const getAllProductsService = async (queryStr) => {
     wearType,
     occasion,
     tags,
+    style,
+    work,
+    fabric,
+    productType,
   } = queryStr;
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -66,6 +71,22 @@ export const getAllProductsService = async (queryStr) => {
 
   if (tags) {
     filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
+  }
+
+  if (style) {
+    filter.style = { $in: Array.isArray(style) ? style : [style] };
+  }
+
+  if (work) {
+    filter.work = { $in: Array.isArray(work) ? work : [work] };
+  }
+
+  if (fabric) {
+    filter.fabric = { $in: Array.isArray(fabric) ? fabric : [fabric] };
+  }
+
+  if (productType) {
+    filter.productType = { $in: Array.isArray(productType) ? productType : [productType] };
   }
 
   const pipeline = [
@@ -118,7 +139,16 @@ export const getAllProductsService = async (queryStr) => {
       },
     },
     {
-      $sort: sort || { createdAt: -1 },
+      $sort: (() => {
+        if (!sort) return { createdAt: -1 };
+        if (typeof sort === "object") return sort;
+        if (sort === "newest") return { createdAt: -1 };
+        if (sort === "price_asc") return { "variants.sizes.price": 1 };
+        if (sort === "price_desc") return { "variants.sizes.price": -1 };
+        if (sort === "popularity") return { averageRating: -1 };
+        if (sort.startsWith("-")) return { [sort.substring(1)]: -1 };
+        return { [sort]: 1 };
+      })(),
     },
   ];
 
@@ -205,6 +235,22 @@ export const createProductService = async (data, files, userId) => {
       typeof data.tags === "string"
         ? JSON.parse(data.tags)
         : data.tags,
+    style:
+      typeof data.style === "string"
+        ? JSON.parse(data.style)
+        : data.style,
+    work:
+      typeof data.work === "string"
+        ? JSON.parse(data.work)
+        : data.work,
+    fabric:
+      typeof data.fabric === "string"
+        ? JSON.parse(data.fabric)
+        : data.fabric,
+    productType:
+      typeof data.productType === "string"
+        ? JSON.parse(data.productType)
+        : data.productType,
   };
 
   if (parsedData.sizeChart === "null" || !parsedData.sizeChart)
@@ -293,6 +339,9 @@ export const createProductService = async (data, files, userId) => {
     createdBy: userId,
   });
 
+  // Sync to Algolia
+  await syncToAlgolia(product, "product");
+
   return { success: true, product };
 };
 
@@ -335,6 +384,22 @@ export const updateProductService = async (id, data, files) => {
       typeof data.tags === "string"
         ? JSON.parse(data.tags)
         : data.tags,
+    style:
+      typeof data.style === "string"
+        ? JSON.parse(data.style)
+        : data.style,
+    work:
+      typeof data.work === "string"
+        ? JSON.parse(data.work)
+        : data.work,
+    fabric:
+      typeof data.fabric === "string"
+        ? JSON.parse(data.fabric)
+        : data.fabric,
+    productType:
+      typeof data.productType === "string"
+        ? JSON.parse(data.productType)
+        : data.productType,
   };
 
   if (parsedData.sizeChart === "null" || !parsedData.sizeChart)
@@ -457,6 +522,9 @@ export const updateProductService = async (id, data, files) => {
     { new: true, runValidators: true },
   );
 
+  // Sync to Algolia
+  await syncToAlgolia(updatedProduct, "product");
+
   return { success: true, product: updatedProduct };
 };
 
@@ -481,6 +549,10 @@ export const deleteProductService = async (id) => {
   else if (product.video?.url && !product.video.url.startsWith("http")) await deleteFile(product.video.url);
 
   await product.deleteOne();
+  
+  // Remove from Algolia
+  await deleteFromAlgolia(id);
+  
   return { success: true };
 };
 
@@ -574,14 +646,14 @@ export const bulkImportService = async (files, userId) => {
   // Filename -> File Object
   const imageMap = new Map();
   imageFiles.forEach(file => {
-      imageMap.set(file.originalname, file);
+    imageMap.set(file.originalname, file);
   });
 
   // Pre-fetch all categories to avoid N+1 queries
   const allCategories = await Category.find({}).lean();
   const categoryMap = new Map(); // Name -> _id
   allCategories.forEach(c => {
-      categoryMap.set(c.name.toLowerCase().trim(), c._id);
+    categoryMap.set(c.name.toLowerCase().trim(), c._id);
   });
 
   for (let i = 0; i < rawData.length; i++) {
@@ -589,143 +661,147 @@ export const bulkImportService = async (files, userId) => {
     const rowIndex = i + 2; // Excel row index (1-based, plus header)
 
     try {
-        // 1. Data Cleaning
-        const name = item.Name?.trim();
-        const sku = item.SKU?.toString().trim().toUpperCase();
-        if (!name || !sku) {
-            errors.push(`Row ${rowIndex}: Name or SKU missing`);
-            continue;
-        }
+      // 1. Data Cleaning
+      const name = item.Name?.trim();
+      const sku = item.SKU?.toString().trim().toUpperCase();
+      if (!name || !sku) {
+        errors.push(`Row ${rowIndex}: Name or SKU missing`);
+        continue;
+      }
 
-        // 2. Category Lookup
-        let categoryId = null;
-        if (item.Category) {
-            const catName = item.Category.trim().toLowerCase();
-            categoryId = categoryMap.get(catName);
-            // If not found, create new? For now, leave null or maybe implement creation later.
-        }
+      // 2. Category Lookup
+      let categoryId = null;
+      if (item.Category) {
+        const catName = item.Category.trim().toLowerCase();
+        categoryId = categoryMap.get(catName);
+        // If not found, create new? For now, leave null or maybe implement creation later.
+      }
 
-        // 3. Image Processing Helper
-        const processImage = async (filename, folder = "products") => {
-            if (!filename) return null;
-            const file = imageMap.get(filename.trim());
-            if (file) {
-                // Upload to S3
-                const s3Result = await uploadS3File(file.path, folder);
-                return {
-                    url: s3Result.url,
-                    public_id: s3Result.public_id
-                };
+      // 3. Image Processing Helper
+      const processImage = async (filename, folder = "products") => {
+        if (!filename) return null;
+        const file = imageMap.get(filename.trim());
+        if (file) {
+          // Upload to S3
+          const s3Result = await uploadS3File(file.path, folder);
+          return {
+            url: s3Result.url,
+            public_id: s3Result.public_id
+          };
+        }
+        return null;
+      };
+
+      // 4. Process Main Images
+      const mainImage = await processImage(item.MainImage);
+      const hoverImage = await processImage(item.HoverImage);
+
+      // 5. Process Gallery Images
+      let galleryImages = [];
+      if (item.Images) {
+        const imageNames = item.Images.split(',').map(s => s.trim());
+        for (const imgName of imageNames) {
+          const img = await processImage(imgName);
+          if (img) galleryImages.push(img);
+        }
+      }
+
+      // 6. Process Variants
+      let variants = [];
+      if (item.Variants) {
+        try {
+          const parsedVariants = JSON.parse(item.Variants);
+          for (const v of parsedVariants) {
+            let v_image = null;
+            if (v.imageFilename) {
+              v_image = await processImage(v.imageFilename);
+              delete v.imageFilename; // Remove temp field
             }
-            return null;
-        };
-
-        // 4. Process Main Images
-        const mainImage = await processImage(item.MainImage);
-        const hoverImage = await processImage(item.HoverImage);
-
-        // 5. Process Gallery Images
-        let galleryImages = [];
-        if (item.Images) {
-            const imageNames = item.Images.split(',').map(s => s.trim());
-            for (const imgName of imageNames) {
-                 const img = await processImage(imgName);
-                 if (img) galleryImages.push(img);
-            }
+            // Ensure variant matches schema structure
+            variants.push({
+              ...v,
+              v_image: v_image || undefined
+            });
+          }
+        } catch (e) {
+          errors.push(`Row ${rowIndex}: Invalid Variants JSON`);
         }
+      }
 
-        // 6. Process Variants
-        let variants = [];
-        if (item.Variants) {
-            try {
-                const parsedVariants = JSON.parse(item.Variants);
-                for (const v of parsedVariants) {
-                     let v_image = null;
-                     if (v.imageFilename) {
-                         v_image = await processImage(v.imageFilename);
-                         delete v.imageFilename; // Remove temp field
-                     }
-                     // Ensure variant matches schema structure
-                     variants.push({
-                         ...v,
-                         v_image: v_image || undefined
-                     });
-                }
-            } catch (e) {
-                errors.push(`Row ${rowIndex}: Invalid Variants JSON`);
-            }
-        }
+      // 7. slug generation
+      let slug = slugify(name, { lower: true, strict: true });
+      // Check uniqueness simplistic way (better to handle with retry or suffix)
+      // For bulk, let's append SKU if needed or just trust slugify for now.
 
-        // 7. slug generation
-        let slug = slugify(name, { lower: true, strict: true });
-        // Check uniqueness simplistic way (better to handle with retry or suffix)
-        // For bulk, let's append SKU if needed or just trust slugify for now.
+      // 8. Construct Product Object
+      const product = {
+        name: name,
+        sku: sku,
+        slug: slug,
+        description: item.Description,
+        shortDescription: item.ShortDescription,
+        materialCare: item.MaterialCare,
+        category: categoryId,
+        subCategory: item.SubCategory,
+        price: Number(item.Price) || 0,
+        stock: Number(item.Stock) || 0,
+        status: item.Status || "Active",
+        wearType: item.WearType?.split(',').map(s => s.trim()) || [],
+        occasion: item.Occasion?.split(',').map(s => s.trim()) || [],
+        tags: item.Tags?.split(',').map(s => s.trim()) || [],
+        style: item.Style?.split(',').map(s => s.trim()) || [],
+        work: item.Work?.split(',').map(s => s.trim()) || [],
+        fabric: item.Fabric?.split(',').map(s => s.trim()) || [],
+        productType: item.Type?.split(',').map(s => s.trim()) || [],
+        mainImage: mainImage || { url: "", public_id: "" }, // Schema might require url
+        hoverImage: hoverImage || { url: "", public_id: "" },
+        images: galleryImages,
+        variants: variants,
+        createdBy: userId
+      };
 
-        // 8. Construct Product Object
-        const product = {
-             name: name,
-             sku: sku,
-             slug: slug,
-             description: item.Description,
-             shortDescription: item.ShortDescription,
-             materialCare: item.MaterialCare,
-             category: categoryId,
-             subCategory: item.SubCategory,
-             price: Number(item.Price) || 0,
-             stock: Number(item.Stock) || 0,
-             status: item.Status || "Active",
-             wearType: item.WearType?.split(',').map(s => s.trim()) || [],
-             occasion: item.Occasion?.split(',').map(s => s.trim()) || [],
-             tags: item.Tags?.split(',').map(s => s.trim()) || [],
-             mainImage: mainImage || { url: "", public_id: "" }, // Schema might require url
-             hoverImage: hoverImage || { url: "", public_id: "" },
-             images: galleryImages,
-             variants: variants,
-             createdBy: userId
-        };
-
-        productsToInsert.push(product);
+      productsToInsert.push(product);
 
     } catch (err) {
-        errors.push(`Row ${rowIndex}: Error processing - ${err.message}`);
+      errors.push(`Row ${rowIndex}: Error processing - ${err.message}`);
     }
   }
 
   // Insert valid products
   let inserted = [];
   if (productsToInsert.length > 0) {
-      try {
-        // Use ordered: false to continue inserting even if some fail (e.g. dup key)
-        inserted = await Product.insertMany(productsToInsert, { ordered: false });
-      } catch (err) {
-          // If some failed, err.insertedDocs contains the successful ones
-          if (err.insertedDocs) {
-              inserted = err.insertedDocs;
-          }
-          // Log errors for duplicates etc
-          errors.push(`Database Insert Error: Some products might be duplicates.`);
+    try {
+      // Use ordered: false to continue inserting even if some fail (e.g. dup key)
+      inserted = await Product.insertMany(productsToInsert, { ordered: false });
+    } catch (err) {
+      // If some failed, err.insertedDocs contains the successful ones
+      if (err.insertedDocs) {
+        inserted = err.insertedDocs;
       }
+      // Log errors for duplicates etc
+      errors.push(`Database Insert Error: Some products might be duplicates.`);
+    }
   }
 
   // Cleanup Temp Files
   // Delete the excel file
   try {
-      if (excelFile && excelFile.path) await deleteFile(excelFile.path);
-      // We don't delete separate images here because multer logic put them in temp/bulk
-      // We should probably clean up the whole folder or specific files.
-      // Since we map generic files, let's delete all files uploaded in this request.
-      const allFiles = [excelFile, ...imageFiles];
-      for (const f of allFiles) {
-          if (f.path) await deleteFile(f.path);
-      }
+    if (excelFile && excelFile.path) await deleteFile(excelFile.path);
+    // We don't delete separate images here because multer logic put them in temp/bulk
+    // We should probably clean up the whole folder or specific files.
+    // Since we map generic files, let's delete all files uploaded in this request.
+    const allFiles = [excelFile, ...imageFiles];
+    for (const f of allFiles) {
+      if (f.path) await deleteFile(f.path);
+    }
   } catch (e) {
-      console.error("Cleanup error", e);
+    console.error("Cleanup error", e);
   }
 
-  return { 
-      success: true, 
-      data: inserted, 
-      errors: errors 
+  return {
+    success: true,
+    data: inserted,
+    errors: errors
   };
 };
 

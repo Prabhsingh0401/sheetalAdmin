@@ -59,6 +59,10 @@ export default function ProductModal({
     specifications: [],
     keyBenefits: [],
     eventTags: [],
+    style: [],
+    work: [],
+    fabric: [],
+    productType: [],
     brandInfo: "",
     metaTitle: "",
     metaDescription: "",
@@ -107,6 +111,12 @@ export default function ProductModal({
           eventTags: Array.isArray(initialData.eventTags)
             ? initialData.eventTags
             : [],
+          style: Array.isArray(initialData.style) ? initialData.style : [],
+          work: Array.isArray(initialData.work) ? initialData.work : [],
+          fabric: Array.isArray(initialData.fabric) ? initialData.fabric : [],
+          productType: Array.isArray(initialData.productType)
+            ? initialData.productType
+            : [],
           returnPolicy: initialData.returnPolicy || "7 Days Easy Return",
           price: undefined,
           discountPrice: undefined,
@@ -135,7 +145,7 @@ export default function ProductModal({
 
   const fetchCategories = async () => {
     try {
-      const res = await getCategories();
+      const res = await getCategories(1, 1000);
       const actualArray =
         res?.categories?.categories || res?.data?.categories || [];
       setCategories(Array.isArray(actualArray) ? actualArray : []);
@@ -163,6 +173,10 @@ export default function ProductModal({
       specifications: [],
       keyBenefits: [],
       eventTags: [],
+      style: [],
+      work: [],
+      fabric: [],
+      productType: [],
       brandInfo: "",
       returnPolicy: "7 Days Easy Return",
     });
@@ -240,6 +254,10 @@ export default function ProductModal({
             "wearType",
             "occasion",
             "tags",
+            "style",
+            "work",
+            "fabric",
+            "productType",
           ].includes(key)
         ) {
           data.append(key, JSON.stringify(formData[key] || []));

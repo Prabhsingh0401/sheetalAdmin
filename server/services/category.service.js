@@ -3,6 +3,7 @@ import Product from "../models/product.model.js";
 import slugify from "slugify";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
+import { syncToAlgolia, deleteFromAlgolia } from "./algolia.service.js";
 
 export const createCategoryService = async (data, files) => {
   const {
@@ -15,6 +16,12 @@ export const createCategoryService = async (data, files) => {
     status,
     categoryBanner,
     subCategories,
+    style,
+    work,
+    fabric,
+    productType,
+    wearType,
+    occasion,
   } = data;
 
   if (!name) return { success: false, message: "Category name is required" };
@@ -38,6 +45,27 @@ export const createCategoryService = async (data, files) => {
     }
   }
 
+  const parseArrayField = (fieldData) => {
+    if (!fieldData) return [];
+    if (Array.isArray(fieldData)) return fieldData;
+    if (typeof fieldData === "string") {
+      try {
+        const parsed = JSON.parse(fieldData);
+        return Array.isArray(parsed) ? parsed : [fieldData];
+      } catch (e) {
+        return [fieldData];
+      }
+    }
+    return [];
+  };
+
+  const parsedStyle = parseArrayField(style);
+  const parsedWork = parseArrayField(work);
+  const parsedFabric = parseArrayField(fabric);
+  const parsedProductType = parseArrayField(productType);
+  const parsedWearType = parseArrayField(wearType);
+  const parsedOccasion = parseArrayField(occasion);
+
   const newCategoryData = {
     name,
     slug,
@@ -48,9 +76,14 @@ export const createCategoryService = async (data, files) => {
     isActive: status === "Active",
     metaTitle,
     metaDescription,
-    metaDescription,
     categoryBanner,
     subCategories: parsedSubCategories,
+    style: parsedStyle,
+    work: parsedWork,
+    fabric: parsedFabric,
+    productType: parsedProductType,
+    wearType: parsedWearType,
+    occasion: parsedOccasion,
   };
 
   if (files && files.mainImage) {
@@ -68,6 +101,9 @@ export const createCategoryService = async (data, files) => {
 
   const newCategory = await Category.create(newCategoryData);
 
+  // Sync Algolia
+  await syncToAlgolia(newCategory, "category");
+
   return {
     success: true,
     data: newCategory,
@@ -77,7 +113,7 @@ export const createCategoryService = async (data, files) => {
 
 export const getAllCategoriesService = async () => {
   const categories = await Category.find({ isActive: true })
-    .select("name slug mainImage bannerImage parentCategory subCategories")
+    .select("name slug mainImage bannerImage parentCategory subCategories style work fabric productType wearType occasion")
     .populate("parentCategory", "name")
     .sort({ order: 1 });
 
@@ -194,6 +230,30 @@ export const updateCategoryService = async (id, data, files) => {
     metaDescription: data.metaDescription,
   };
 
+  const parseArrayField = (fieldData) => {
+    // If undefined, don't update (handled by caller logic usually, but here if we want to update only if present)
+    // Actually simpler to just parse if present.
+    if (fieldData === undefined) return undefined;
+
+    if (Array.isArray(fieldData)) return fieldData;
+    if (typeof fieldData === "string") {
+      try {
+        const parsed = JSON.parse(fieldData);
+        return Array.isArray(parsed) ? parsed : [fieldData];
+      } catch (e) {
+        return [fieldData];
+      }
+    }
+    return [];
+  };
+
+  if (data.style !== undefined) updateData.style = parseArrayField(data.style);
+  if (data.work !== undefined) updateData.work = parseArrayField(data.work);
+  if (data.fabric !== undefined) updateData.fabric = parseArrayField(data.fabric);
+  if (data.productType !== undefined) updateData.productType = parseArrayField(data.productType);
+  if (data.wearType !== undefined) updateData.wearType = parseArrayField(data.wearType);
+  if (data.occasion !== undefined) updateData.occasion = parseArrayField(data.occasion);
+
   if (data.subCategories !== undefined) {
     let parsedSubCategories = [];
     if (Array.isArray(data.subCategories)) {
@@ -252,6 +312,9 @@ export const updateCategoryService = async (id, data, files) => {
     { new: true, runValidators: true },
   );
 
+  // Sync Algolia
+  await syncToAlgolia(updated, "category");
+
   return {
     success: true,
     data: updated,
@@ -298,5 +361,9 @@ export const deleteCategoryService = async (id) => {
   }
 
   await category.deleteOne();
+
+  // Remove from Algolia
+  await deleteFromAlgolia(id);
+
   return { success: true, message: "Category deleted successfully" };
 };
