@@ -19,4 +19,4 @@ export const getApiImageUrl = (
         return path.url;
     }
     return fallback;
-};x
+};
