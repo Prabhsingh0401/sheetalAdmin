@@ -81,3 +81,17 @@ export const updateCartItemQuantity = async (req, res, next) => {
     next(err);
   }
 };
+
+export const clearCart = async (req, res, next) => {
+  try {
+    const result = await cartService.clearCartService(req.user._id);
+    return successResponse(
+      res,
+      200,
+      null,
+      result.message
+    );
+  } catch (err) {
+    next(err);
+  }
+};

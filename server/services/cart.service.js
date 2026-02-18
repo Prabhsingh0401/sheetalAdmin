@@ -157,3 +157,19 @@ export const updateCartItemQuantityService = async (
     message: "Cart item quantity updated successfully",
   };
 };
+
+export const clearCartService = async (userId) => {
+  const cart = await Cart.findOne({ user: userId });
+
+  if (!cart) {
+    throw new ErrorResponse("Cart not found", 404);
+  }
+
+  cart.items = [];
+  await cart.save();
+
+  return {
+    success: true,
+    message: "Cart cleared successfully"
+  };
+};
