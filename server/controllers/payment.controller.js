@@ -38,3 +38,19 @@ export const createPaymentLink = async (req, res, next) => {
         next(err);
     }
 };
+
+/**
+ * POST /api/v1/payment/verify
+ *
+ * Called by the frontend after Razorpay redirects back to /checkout/success.
+ * Verifies signature, marks order as Paid, clears cart, pushes to Shiprocket.
+ * Works without webhooks — works in local dev AND production.
+ */
+export const verifyPayment = async (req, res, next) => {
+    try {
+        const order = await paymentService.verifyOnlinePaymentService(req.body);
+        return successResponse(res, 200, order, 'Payment verified and order confirmed');
+    } catch (err) {
+        next(err);
+    }
+};

@@ -1,9 +1,11 @@
 import razorpay from '../config/razorpay.js';
+import crypto from 'crypto';
 import ErrorResponse from '../utils/ErrorResponse.js';
 import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import User from '../models/user.model.js';
 import Settings from '../models/settings.model.js';
+import { createShiprocketOrder } from './shiprocket.service.js';
 
 export const createPaymentLinkService = async (userId, shippingAddress, frontendCallbackUrl) => {
     // 1. Fetch Cart and User
@@ -166,4 +168,109 @@ export const createPaymentLinkService = async (userId, shippingAddress, frontend
         await Order.findByIdAndDelete(order._id);
         throw ErrorResponse(error.error?.description || error.message, 500);
     }
+};
+
+/**
+ * Verifies an Online (Razorpay payment link) payment after redirect.
+ *
+ * Razorpay appends these query params to callback_url on successful payment:
+ *   razorpay_payment_link_id        — payment link ID
+ *   razorpay_payment_link_reference_id — our order._id (set as reference_id)
+ *   razorpay_payment_link_status    — "paid"
+ *   razorpay_payment_id             — individual payment ID
+ *   razorpay_signature              — HMAC-SHA256 for verification
+ *
+ * Signature formula (Razorpay docs):
+ *   HMAC-SHA256(
+ *     payment_link_id + "|" + payment_link_reference_id + "|" + payment_link_status,
+ *     RAZORPAY_KEY_SECRET
+ *   )
+ *
+ * @param {Object} params - Query params forwarded from the frontend
+ * @returns {Promise<Object>} Updated order
+ */
+export const verifyOnlinePaymentService = async (params) => {
+    const {
+        razorpay_payment_link_id,
+        razorpay_payment_link_reference_id,
+        razorpay_payment_link_status,
+        razorpay_payment_id,
+        razorpay_signature,
+    } = params;
+
+    // 1. Validate all required params are present
+    if (
+        !razorpay_payment_link_id ||
+        !razorpay_payment_link_reference_id ||
+        !razorpay_payment_link_status ||
+        !razorpay_payment_id ||
+        !razorpay_signature
+    ) {
+        throw ErrorResponse('Missing payment verification parameters', 400);
+    }
+
+    // 2. Only process if status is paid
+    if (razorpay_payment_link_status !== 'paid') {
+        throw ErrorResponse(`Payment not completed. Status: ${razorpay_payment_link_status}`, 400);
+    }
+
+    // 3. Verify HMAC-SHA256 signature
+    const body = `${razorpay_payment_link_id}|${razorpay_payment_link_reference_id}|${razorpay_payment_link_status}`;
+    const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(body)
+        .digest('hex');
+
+    const isValid = crypto.timingSafeEqual(
+        Buffer.from(expectedSignature, 'hex'),
+        Buffer.from(razorpay_signature, 'hex')
+    );
+
+    if (!isValid) {
+        throw ErrorResponse('Invalid payment signature — possible tampering detected', 400);
+    }
+
+    // 4. Find the order (reference_id = our order._id)
+    const orderId = razorpay_payment_link_reference_id;
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+        throw ErrorResponse(`Order ${orderId} not found`, 404);
+    }
+
+    // 5. Idempotency — if already paid, skip re-processing (handles double calls)
+    if (order.paymentInfo?.status === 'Paid') {
+        return order;
+    }
+
+    // 6. Mark order as Paid
+    order.paymentInfo.id = razorpay_payment_id;
+    order.paymentInfo.status = 'Paid';
+    order.paidAt = new Date();
+    await order.save();
+
+    // 7. Clear the cart
+    try {
+        await Cart.findOneAndUpdate(
+            { user: order.user },
+            { $set: { items: [] } }
+        );
+    } catch (cartErr) {
+        console.error('[PaymentVerify] Cart clear failed:', cartErr.message);
+    }
+
+    // 8. Push to Shiprocket (skip if already there)
+    if (!order.shiprocketOrderId) {
+        try {
+            const user = await User.findById(order.user).lean();
+            const { shiprocketOrderId, shipmentId } = await createShiprocketOrder(order, user);
+            await Order.findByIdAndUpdate(orderId, { shiprocketOrderId, shipmentId });
+            order.shiprocketOrderId = shiprocketOrderId;
+            order.shipmentId = shipmentId;
+        } catch (srErr) {
+            console.error('[PaymentVerify] Shiprocket push failed:', srErr.message);
+        }
+    }
+
+    return order;
 };
