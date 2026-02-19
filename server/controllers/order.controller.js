@@ -2,7 +2,7 @@ import * as orderService from "../services/order.service.js";
 import successResponse from "../utils/successResponse.js";
 import Order from "../models/order.model.js";
 import User from "../models/user.model.js";
-import { createShiprocketOrder } from "../services/shiprocket.service.js";
+import { createShiprocketOrder, assignAwbService } from "../services/shiprocket.service.js";
 
 // --- 1. CREATE ORDER ---
 export const createOrder = async (req, res, next) => {
@@ -97,6 +97,57 @@ export const pushToShiprocket = async (req, res, next) => {
       shiprocketOrderId,
       shipmentId,
     }, `Order successfully pushed to Shiprocket`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- 6. ADMIN: Assign AWB to a Shiprocket Shipment ---
+/**
+ * POST /api/v1/orders/admin/assign-awb/:orderId
+ *
+ * Calls Shiprocket's /courier/assign/awb endpoint for a given order.
+ * The order must already have a shipmentId (from pushToShiprocket).
+ * Optionally accepts a courierId in the request body; if omitted,
+ * Shiprocket auto-selects the best courier for the route.
+ *
+ * On success, saves awbCode + courierPartner back to our Order.
+ *
+ * @returns Updated awbCode and courierPartner
+ */
+export const assignAwb = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (!order.shipmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Order has no Shiprocket shipment ID. Push to Shiprocket first.",
+      });
+    }
+
+    if (order.awbCode) {
+      console.warn(`[Admin] Order ${order._id} already has AWB: ${order.awbCode}. Re-assigning...`);
+    }
+
+    const { courierId } = req.body; // optional
+    const { awbCode, courierName } = await assignAwbService(order.shipmentId, courierId);
+
+    // Persist AWB details onto the Order document
+    await Order.findByIdAndUpdate(order._id, {
+      awbCode,
+      courierPartner: courierName || order.courierPartner,
+    });
+
+    return successResponse(res, 200, {
+      orderId: order._id,
+      awbCode,
+      courierName,
+    }, `AWB assigned successfully: ${awbCode}`);
   } catch (error) {
     next(error);
   }

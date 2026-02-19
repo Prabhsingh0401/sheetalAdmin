@@ -5,6 +5,7 @@ import {
   adminGetAllOrders,
   updateOrderStatus,
   pushToShiprocket,
+  assignAwb,
 } from "../controllers/order.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 
@@ -26,5 +27,8 @@ router.put("/admin/update/:id", isAuthenticated, isAdmin, updateOrderStatus);
 
 // 5. Admin: Manually push an order to Shiprocket (testing + manual sync)
 router.post("/admin/push-to-shiprocket/:orderId", isAuthenticated, isAdmin, pushToShiprocket);
+
+// 6. Admin: Assign AWB number to a Shiprocket shipment
+router.post("/admin/assign-awb/:orderId", isAuthenticated, isAdmin, assignAwb);
 
 export default router;

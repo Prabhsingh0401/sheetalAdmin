@@ -9,8 +9,9 @@
  *  - We cache the token in memory and auto-refresh when expired
  *  - No external lib needed — plain fetch (Node 18+)
  *
- * Exported functions (step-by-step, built one at a time):
+ * Exported functions:
  *  - createShiprocketOrder(order, user)  → creates order on Shiprocket
+ *  - assignAwbService(shipmentId, courierId?) → assigns AWB to a shipment
  */
 
 import dotenv from "dotenv";
@@ -237,4 +238,39 @@ export const createShiprocketOrder = async (order, user) => {
     }
 
     return { shiprocketOrderId, shipmentId };
+};
+
+/**
+ * Assigns an AWB (Air Waybill) number to a Shiprocket shipment.
+ *
+ * Must be called AFTER createShiprocketOrder so we have a valid shipmentId.
+ * If courierId is not supplied, Shiprocket auto-selects the best available
+ * courier for the route.
+ *
+ * @param {number} shipmentId  - The shipment_id returned by createShiprocketOrder
+ * @param {number} [courierId] - Optional: specific Shiprocket courier company ID
+ * @returns {Promise<{ awbCode: string, courierName: string }>}
+ */
+export const assignAwbService = async (shipmentId, courierId = null) => {
+    const payload = { shipment_id: String(shipmentId) };
+    if (courierId) payload.courier_id = String(courierId);
+
+    const response = await srFetch("/courier/assign/awb", "POST", payload);
+
+    // Shiprocket nests the result under response.response.data
+    const data = response?.response?.data;
+
+    const awbCode    = data?.awb_code    || response?.awb_code    || null;
+    const courierName = data?.courier_name || response?.courier_name || null;
+
+    if (!awbCode) {
+        console.error("[Shiprocket] AWB assign response:", JSON.stringify(response, null, 2));
+        throw new Error(
+            `AWB assignment failed — no awb_code in response. Shiprocket message: ${
+                response?.response?.message || JSON.stringify(response)
+            }`
+        );
+    }
+
+    return { awbCode, courierName };
 };

@@ -11,13 +11,16 @@ import {
   Plus,
   Truck,
   Hash,
+  ExternalLink,
+  Tag,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import OrderModal from "./OrderModal";
 import ViewOrderDrawer from "./ViewOrderDrawer";
 import CreateOrderModal from "./CreateOrderModal";
-import { getAllOrders } from "@/services/orderService";
+import { getAllOrders, assignAwb } from "@/services/orderService";
 
 export default function OrderTable({ refreshStats }) {
   const [orders, setOrders] = useState([]);
@@ -36,6 +39,7 @@ export default function OrderTable({ refreshStats }) {
   const [editData, setEditData] = useState(null);
   const [viewOrder, setViewOrder] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [awbLoading, setAwbLoading] = useState(null); // stores orderId currently being assigned
 
   useEffect(() => {
     fetchOrders();
@@ -54,6 +58,21 @@ export default function OrderTable({ refreshStats }) {
       toast.error("Fetch failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignAwb = async (orderId) => {
+    setAwbLoading(orderId);
+    try {
+      const res = await assignAwb(orderId);
+      if (res.success) {
+        toast.success(`AWB assigned: ${res.data.awbCode}`);
+        fetchOrders();
+      }
+    } catch (err) {
+      toast.error(err.message || "AWB assignment failed");
+    } finally {
+      setAwbLoading(null);
     }
   };
 
@@ -170,6 +189,12 @@ export default function OrderTable({ refreshStats }) {
               <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
                 Status
               </th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                Shiprocket
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                AWB
+              </th>
               <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">
                 Actions
               </th>
@@ -185,11 +210,10 @@ export default function OrderTable({ refreshStats }) {
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center">
                       <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center shadow-inner ${
-                          o.orderStatus === "Shipped"
-                            ? "bg-blue-600 text-white"
-                            : "bg-slate-900 text-white"
-                        }`}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center shadow-inner ${o.orderStatus === "Shipped"
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-900 text-white"
+                          }`}
                       >
                         {o.orderStatus === "Shipped" ? (
                           <Truck size={14} />
@@ -223,6 +247,52 @@ export default function OrderTable({ refreshStats }) {
                       {o.orderStatus}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-center">
+                    {o.shiprocketOrderId ? (
+                      <a
+                        href={`https://app.shiprocket.in/seller/orders/details/${o.shiprocketOrderId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`View on Shiprocket (ID: ${o.shiprocketOrderId})`}
+                        className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-teal-600 hover:bg-teal-100 hover:border-teal-400 transition-all text-[10px] font-black uppercase tracking-wide"
+                      >
+                        <ExternalLink size={11} />
+                        SR
+                      </a>
+                    ) : (
+                      <span className="text-slate-300 text-xs font-bold">—</span>
+                    )}
+                  </td>
+                  {/* AWB Column */}
+                  <td className="px-6 py-4 text-center">
+                    {o.awbCode ? (
+                      // AWB already assigned — show the code as a static green pill
+                      <span
+                        title={`Courier: ${o.courierPartner || "—"}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wide"
+                      >
+                        <Tag size={10} />
+                        {o.awbCode}
+                      </span>
+                    ) : o.shipmentId ? (
+                      // Has shipmentId but no AWB yet — show the Assign button
+                      <button
+                        onClick={() => handleAssignAwb(o._id)}
+                        disabled={awbLoading === o._id}
+                        title="Assign AWB via Shiprocket"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100 hover:border-violet-400 transition-all text-[10px] font-black uppercase tracking-wide disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        {awbLoading === o._id ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <Truck size={11} />
+                        )}
+                        {awbLoading === o._id ? "Assigning..." : "Assign AWB"}
+                      </button>
+                    ) : (
+                      <span className="text-slate-300 text-xs font-bold">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -249,7 +319,7 @@ export default function OrderTable({ refreshStats }) {
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="px-4 py-32 text-center">
+                <td colSpan="8" className="px-4 py-32 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-400 italic">
                     <Package size={40} className="mb-4 opacity-20" />
                     <p className="text-sm font-medium">No orders found.</p>
@@ -310,11 +380,10 @@ export default function OrderTable({ refreshStats }) {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`h-9 min-w-[36px] rounded-xl text-xs font-black transition-all ${
-                    currentPage === i + 1
-                      ? "bg-slate-900 text-white shadow-lg"
-                      : "bg-white border border-slate-200 text-slate-500 hover:border-slate-400"
-                  }`}
+                  className={`h-9 min-w-[36px] rounded-xl text-xs font-black transition-all ${currentPage === i + 1
+                    ? "bg-slate-900 text-white shadow-lg"
+                    : "bg-white border border-slate-200 text-slate-500 hover:border-slate-400"
+                    }`}
                 >
                   {i + 1}
                 </button>

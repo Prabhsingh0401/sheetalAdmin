@@ -339,9 +339,16 @@ export const getCouponStatsService = async () => {
 
     const stats = await Coupon.aggregate([
       {
+        // Match the same base filter used in the table so stats are consistent
+        $match: {
+          isActive: true,
+          endDate: { $gte: now },
+        },
+      },
+      {
         $group: {
           _id: null,
-          // Total = all coupons ever created (regardless of status/expiry)
+          // Total = all active, non-expired coupons (matches the table's filter)
           total: { $sum: 1 },
           // Active = isActive:true AND not yet expired (matches the table's own filter)
           active: {

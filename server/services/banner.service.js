@@ -63,7 +63,6 @@ export const getAllBannersService = async () => {
   );
 
   const banners = await Banner.find({
-    isActive: true,
     status: "Active",
     $or: [{ expiresAt: null }, { expiresAt: { $gte: currentDate } }],
   }).sort({ order: 1 });
@@ -110,6 +109,7 @@ export const updateBannerService = async (id, data, files) => {
       status: data.status,
       image: banner.image || {}, // Ensure image object exists
       expiresAt: data.expiresAt || null,
+      isActive: data.status === "Active", // Explicitly sync isActive with status
     };
 
     // Only process files if files object exists and is valid
@@ -152,12 +152,12 @@ export const updateBannerService = async (id, data, files) => {
       { $set: updateData },
       { new: true },
     );
-    
+
     return { success: true, data: updated };
   } catch (error) {
     console.error("Error in updateBannerService:", error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: error.message || "Failed to update banner",
       error: error.toString()
     };

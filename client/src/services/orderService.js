@@ -65,6 +65,21 @@ export const createOrder = async (orderData) => {
   return handleResponse(res);
 };
 
+/**
+ * Triggers AWB assignment for an order that has already been pushed to Shiprocket.
+ * @param {string} orderId - Our MongoDB order _id
+ * @param {number|null} courierId - Optional Shiprocket courier company ID (null = auto)
+ */
+export const assignAwb = async (orderId, courierId = null) => {
+  const res = await fetch(`${API_BASE_URL}/orders/admin/assign-awb/${orderId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(courierId ? { courierId } : {}),
+  });
+  return handleResponse(res);
+};
+
 export const getMyOrders = async (page = 1) => {
   const res = await fetch(`${API_BASE_URL}/orders/my-orders?page=${page}`, {
     method: "GET",

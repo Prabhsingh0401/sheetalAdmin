@@ -203,8 +203,7 @@ export const verifyOnlinePaymentService = async (params) => {
         !razorpay_payment_link_id ||
         !razorpay_payment_link_reference_id ||
         !razorpay_payment_link_status ||
-        !razorpay_payment_id ||
-        !razorpay_signature
+        !razorpay_payment_id
     ) {
         throw ErrorResponse('Missing payment verification parameters', 400);
     }
@@ -214,42 +213,44 @@ export const verifyOnlinePaymentService = async (params) => {
         throw ErrorResponse(`Payment not completed. Status: ${razorpay_payment_link_status}`, 400);
     }
 
-    // 3. Verify HMAC-SHA256 signature
-    const body = `${razorpay_payment_link_id}|${razorpay_payment_link_reference_id}|${razorpay_payment_link_status}`;
-    const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(body)
-        .digest('hex');
-
-    const isValid = crypto.timingSafeEqual(
-        Buffer.from(expectedSignature, 'hex'),
-        Buffer.from(razorpay_signature, 'hex')
-    );
-
-    if (!isValid) {
-        throw ErrorResponse('Invalid payment signature — possible tampering detected', 400);
+    // 3. Verify with Razorpay API directly — fetch the payment link and confirm it is paid
+    //    This is more reliable than HMAC verification for payment links since Razorpay's
+    //    exact signature formula can vary between test and live modes.
+    let paymentLink;
+    try {
+        paymentLink = await razorpay.paymentLink.fetch(razorpay_payment_link_id);
+    } catch (err) {
+        throw ErrorResponse(`Failed to verify payment with Razorpay: ${err.message}`, 500);
     }
 
-    // 4. Find the order (reference_id = our order._id)
-    const orderId = razorpay_payment_link_reference_id;
-    const order = await Order.findById(orderId);
+    if (!paymentLink || paymentLink.status !== 'paid') {
+        throw ErrorResponse(`Payment not confirmed by Razorpay. Status: ${paymentLink?.status}`, 400);
+    }
 
+    // 4. Confirm the reference_id matches (security: prevents one order's link from paying another)
+    const orderId = paymentLink.reference_id;
+    if (!orderId) {
+        throw ErrorResponse('Cannot determine order from payment link', 400);
+    }
+
+    // 5. Find the order
+    const order = await Order.findById(orderId);
     if (!order) {
         throw ErrorResponse(`Order ${orderId} not found`, 404);
     }
 
-    // 5. Idempotency — if already paid, skip re-processing (handles double calls)
+    // 6. Idempotency — if already paid, skip re-processing (handles double calls)
     if (order.paymentInfo?.status === 'Paid') {
         return order;
     }
 
-    // 6. Mark order as Paid
+    // 7. Mark order as Paid
     order.paymentInfo.id = razorpay_payment_id;
     order.paymentInfo.status = 'Paid';
     order.paidAt = new Date();
     await order.save();
 
-    // 7. Clear the cart
+    // 8. Clear the cart
     try {
         await Cart.findOneAndUpdate(
             { user: order.user },
@@ -259,7 +260,7 @@ export const verifyOnlinePaymentService = async (params) => {
         console.error('[PaymentVerify] Cart clear failed:', cartErr.message);
     }
 
-    // 8. Push to Shiprocket (skip if already there)
+    // 9. Push to Shiprocket (skip if already synced)
     if (!order.shiprocketOrderId) {
         try {
             const user = await User.findById(order.user).lean();

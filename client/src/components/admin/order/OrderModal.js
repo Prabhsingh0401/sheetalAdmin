@@ -31,8 +31,12 @@ export default function OrderModal({
     if (isOpen && initialData) {
       setStatus(initialData.orderStatus || "Processing");
       setShippingInfo({
-        carrier: initialData.shippingInfo?.carrier || "",
-        trackingId: initialData.shippingInfo?.trackingId || "",
+        carrier:
+          initialData.shippingInfo?.carrier ||
+          initialData.courierPartner ||
+          "",
+        trackingId:
+          initialData.shippingInfo?.trackingId || initialData.awbCode || "",
         estimatedDelivery: initialData.shippingInfo?.estimatedDelivery || "",
       });
     }

@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   AlertCircle,
   Tag,
+  Hash,
 } from "lucide-react";
 
 export default function ViewOrderDrawer({ isOpen, onClose, order }) {
@@ -120,6 +121,44 @@ export default function ViewOrderDrawer({ isOpen, onClose, order }) {
               </div>
             </div>
 
+            {/* 1b. AWB / Tracking Info — shown when AWB is assigned */}
+            {(order.awbCode || order.trackingId) && (
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-3 text-violet-600">
+                  <Truck size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    Shipment & Tracking
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {order.awbCode && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AWB Code</span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wide">
+                        <Tag size={10} />
+                        {order.awbCode}
+                      </span>
+                    </div>
+                  )}
+                  {order.courierPartner && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Courier</span>
+                      <span className="text-[11px] font-black text-slate-800">{order.courierPartner}</span>
+                    </div>
+                  )}
+                  {order.trackingId && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tracking ID</span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-black text-slate-800">
+                        <Hash size={10} className="text-slate-400" />
+                        {order.trackingId}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 2. Customer & Address Cards */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
@@ -149,14 +188,26 @@ export default function ViewOrderDrawer({ isOpen, onClose, order }) {
                     Payment
                   </span>
                 </div>
-                <p className="text-xs font-black text-slate-800">
-                  {order.paymentInfo?.method || "COD"}
-                </p>
-                <p
-                  className={`text-[10px] font-bold mt-1 ${order.paymentInfo?.status === "Paid" ? "text-emerald-600" : "text-amber-600"}`}
-                >
-                  ● {order.paymentInfo?.status || "Pending"}
-                </p>
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-black text-slate-800">
+                    {order.paymentInfo?.method === "Online"
+                      ? "Prepaid Online"
+                      : "Cash on Delivery (COD)"}
+                  </p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p
+                      className={`text-[10px] font-bold ${order.paymentInfo?.status === "Paid" ? "text-emerald-600" : "text-amber-600"}`}
+                    >
+                      ● {order.paymentInfo?.status || "Pending"}
+                    </p>
+                    {order.paymentInfo?.method === "Online" &&
+                      order.paymentInfo?.id && (
+                        <p className="text-[9px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                          Ref: {order.paymentInfo.id.slice(-8).toUpperCase()}
+                        </p>
+                      )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -221,11 +272,10 @@ export default function ViewOrderDrawer({ isOpen, onClose, order }) {
                       />
                     )}
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center z-10 ${
-                        step.active
-                          ? "bg-emerald-500 text-white ring-4 ring-emerald-50 shadow-sm"
-                          : "bg-slate-100 text-slate-300"
-                      }`}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center z-10 ${step.active
+                        ? "bg-emerald-500 text-white ring-4 ring-emerald-50 shadow-sm"
+                        : "bg-slate-100 text-slate-300"
+                        }`}
                     >
                       <CheckCircle2 size={12} />
                     </div>
@@ -238,9 +288,9 @@ export default function ViewOrderDrawer({ isOpen, onClose, order }) {
                       <p className="text-[10px] text-slate-400 font-medium">
                         {step.active && step.date
                           ? new Date(step.date).toLocaleString("en-IN", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
                           : "Pending..."}
                       </p>
                     </div>
@@ -259,8 +309,8 @@ export default function ViewOrderDrawer({ isOpen, onClose, order }) {
                     {(
                       order.itemsPrice ||
                       order.totalPrice -
-                        (order.shippingPrice || 0) +
-                        (order.discountPrice || 0)
+                      (order.shippingPrice || 0) +
+                      (order.discountPrice || 0)
                     ).toLocaleString()}
                   </span>
                 </div>
