@@ -335,20 +335,41 @@ export const deleteCouponService = async (id) => {
 
 export const getCouponStatsService = async () => {
   try {
+    const now = new Date();
+
     const stats = await Coupon.aggregate([
       {
         $group: {
           _id: null,
+          // Total = all coupons ever created (regardless of status/expiry)
           total: { $sum: 1 },
-          active: { $sum: { $cond: ["$isActive", 1, 0] } },
+          // Active = isActive:true AND not yet expired (matches the table's own filter)
+          active: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$isActive", true] },
+                    { $gte: ["$endDate", now] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          // Total redemptions across all coupons
           totalUsed: { $sum: { $ifNull: ["$usedCount", 0] } },
+          // Total discount value generated
           totalSavings: { $sum: { $ifNull: ["$totalDiscountGenerated", 0] } },
+          // Count of FestiveSale type coupons
           festiveSales: {
             $sum: { $cond: [{ $eq: ["$couponType", "FestiveSale"] }, 1, 0] },
           },
         },
       },
     ]);
+
     const result = stats[0] || {
       total: 0,
       active: 0,

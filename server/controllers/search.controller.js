@@ -1,6 +1,11 @@
 import asyncHandler from "express-async-handler";
 import { searchService } from "../services/search.service.js";
+import { rebuildIndex } from "../services/ngram.search.service.js";
 
+/**
+ * GET /api/v1/search?q=<query>&limit=<n>&page=<n>
+ * Searches products and categories using the n-gram index.
+ */
 export const searchController = asyncHandler(async (req, res) => {
   const { q, limit = 10, page = 1 } = req.query;
 
@@ -20,5 +25,19 @@ export const searchController = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     results,
+  });
+});
+
+/**
+ * POST /api/v1/search/rebuild-index  (admin only)
+ * Triggers a full rebuild of the in-memory n-gram index from MongoDB.
+ * Useful after bulk imports or data migrations.
+ */
+export const rebuildIndexController = asyncHandler(async (req, res) => {
+  const result = await rebuildIndex();
+  res.status(200).json({
+    success: true,
+    message: "N-gram index rebuilt successfully.",
+    stats: result,
   });
 });

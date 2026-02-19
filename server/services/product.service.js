@@ -6,7 +6,7 @@ import { deleteFile, deleteS3File, uploadS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 import xlsx from "xlsx";
 import mongoose from "mongoose";
-import { syncToAlgolia, deleteFromAlgolia } from "./algolia.service.js";
+import { syncToIndex, deleteFromIndex, rebuildIndex } from "./ngram.search.service.js";
 
 export const getAllProductsService = async (queryStr) => {
   const {
@@ -339,8 +339,8 @@ export const createProductService = async (data, files, userId) => {
     createdBy: userId,
   });
 
-  // Sync to Algolia
-  await syncToAlgolia(product, "product");
+  // Sync to n-gram search index
+  await syncToIndex(product, "product");
 
   return { success: true, product };
 };
@@ -522,8 +522,8 @@ export const updateProductService = async (id, data, files) => {
     { new: true, runValidators: true },
   );
 
-  // Sync to Algolia
-  await syncToAlgolia(updatedProduct, "product");
+  // Sync to n-gram search index
+  await syncToIndex(updatedProduct, "product");
 
   return { success: true, product: updatedProduct };
 };
@@ -549,10 +549,10 @@ export const deleteProductService = async (id) => {
   else if (product.video?.url && !product.video.url.startsWith("http")) await deleteFile(product.video.url);
 
   await product.deleteOne();
-  
-  // Remove from Algolia
-  await deleteFromAlgolia(id);
-  
+
+  // Remove from n-gram search index
+  await deleteFromIndex(id);
+
   return { success: true };
 };
 
@@ -781,6 +781,16 @@ export const bulkImportService = async (files, userId) => {
       // Log errors for duplicates etc
       errors.push(`Database Insert Error: Some products might be duplicates.`);
     }
+  }
+
+  // Rebuild the n-gram search index in the background after bulk import.
+  // insertMany bypasses syncToIndex, so we trigger a full rebuild here.
+  // Fire-and-forget: we do NOT await so the HTTP response is not delayed.
+  if (inserted.length > 0) {
+    rebuildIndex()
+      .catch((err) =>
+        console.error("[NGramSearch] Auto-rebuild failed after bulk import:", err)
+      );
   }
 
   // Cleanup Temp Files

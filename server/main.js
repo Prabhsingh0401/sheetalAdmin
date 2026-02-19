@@ -28,6 +28,7 @@ import settingsRoutes from "./routes/settings.routes.js";
 import lookbookRoutes from "./routes/lookbook.routes.js";
 import pagesRoutes from "./routes/pages.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
+import webhookRoutes from "./routes/webhook.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -100,6 +101,20 @@ if (config.mode === "development") {
 
 app.use(cookieParser());
 
+// Capture raw body for webhook signature verification (MUST be before JSON parser)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/v1/webhooks")) {
+    let data = [];
+    req.on("data", (chunk) => data.push(chunk));
+    req.on("end", () => {
+      req.rawBody = Buffer.concat(data);
+      next();
+    });
+  } else {
+    next();
+  }
+});
+
 // Custom middleware to conditionally parse JSON and URL-encoded data
 const parseJsonAndUrlEncoded = (req, res, next) => {
   if (
@@ -117,6 +132,9 @@ const parseJsonAndUrlEncoded = (req, res, next) => {
 app.use(parseJsonAndUrlEncoded);
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+// --- Webhook routes (registered AFTER raw body capture, BEFORE other routes) ---
+app.use("/api/v1/webhooks", webhookRoutes);
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/admin", adminRoutes);

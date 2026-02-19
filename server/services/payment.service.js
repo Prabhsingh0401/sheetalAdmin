@@ -153,11 +153,6 @@ export const createPaymentLinkService = async (userId, shippingAddress, frontend
         callback_method: "get"
     };
 
-    console.log("Creating Razorpay Link with options:", JSON.stringify({ ...paymentLinkOptions, customer: { ...paymentLinkOptions.customer, contact: "REDACTED" } }, null, 2)); 
-    // Redacting contact for privacy in logs, but knowing it's processed. 
-    // Actually for debugging let's show the format (first few chars)
-    console.log(`Customer Contact Value: ${customerContact}`);
-
     try {
         const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
 

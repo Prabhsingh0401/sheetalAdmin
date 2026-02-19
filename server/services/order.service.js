@@ -1,6 +1,9 @@
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
+import User from "../models/user.model.js";
+import Cart from "../models/cart.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
+import { createShiprocketOrder } from "./shiprocket.service.js";
 
 // --- CREATE NEW ORDER ---
 export const createOrderService = async (data, userId) => {
@@ -58,6 +61,28 @@ export const createOrderService = async (data, userId) => {
 
   // 3. Database mein save karein
   const order = await Order.create(finalOrderData);
+
+  // 4. COD: Push to Shiprocket immediately + clear cart
+  //    Online orders are pushed via the Razorpay webhook AFTER payment is confirmed.
+  if (order.paymentInfo?.method === "COD") {
+    // Clear cart
+    try {
+      await Cart.findOneAndUpdate({ user: userId }, { $set: { items: [] } });
+    } catch (cartErr) {
+      console.error(`[COD] Failed to clear cart for user ${userId}:`, cartErr.message);
+    }
+
+    // Push to Shiprocket
+    try {
+      const user = await User.findById(userId).lean();
+      const { shiprocketOrderId, shipmentId } = await createShiprocketOrder(order, user);
+      await Order.findByIdAndUpdate(order._id, { shiprocketOrderId, shipmentId });
+      order.shiprocketOrderId = shiprocketOrderId;
+      order.shipmentId = shipmentId;
+    } catch (srError) {
+      console.error(`[Shiprocket] Failed to push COD order ${order._id}:`, srError.message);
+    }
+  }
 
   return order;
 };

@@ -1,66 +1,19 @@
-import Product from "../models/product.model.js";
-import Category from "../models/category.model.js";
-import { searchAlgolia } from "./algolia.service.js";
-import dotenv from "dotenv";
+import { searchNgram } from "./ngram.search.service.js";
 
-dotenv.config();
-
+/**
+ * Searches products and categories using the custom n-gram index.
+ *
+ * @param {{ query: string, limit: number, page: number }} params
+ * @returns {Promise<Array<{ type: string, data: Object }>>}
+ */
 export const searchService = async ({ query, limit, page }) => {
-  // Use Algolia if configured
-  if (process.env.ALGOLIA_APP_ID && process.env.ALGOLIA_ADMIN_API_KEY) {
-    try {
-      const algoliaResult = await searchAlgolia(query, { limit, page });
+  const result = await searchNgram(query, { limit, page });
 
-      return algoliaResult.hits.map(hit => ({
-        type: hit.type,
-        data: {
-          ...hit,
-          _id: hit.objectID, // Map objectID back to _id for frontend compatibility
-        }
-      }));
-    } catch (error) {
-      console.error("Algolia search failed, falling back to MongoDB:", error);
-      // Fallback to Mongo below
-    }
-  }
-
-  // MongoDB Fallback Implementation
-  const skip = (page - 1) * limit;
-  const searchRegex = new RegExp(query, "i");
-
-  const productPromise = Product.find({
-    $or: [{ name: { $regex: searchRegex } }, { sku: { $regex: searchRegex } }],
-  })
-    .skip(skip)
-    .limit(limit)
-    .populate("category")
-    .lean()
-    .exec();
-
-  const categoryPromise = Category.find({
-    name: { $regex: query, $options: "i" },
-  })
-    .skip(skip)
-    .limit(limit)
-    .lean()
-    .exec();
-
-  const [products, categories] = await Promise.all([
-    productPromise,
-    categoryPromise,
-  ]);
-
-  const formattedProducts = products.map((product) => ({
-    type: "product",
-    data: product,
+  return result.hits.map((hit) => ({
+    type: hit.type,
+    data: {
+      ...hit,
+      _id: hit.id, // Map id back to _id for frontend compatibility
+    },
   }));
-  const formattedCategories = categories.map((category) => ({
-    type: "category",
-    data: category,
-  }));
-
-  const combinedResults = [...formattedProducts, ...formattedCategories];
-
-  return combinedResults;
 };
-

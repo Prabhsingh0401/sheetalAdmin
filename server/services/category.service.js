@@ -3,7 +3,7 @@ import Product from "../models/product.model.js";
 import slugify from "slugify";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
-import { syncToAlgolia, deleteFromAlgolia } from "./algolia.service.js";
+import { syncToIndex, deleteFromIndex } from "./ngram.search.service.js";
 
 export const createCategoryService = async (data, files) => {
   const {
@@ -101,8 +101,8 @@ export const createCategoryService = async (data, files) => {
 
   const newCategory = await Category.create(newCategoryData);
 
-  // Sync Algolia
-  await syncToAlgolia(newCategory, "category");
+  // Sync to n-gram search index
+  await syncToIndex(newCategory, "category");
 
   return {
     success: true,
@@ -312,8 +312,8 @@ export const updateCategoryService = async (id, data, files) => {
     { new: true, runValidators: true },
   );
 
-  // Sync Algolia
-  await syncToAlgolia(updated, "category");
+  // Sync to n-gram search index
+  await syncToIndex(updated, "category");
 
   return {
     success: true,
@@ -362,8 +362,8 @@ export const deleteCategoryService = async (id) => {
 
   await category.deleteOne();
 
-  // Remove from Algolia
-  await deleteFromAlgolia(id);
+  // Remove from n-gram search index
+  await deleteFromIndex(id);
 
   return { success: true, message: "Category deleted successfully" };
 };
