@@ -15,6 +15,7 @@ import {
   updateAddress,
   deleteAddress,
   setDefaultAddress,
+  getUserOrders,
 } from "../controllers/user.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js"; // Import uploadTo
@@ -45,6 +46,7 @@ router.put("/address/:addressId/default", isAuthenticated, setDefaultAddress);
 router.get("/admin/all", isAuthenticated, isAdmin, getAllUsers);
 router.post("/admin", isAuthenticated, isAdmin, createUser);
 router.get("/admin/stats", isAuthenticated, isAdmin, getUserStats);
+router.get("/admin/:id/orders", isAuthenticated, isAdmin, getUserOrders);
 router
   .route("/admin/:id")
   .get(isAuthenticated, isAdmin, getSingleUserDetails)

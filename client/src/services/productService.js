@@ -80,3 +80,29 @@ export const getLowStockProducts = async () => {
   });
   return handleResponse(res);
 };
+
+export const getAdminReviews = async (page = 1, limit = 10, status = "all") => {
+  const res = await fetch(
+    `${API_BASE_URL}/products/admin/reviews?page=${page}&limit=${limit}&status=${status}`,
+    { credentials: "include" }
+  );
+  return handleResponse(res);
+};
+
+export const updateReviewStatusAdmin = async (id, isApproved) => {
+  const res = await fetch(`${API_BASE_URL}/products/admin/reviews/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ isApproved }),
+  });
+  return handleResponse(res);
+};
+
+export const deleteReviewAdmin = async (id) => {
+  const res = await fetch(`${API_BASE_URL}/products/admin/reviews?id=${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return handleResponse(res);
+};

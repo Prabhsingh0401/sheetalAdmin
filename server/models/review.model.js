@@ -23,7 +23,7 @@ const reviewSchema = new mongoose.Schema(
       repliedAt: { type: Date },
     },
     isVerifiedPurchase: { type: Boolean, default: false },
-    isApproved: { type: Boolean, default: true },
+    isApproved: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

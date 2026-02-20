@@ -2,6 +2,7 @@ import express from "express";
 import {
   createOrder,
   getMyOrders,
+  getSingleOrder,
   adminGetAllOrders,
   updateOrderStatus,
   pushToShiprocket,
@@ -17,6 +18,9 @@ router.post("/create", isAuthenticated, createOrder);
 
 // 2. User ko apne purane orders dikhane ke liye (With Pagination)
 router.get("/my-orders", isAuthenticated, getMyOrders);
+
+// 3. User: Get single order detail (must own the order)
+router.get("/:id", isAuthenticated, getSingleOrder);
 
 // --- ADMIN ROUTES ---
 // 3. Admin ko poori website ke saare orders dikhane ke liye

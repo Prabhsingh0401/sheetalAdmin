@@ -1,5 +1,6 @@
 import Review from "../models/review.model.js";
 import Product from "../models/product.model.js";
+import Order from "../models/order.model.js";
 import slugify from "slugify";
 import Category from "../models/category.model.js";
 import { deleteFile, deleteS3File, uploadS3File } from "../utils/fileHelper.js";
@@ -816,12 +817,34 @@ export const bulkImportService = async (files, userId) => {
 };
 
 export const addReviewService = async (productId, user, rating, comment) => {
-  const product = await Product.findById(productId);
+  console.log(`[addReviewService] User ${user._id} attempting review for Product ${productId}`);
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return { success: false, statusCode: 400, message: "Invalid product ID" };
+  }
+  const prodId = new mongoose.Types.ObjectId(productId);
+
+  const product = await Product.findById(prodId);
   if (!product) return { success: false, statusCode: 404 };
+
+  // 1. MUST have purchased the product (Order Status: Delivered)
+  const hasPurchased = await Order.findOne({
+    user: user._id,
+    "orderItems.product": prodId,
+    orderStatus: "Delivered",
+  });
+  console.log(`[addReviewService] Purchase verification: ${!!hasPurchased}`);
+
+  if (!hasPurchased) {
+    return {
+      success: false,
+      statusCode: 403,
+      message: "You can only review products that have been delivered to you.",
+    };
+  }
 
   const existingReview = await Review.findOne({
     user: user._id,
-    product: productId,
+    product: prodId,
   });
   if (existingReview) {
     return {
@@ -833,23 +856,106 @@ export const addReviewService = async (productId, user, rating, comment) => {
 
   const newReview = await Review.create({
     user: user._id,
-    product: productId,
+    product: prodId,
     userName: user.name,
     rating: Number(rating),
     comment,
     isVerifiedPurchase: true,
   });
 
-  const reviews = await Review.find({ product: productId, isApproved: true });
-
-  product.totalReviews = reviews.length;
-  product.averageRating =
-    reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length;
-
-  await product.save();
-
   return { success: true, review: newReview };
 };
+
+/**
+ * Checks if a user is eligible to review a product.
+ * Eligible only if they have a 'Delivered' order containing this product.
+ */
+export const canReviewService = async (productId, userId) => {
+  console.log(`[canReviewService] Checking eligibility for User: ${userId}, Product: ${productId}`);
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return { success: false, canReview: false, reason: "Invalid product ID" };
+  }
+  const prodId = new mongoose.Types.ObjectId(productId);
+
+  const order = await Order.findOne({
+    user: userId,
+    "orderItems.product": prodId,
+    orderStatus: "Delivered",
+  });
+
+  console.log(`[canReviewService] Order found: ${!!order}`);
+
+  const alreadyReviewed = await Review.findOne({
+    user: userId,
+    product: prodId,
+  });
+
+  return {
+    success: true,
+    canReview: !!order && !alreadyReviewed,
+    reason: !order
+      ? "Purchase required"
+      : alreadyReviewed
+        ? "Already reviewed"
+        : null,
+  };
+};
+
+export const getAllReviewsService = async (page = 1, limit = 10, status = "all") => {
+  const query = {};
+  if (status === "approved") query.isApproved = true;
+  if (status === "pending") query.isApproved = false;
+
+  const total = await Review.countDocuments(query);
+  const skip = (page - 1) * limit;
+
+  const reviews = await Review.find(query)
+    .populate("product", "name mainImage")
+    .sort("-createdAt")
+    .skip(skip)
+    .limit(limit);
+
+  return { success: true, reviews, total, page: Number(page), limit: Number(limit) };
+};
+
+export const updateReviewStatusService = async (reviewId, isApproved) => {
+  const review = await Review.findById(reviewId);
+  if (!review) return { success: false, statusCode: 404, message: "Review not found" };
+
+  review.isApproved = isApproved;
+  await review.save();
+
+  // Recalculate product rating
+  const product = await Product.findById(review.product);
+  if (product) {
+    const reviews = await Review.find({ product: review.product, isApproved: true });
+    product.totalReviews = reviews.length;
+    product.averageRating = reviews.length ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length : 0;
+    await product.save();
+  }
+
+  return { success: true, review };
+};
+
+export const deleteReviewService = async (reviewId) => {
+  const review = await Review.findById(reviewId);
+  if (!review) return { success: false, statusCode: 404, message: "Review not found" };
+
+  await review.deleteOne();
+
+  // Recalculate product rating
+  const product = await Product.findById(review.product);
+  if (product) {
+    const reviews = await Review.find({ product: review.product, isApproved: true });
+    product.totalReviews = reviews.length;
+    product.averageRating = reviews.length ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length : 0;
+    await product.save();
+  }
+
+  return { success: true, message: "Review deleted" };
+};
+
+
 
 export const getProductStatsService = async () => {
   const stats = await Product.aggregate([
@@ -882,27 +988,6 @@ export const getProductStatsService = async () => {
       outOfStock: 0,
     },
   };
-};
-
-export const deleteReviewService = async (productId, reviewId) => {
-  const review = await Review.findById(reviewId);
-  if (!review) return { success: false, statusCode: 404 };
-
-  await review.deleteOne();
-
-  const reviews = await Review.find({ product: productId, isApproved: true });
-  const product = await Product.findById(productId);
-
-  if (product) {
-    product.totalReviews = reviews.length;
-    product.averageRating =
-      reviews.length > 0
-        ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length
-        : 0;
-    await product.save();
-  }
-
-  return { success: true };
 };
 
 export const incrementViewCountService = async (id) => {

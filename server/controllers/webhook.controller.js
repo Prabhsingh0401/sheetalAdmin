@@ -106,6 +106,13 @@ const handlePaymentLinkPaid = async (payload) => {
         console.error(`[Webhook] Failed to clear cart:`, cartErr.message);
     }
 
+    // --- Push order reference into user's orders array (online payment confirmed) ---
+    try {
+        await User.findByIdAndUpdate(order.user, { $push: { orders: order._id } });
+    } catch (userUpdateErr) {
+        console.error(`[Webhook] Failed to push order ref to user ${order.user}:`, userUpdateErr.message);
+    }
+
     // --- Push to Shiprocket (idempotent check) ---
     if (order.shiprocketOrderId) {
         return;

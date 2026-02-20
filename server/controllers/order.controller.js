@@ -35,7 +35,20 @@ export const getMyOrders = async (req, res, next) => {
   }
 };
 
-// --- 3. ADMIN: GET ALL ORDERS (Paginated + Filters) ---
+// --- 3. GET SINGLE ORDER (User — must own the order) ---
+export const getSingleOrder = async (req, res, next) => {
+  try {
+    const data = await orderService.getSingleOrderService(
+      req.params.id,
+      req.user._id,
+    );
+    return successResponse(res, 200, data, "Order fetched successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- 4. ADMIN: GET ALL ORDERS (Paginated + Filters) ---
 export const adminGetAllOrders = async (req, res, next) => {
   try {
     const result = await orderService.getAllOrdersService(req.query);

@@ -80,6 +80,16 @@ export const createProductReview = async (req, res, next) => {
   }
 };
 
+export const checkCanReview = async (req, res, next) => {
+  try {
+    const { productId } = req.query;
+    const result = await productService.canReviewService(productId, req.user._id);
+    return successResponse(res, 200, result, "Eligibility check completed");
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getProductStats = async (req, res, next) => {
   try {
     const result = await productService.getProductStatsService();
@@ -100,8 +110,6 @@ export const bulkImportProducts = async (req, res, next) => {
       req.files,
       req.user._id,
     );
-    // Cleanup handled inside service now
-    // if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
     return successResponse(
       res,
@@ -196,14 +204,40 @@ export const deleteProduct = async (req, res, next) => {
 
 export const deleteReview = async (req, res, next) => {
   try {
-    const result = await productService.deleteReviewService(
-      req.query.productId,
-      req.query.id,
-    );
+    const reviewId = req.query.id || req.params.id;
+    const result = await productService.deleteReviewService(reviewId);
 
     if (!result.success) return res.status(result.statusCode).json(result);
 
     return successResponse(res, 200, null, "Review deleted");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllReviews = async (req, res, next) => {
+  try {
+    const { page, limit, status } = req.query;
+    const result = await productService.getAllReviewsService(page, limit, status);
+    return successResponse(
+      res,
+      200,
+      result.reviews,
+      "Reviews fetched successfully",
+      { total: result.total, page: result.page, limit: result.limit }
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateReviewStatus = async (req, res, next) => {
+  try {
+    const { isApproved } = req.body;
+    const reviewId = req.params.id || req.query.id;
+    const result = await productService.updateReviewStatusService(reviewId, isApproved);
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 200, result.review, "Review status updated");
   } catch (error) {
     next(error);
   }

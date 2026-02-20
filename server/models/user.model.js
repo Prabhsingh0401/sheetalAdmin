@@ -55,6 +55,8 @@ const userSchema = new mongoose.Schema(
         quantity: { type: Number, default: 1 },
       },
     ],
+    // All orders placed by this customer (references to Order documents)
+    orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     isVerified: { type: Boolean, default: false },
     resetPasswordToken: String,
     resetPasswordExpire: Date,

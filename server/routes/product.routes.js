@@ -15,6 +15,9 @@ import {
   getTrendingProducts,
   incrementViewCount,
   getSampleExcel,
+  checkCanReview,
+  getAllReviews,
+  updateReviewStatus,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
@@ -30,7 +33,8 @@ router.get("/trending", getTrendingProducts);
 router.post("/view/:id", incrementViewCount);
 router.get("/detail/:id", getProductDetails);
 router.get("/reviews", getProductReviews);
-router.get("/:id", getProductDetails); // Allow fetching by ID/Slug directly
+router.get("/can-review", isAuthenticated, checkCanReview);
+router.get("/:id", getProductDetails);
 
 // protected routes
 router.put("/review", isAuthenticated, createProductReview);
@@ -81,6 +85,8 @@ router.put(
 );
 
 router.delete("/admin/:id", isAuthenticated, isAdmin, deleteProduct);
+router.get("/admin/reviews", isAuthenticated, isAdmin, getAllReviews);
+router.put("/admin/reviews/:id", isAuthenticated, isAdmin, updateReviewStatus);
 router.delete("/admin/reviews", isAuthenticated, isAdmin, deleteReview);
 router.get("/admin/low-stock", isAuthenticated, isAdmin, getLowStockProducts);
 

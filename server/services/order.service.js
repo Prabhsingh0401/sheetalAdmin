@@ -62,7 +62,14 @@ export const createOrderService = async (data, userId) => {
   // 3. Database mein save karein
   const order = await Order.create(finalOrderData);
 
-  // 4. COD: Push to Shiprocket immediately + clear cart
+  // 4. Push order reference into the user's orders array
+  try {
+    await User.findByIdAndUpdate(userId, { $push: { orders: order._id } });
+  } catch (userUpdateErr) {
+    console.error(`[Order] Failed to push order ref to user ${userId}:`, userUpdateErr.message);
+  }
+
+  // 5. COD: Push to Shiprocket immediately + clear cart
   //    Online orders are pushed via the Razorpay webhook AFTER payment is confirmed.
   if (order.paymentInfo?.method === "COD") {
     // Clear cart
@@ -109,6 +116,12 @@ export const updateOrderStatusService = async (
         await product.save();
       }
     }
+    // Remove order reference from user's orders array
+    try {
+      await User.findByIdAndUpdate(order.user, { $pull: { orders: order._id } });
+    } catch (userUpdateErr) {
+      console.error(`[Order] Failed to pull order ref from user ${order.user}:`, userUpdateErr.message);
+    }
   }
 
   order.orderStatus = status;
@@ -124,6 +137,23 @@ export const updateOrderStatusService = async (
 // --- GET MY ORDERS (User) ---
 export const getMyOrdersService = async (userId) => {
   return await Order.find({ user: userId }).sort("-createdAt");
+};
+
+// --- GET SINGLE ORDER (User — must own the order) ---
+/**
+ * Fetches a single order by ID. Throws 404 if not found and 403 if the
+ * requesting user does not own the order.
+ * @param {string} orderId - MongoDB ObjectId of the order
+ * @param {string} userId  - ObjectId of the authenticated user
+ */
+export const getSingleOrderService = async (orderId, userId) => {
+  const order = await Order.findById(orderId).populate("orderItems.product", "name mainImage slug");
+  if (!order) throw new ErrorResponse("Order not found", 404);
+  // Make sure this order belongs to the requesting user
+  if (order.user.toString() !== userId.toString()) {
+    throw new ErrorResponse("You are not authorised to view this order", 403);
+  }
+  return order;
 };
 
 // --- GET ALL ORDERS (Admin / User with Pagination) ---

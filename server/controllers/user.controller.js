@@ -206,3 +206,26 @@ export const setDefaultAddress = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Admin: Get paginated orders for a specific customer.
+ * @route GET /api/v1/users/admin/:id/orders
+ * @access Admin
+ */
+export const getUserOrders = async (req, res, next) => {
+  try {
+    const result = await userService.getUserOrdersService(
+      req.params.id,
+      req.query,
+    );
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(
+      res,
+      200,
+      result.data,
+      "Customer orders retrieved successfully",
+    );
+  } catch (err) {
+    next(err);
+  }
+};

@@ -43,7 +43,14 @@ export const toggleWishlistService = async (userId, productId) => {
 };
 
 export const getMeService = async (userId) => {
-  const user = await User.findById(userId).select("-password");
+  const user = await User.findById(userId)
+    .select("-password")
+    .populate({
+      path: "orders",
+      select:
+        "orderStatus totalPrice paymentInfo.method shippingAddress.fullName orderItems.name orderItems.image orderItems.quantity orderItems.variant createdAt trackingId",
+      options: { sort: { createdAt: -1 } },
+    });
   if (!user)
     return { success: false, statusCode: 404, message: "User not found" };
   return { success: true, data: user };
@@ -215,7 +222,7 @@ export const getSingleUserDetailsService = async (userId) => {
   const orders = await Order.find({ user: userId }).sort("-createdAt");
 
   const totalSpent = orders.reduce(
-    (sum, order) => sum + (order.totalAmount || 0),
+    (sum, order) => sum + (order.totalPrice || 0),
     0,
   );
 
@@ -315,5 +322,50 @@ export const setDefaultAddressService = async (userId, addressId) => {
     success: true,
     message: "Default address updated successfully",
     data: user.addresses
+  };
+};
+
+/**
+ * Fetches paginated orders for a specific customer with summary stats.
+ * Uses the User.orders reference array for a targeted, efficient lookup.
+ * @param {string} userId - The customer's MongoDB ObjectId
+ * @param {object} queryParams - Pagination and filter params { page, limit, status }
+ * @returns Paginated orders with totalOrders, totalSpent, currentPage, totalPages
+ */
+export const getUserOrdersService = async (userId, queryParams = {}) => {
+  const page = parseInt(queryParams.page) || 1;
+  const limit = parseInt(queryParams.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  // Build filter using Order collection directly for flexibility (status filter, pagination)
+  const filter = { user: userId };
+  if (queryParams.status) filter.orderStatus = queryParams.status;
+
+  const [orders, totalOrders, allOrders] = await Promise.all([
+    Order.find(filter)
+      .sort("-createdAt")
+      .skip(skip)
+      .limit(limit)
+      .populate("orderItems.product", "name mainImage"),
+    Order.countDocuments(filter),
+    Order.find({ user: userId }).select("totalPrice"),
+  ]);
+
+  const totalSpent = allOrders.reduce(
+    (sum, order) => sum + (order.totalPrice || 0),
+    0,
+  );
+
+  return {
+    success: true,
+    data: {
+      orders,
+      totalOrders,
+      totalSpent,
+      currentPage: page,
+      totalPages: Math.ceil(totalOrders / limit),
+      hasNextPage: page * limit < totalOrders,
+      hasPrevPage: page > 1,
+    },
   };
 };
