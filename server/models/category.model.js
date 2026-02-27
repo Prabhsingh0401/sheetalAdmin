@@ -51,7 +51,7 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-categorySchema.pre("save", async function (next) {
+categorySchema.pre("save", async function () {
   if (this.isNew && (this.order === null || this.order === undefined)) {
     const highestOrderCategory = await this.constructor
       .findOne()
@@ -61,7 +61,6 @@ categorySchema.pre("save", async function (next) {
         ? highestOrderCategory.order + 1
         : 1;
   }
-  next();
 });
 
 const Category =
