@@ -173,3 +173,42 @@ export const clearCartService = async (userId) => {
     message: "Cart cleared successfully"
   };
 };
+
+/**
+ * Merges guest cart items (from localStorage) into the authenticated user's server cart.
+ * Called once after the user logs in.
+ */
+export const mergeGuestCartService = async (userId, guestItems) => {
+  if (!Array.isArray(guestItems) || guestItems.length === 0) {
+    return { success: true, message: "Nothing to merge" };
+  }
+
+  let cart = await Cart.findOne({ user: userId });
+
+  if (!cart) {
+    cart = await Cart.create({ user: userId, items: [] });
+  }
+
+  for (const guestItem of guestItems) {
+    const { productId, quantity, size, color, price, discountPrice, variantImage } = guestItem;
+
+    const existingItem = cart.items.find(
+      (item) =>
+        item.product.toString() === productId &&
+        item.size === size &&
+        item.color === color,
+    );
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+      existingItem.price = price;
+      existingItem.discountPrice = discountPrice;
+      if (variantImage) existingItem.variantImage = variantImage;
+    } else {
+      cart.items.push({ product: productId, quantity, size, color, price, discountPrice, variantImage });
+    }
+  }
+
+  await cart.save();
+  return { success: true, data: cart, message: "Guest cart merged successfully" };
+};
