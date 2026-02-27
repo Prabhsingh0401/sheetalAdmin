@@ -2,10 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import {
-  Eye,
   Edit3,
   Trash2,
-  ArrowUpDown,
   Search,
   RefreshCw,
   ChevronLeft,
@@ -140,13 +138,6 @@ function SortableCategoryRow({ category, onEdit, onView, onDelete }) {
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-4 text-slate-400">
-          <button
-            title="View"
-            className="hover:text-slate-900 transition-colors"
-            onClick={() => onView(category)}
-          >
-            <Eye size={18} />
-          </button>
           <button
             title="Edit"
             className="hover:text-blue-600 transition-colors"
