@@ -233,9 +233,10 @@ export const getAllReviews = async (req, res, next) => {
 
 export const updateReviewStatus = async (req, res, next) => {
   try {
-    const { isApproved } = req.body;
+    console.log("UPDATE REVIEW BODY:", req.body);
+    const { isApproved, comment, rating, userName } = req.body;
     const reviewId = req.params.id || req.query.id;
-    const result = await productService.updateReviewStatusService(reviewId, isApproved);
+    const result = await productService.updateReviewStatusService(reviewId, isApproved, comment, rating, userName);
     if (!result.success) return res.status(result.statusCode).json(result);
     return successResponse(res, 200, result.review, "Review status updated");
   } catch (error) {

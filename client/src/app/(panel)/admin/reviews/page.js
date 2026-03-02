@@ -7,6 +7,8 @@ import {
   Package,
   XCircle,
   Clock,
+  Edit,
+  X,
 } from "lucide-react";
 import PageHeader from "@/components/admin/layout/PageHeader.js";
 import { getAdminReviews, updateReviewStatusAdmin, deleteReviewAdmin } from "@/services/productService";
@@ -16,6 +18,8 @@ export default function ReviewsPage() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ average: 0, approved: 0, pending: 0 });
+  const [editingReview, setEditingReview] = useState(null);
+  const [editForm, setEditForm] = useState({ comment: "", rating: 5, userName: "" });
 
   useEffect(() => {
     fetchReviews();
@@ -53,9 +57,35 @@ export default function ReviewsPage() {
     }
   };
 
+  const openEditModal = (review) => {
+    setEditingReview(review._id);
+    setEditForm({ comment: review.comment, rating: review.rating, userName: review.userName });
+  };
+
+  const closeEditModal = () => {
+    setEditingReview(null);
+    setEditForm({ comment: "", rating: 5, userName: "" });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await updateReviewStatusAdmin(editingReview, editForm);
+      if (res.success) {
+        toast.success("Review updated successfully");
+        fetchReviews(); // Refresh
+        closeEditModal();
+      } else {
+        toast.error(res.message || "Failed to update review");
+      }
+    } catch (error) {
+      toast.error("Error updating review");
+    }
+  };
+
   const handleStatusChange = async (id, isApproved) => {
     try {
-      const res = await updateReviewStatusAdmin(id, isApproved);
+      const res = await updateReviewStatusAdmin(id, { isApproved });
       if (res.success) {
         toast.success(`Review ${isApproved ? 'approved' : 'rejected'} successfully`);
         fetchReviews(); // Refresh
@@ -195,6 +225,13 @@ export default function ReviewsPage() {
                       {isApproved ? "Approved" : "Pending"}
                     </span>
                     <div className="flex gap-2">
+                      <button
+                        title="Edit"
+                        onClick={() => openEditModal(review)}
+                        className="p-2.5 bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                      >
+                        <Edit size={18} />
+                      </button>
                       {!isApproved ? (
                         <button
                           title="Approve"
@@ -227,6 +264,74 @@ export default function ReviewsPage() {
           })
         )}
       </div>
+
+      {/* --- Edit Modal --- */}
+      {editingReview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-black text-slate-900 text-lg">Edit Review</h3>
+              <button
+                onClick={closeEditModal}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">User Name</label>
+                <input
+                  type="text"
+                  value={editForm.userName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, userName: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-slate-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rating</label>
+                <select
+                  value={editForm.rating}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, rating: Number(e.target.value) }))}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-slate-900"
+                  required
+                >
+                  <option value={1}>1 Star</option>
+                  <option value={2}>2 Stars</option>
+                  <option value={3}>3 Stars</option>
+                  <option value={4}>4 Stars</option>
+                  <option value={5}>5 Stars</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Comment</label>
+                <textarea
+                  value={editForm.comment}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, comment: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all resize-none h-28 text-slate-900"
+                  required
+                ></textarea>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -918,11 +918,15 @@ export const getAllReviewsService = async (page = 1, limit = 10, status = "all")
   return { success: true, reviews, total, page: Number(page), limit: Number(limit) };
 };
 
-export const updateReviewStatusService = async (reviewId, isApproved) => {
+export const updateReviewStatusService = async (reviewId, isApproved, comment, rating, userName) => {
   const review = await Review.findById(reviewId);
   if (!review) return { success: false, statusCode: 404, message: "Review not found" };
 
-  review.isApproved = isApproved;
+  if (isApproved !== undefined) review.isApproved = isApproved;
+  if (comment !== undefined) review.comment = comment;
+  if (rating !== undefined) review.rating = rating;
+  if (userName !== undefined) review.userName = userName;
+
   await review.save();
 
   // Recalculate product rating

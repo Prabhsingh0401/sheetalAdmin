@@ -89,12 +89,12 @@ export const getAdminReviews = async (page = 1, limit = 10, status = "all") => {
   return handleResponse(res);
 };
 
-export const updateReviewStatusAdmin = async (id, isApproved) => {
+export const updateReviewStatusAdmin = async (id, data) => {
   const res = await fetch(`${API_BASE_URL}/products/admin/reviews/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ isApproved }),
+    body: JSON.stringify(data),
   });
   return handleResponse(res);
 };
