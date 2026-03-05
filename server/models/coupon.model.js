@@ -145,5 +145,9 @@ couponSchema.methods.isValid = function (userId, orderAmount, cartItems = []) {
   return { valid: true, message: "Valid" };
 };
 
+if (!mongoose.models.None) {
+  mongoose.model("None", new mongoose.Schema({}));
+}
+
 const Coupon = mongoose.models.Coupon || mongoose.model("Coupon", couponSchema);
 export default Coupon;
