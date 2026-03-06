@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   Users,
   ShoppingCart,
-  DollarSign,
+  IndianRupee,
   Package,
   Star,
   UserPlus,
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
               label: "Total Revenue",
               val: formatCurrency(stats.totalOrders * 2499),
               status: "Live Estimate",
-              icon: <DollarSign size={20} />,
+              icon: <IndianRupee size={20} />,
               color: "text-emerald-700",
               bg: "bg-emerald-100",
             },
@@ -219,10 +219,10 @@ export default function AdminDashboard() {
                       </p>
                       <span
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${product.stock < 10
-                            ? "text-red-700 bg-red-100"
-                            : product.stock < 50
-                              ? "text-orange-700 bg-orange-100"
-                              : "text-emerald-700 bg-emerald-100"
+                          ? "text-red-700 bg-red-100"
+                          : product.stock < 50
+                            ? "text-orange-700 bg-orange-100"
+                            : "text-emerald-700 bg-emerald-100"
                           }`}
                       >
                         {product.stock < 10
@@ -235,10 +235,10 @@ export default function AdminDashboard() {
                     <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full w-full rounded-full transition-all duration-500 ${product.stock < 10
-                            ? "bg-red-500"
-                            : product.stock < 50
-                              ? "bg-orange-500"
-                              : "bg-emerald-500"
+                          ? "bg-red-500"
+                          : product.stock < 50
+                            ? "bg-orange-500"
+                            : "bg-emerald-500"
                           }`}
                         style={{
                           width: `${Math.min((product.stock / 100) * 100, 100)}%`,

@@ -116,6 +116,26 @@ export default function BasicInfoParams({
                 />
             </div>
 
+            <div className="grid grid-cols-1 gap-5">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        Low Stock Alert Threshold
+                        <span className="text-[10px] font-normal text-slate-400 normal-case tracking-normal">
+                            (alert when any size stock ≤ this number)
+                        </span>
+                    </label>
+                    <input
+                        type="number"
+                        name="lowStockThreshold"
+                        value={formData.lowStockThreshold ?? 5}
+                        onChange={handleChange}
+                        min={0}
+                        className="w-full bg-white border border-amber-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-amber-600 outline-none shadow-sm max-w-[200px]"
+                        placeholder="e.g. 5"
+                    />
+                </div>
+            </div>
+
             <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                     Full Description

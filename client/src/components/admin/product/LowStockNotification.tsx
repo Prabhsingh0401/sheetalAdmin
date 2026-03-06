@@ -18,6 +18,7 @@ interface LowStockVariant {
 interface LowStockProduct {
   _id: string;
   name: string;
+  lowStockThreshold: number;
   mainImage: {
     url: string;
     alt: string;
@@ -86,9 +87,14 @@ const LowStockNotification: React.FC = () => {
                   )}
 
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900 mb-2">
-                      {product.name}
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-slate-900">
+                        {product.name}
+                      </p>
+                      <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
+                        Alert ≤ {product.lowStockThreshold ?? 5}
+                      </span>
+                    </div>
 
                     <div className="space-y-2">
                       {product.lowStockVariants.flatMap((variant) =>
@@ -108,10 +114,11 @@ const LowStockNotification: React.FC = () => {
                             </div>
 
                             <span
-                              className={`font-semibold ${size.stock < 3
+                              className={`font-semibold ${
+                                size.stock <= Math.ceil((product.lowStockThreshold ?? 5) / 2)
                                   ? "text-red-600"
                                   : "text-amber-700"
-                                }`}
+                              }`}
                             >
                               {size.stock}
                             </span>

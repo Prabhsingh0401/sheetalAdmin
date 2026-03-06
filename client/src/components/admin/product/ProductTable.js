@@ -293,10 +293,15 @@ export default function ProductTable({ refreshStats }) {
                   </td>
 
                   <td className="px-4 py-4">
-                    {p.lowStockVariantCount > 0 && (
-                      <span className="bg-red-100 text-red-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full">
-                        {p.lowStockVariantCount} Variants Low Stock
+                    {p.lowStockVariantCount > 0 ? (
+                      <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                        {p.lowStockVariantCount} Variant{p.lowStockVariantCount > 1 ? "s" : ""} Low Stock
+                        {p.lowStockThreshold !== undefined && (
+                          <span className="ml-1 text-red-600 font-normal">(≤{p.lowStockThreshold})</span>
+                        )}
                       </span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
                     )}
                   </td>
 

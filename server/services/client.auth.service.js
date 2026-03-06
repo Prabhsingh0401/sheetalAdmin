@@ -171,11 +171,11 @@ const verifyFirebaseIdToken = async (idToken, currentUserId = null) => {
     if (phoneNumber) {
       if (userByPhone) {
         if (userByPhone._id.toString() === currentUser._id.toString()) {
-           // Already linked to same user, do nothing
-           finalUser = currentUser;
+          // Already linked to same user, do nothing
+          finalUser = currentUser;
         } else {
-           // Linked to ANOTHER user -> MERGE
-           finalUser = await mergeAccounts(currentUser, userByPhone);
+          // Linked to ANOTHER user -> MERGE
+          finalUser = await mergeAccounts(currentUser, userByPhone);
         }
       } else {
         // Phone not used by anyone -> Update current user
@@ -187,26 +187,26 @@ const verifyFirebaseIdToken = async (idToken, currentUserId = null) => {
 
     // 2. Linking Email
     if (email) {
-        // Refresh currentUser in case it was updated in step 1
-        // (Actually mergeAccounts modifies object in place mostly, but good to be safe if desired,
-        // but here finalUser is the latest state)
-        // If we merged in step 1, finalUser is the merged one. Use that.
-        const targetUser = finalUser || currentUser;
+      // Refresh currentUser in case it was updated in step 1
+      // (Actually mergeAccounts modifies object in place mostly, but good to be safe if desired,
+      // but here finalUser is the latest state)
+      // If we merged in step 1, finalUser is the merged one. Use that.
+      const targetUser = finalUser || currentUser;
 
-        if (userByEmail) {
-            if (userByEmail._id.toString() === targetUser._id.toString()) {
-                // Already linked
-                finalUser = targetUser;
-            } else {
-                // Linked to another -> MERGE
-                finalUser = await mergeAccounts(targetUser, userByEmail);
-            }
+      if (userByEmail) {
+        if (userByEmail._id.toString() === targetUser._id.toString()) {
+          // Already linked
+          finalUser = targetUser;
         } else {
-             // Email not used -> Update target user
-             targetUser.email = email;
-             await targetUser.save();
-             finalUser = targetUser;
+          // Linked to another -> MERGE
+          finalUser = await mergeAccounts(targetUser, userByEmail);
         }
+      } else {
+        // Email not used -> Update target user
+        targetUser.email = email;
+        await targetUser.save();
+        finalUser = targetUser;
+      }
     }
   }
   // Scenario B: User is NOT logged in (Login/Signup)
@@ -216,38 +216,38 @@ const verifyFirebaseIdToken = async (idToken, currentUserId = null) => {
     // 3. Only Email
 
     if (userByPhone && userByEmail) {
-        if (userByPhone._id.toString() === userByEmail._id.toString()) {
-            finalUser = userByPhone;
-        } else {
-            // Two different users exist for the phone and email provided in this SINGLE login event?
-            // This is a complex edge case. Usually implies data inconsistency or user using same credentials on different accounts.
-            // We prioritize the one that matches the login provider method, or simply merge them.
-            // Let's merge them assuming they belong to same person verification.
-            finalUser = await mergeAccounts(userByPhone, userByEmail);
-        }
-    } else if (userByPhone) {
+      if (userByPhone._id.toString() === userByEmail._id.toString()) {
         finalUser = userByPhone;
-        // checking if we gained an email from token that is not in DB
-        if (email && !finalUser.email) {
-            finalUser.email = email;
-            await finalUser.save();
-        }
+      } else {
+        // Two different users exist for the phone and email provided in this SINGLE login event?
+        // This is a complex edge case. Usually implies data inconsistency or user using same credentials on different accounts.
+        // We prioritize the one that matches the login provider method, or simply merge them.
+        // Let's merge them assuming they belong to same person verification.
+        finalUser = await mergeAccounts(userByPhone, userByEmail);
+      }
+    } else if (userByPhone) {
+      finalUser = userByPhone;
+      // checking if we gained an email from token that is not in DB
+      if (email && !finalUser.email) {
+        finalUser.email = email;
+        await finalUser.save();
+      }
     } else if (userByEmail) {
-        finalUser = userByEmail;
-        // checking if we gained a phone from token
-        if (phoneNumber && !finalUser.phoneNumber) {
-             finalUser.phoneNumber = phoneNumber;
-             await finalUser.save();
-        }
+      finalUser = userByEmail;
+      // checking if we gained a phone from token
+      if (phoneNumber && !finalUser.phoneNumber) {
+        finalUser.phoneNumber = phoneNumber;
+        await finalUser.save();
+      }
     } else {
-        // New User
-         finalUser = await User.create({
-            phoneNumber,
-            email,
-            name: name || undefined,
-            profilePicture: picture || undefined,
-            isVerified: true,
-        });
+      // New User
+      finalUser = await User.create({
+        phoneNumber,
+        email,
+        name: name || undefined,
+        profilePicture: picture || undefined,
+        isVerified: true,
+      });
     }
   }
 
@@ -267,18 +267,18 @@ const verifyFirebaseIdToken = async (idToken, currentUserId = null) => {
 };
 
 const sanitizeUser = (user) => {
-    return {
-      id: user._id,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      fullName: user.name,
-      alternativeMobileNumber: user.alternativeMobileNumber,
-      gender: user.gender,
-      dateOfBirth: user.dateOfBirth
-        ? user.dateOfBirth.toISOString().split("T")[0]
-        : undefined,
-    };
+  return {
+    id: user._id,
+    phoneNumber: user.phoneNumber,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    alternativeMobileNumber: user.alternativeMobileNumber,
+    gender: user.gender,
+    dateOfBirth: user.dateOfBirth
+      ? user.dateOfBirth.toISOString().split("T")[0]
+      : undefined,
+  };
 }
 
 export { sendOtp, verifyFirebaseIdToken, sendEmailOtp, verifyEmailOtp };

@@ -10,24 +10,28 @@ export const getCartByUserIdService = async (userId) => {
     populate: {
       path: "category",
       model: "Category",
-      select: "_id name slug", // Select fields you need from the category
+      select: "_id name slug",
     },
   });
 
   if (!cart) {
-    // If no cart, create one
     const newCart = await Cart.create({ user: userId, items: [] });
-    return {
-      success: true,
-      data: newCart,
-    };
+    return { success: true, data: newCart };
   }
 
-  return {
-    success: true,
-    data: cart,
-  };
+  // ── Strip orphan items (product deleted from admin) ──────────────────────
+  // After populate, items referencing a deleted product will have item.product === null.
+  // Remove them silently so the client never receives null-product data.
+  const orphanCount = cart.items.filter((item) => !item.product).length;
+  if (orphanCount > 0) {
+    cart.items = cart.items.filter((item) => item.product != null);
+    await cart.save();
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  return { success: true, data: cart };
 };
+
 
 export const addToCartService = async (
   userId,

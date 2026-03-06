@@ -27,12 +27,14 @@ export const getAllProductsService = async (queryStr) => {
     work,
     fabric,
     productType,
+    minPrice,
+    maxPrice,
   } = queryStr;
 
   const skip = (Number(page) - 1) * Number(limit);
-  const lowStockThreshold = 5;
 
   let filter = {};
+
 
   if (search) {
     filter.$or = [
@@ -83,8 +85,30 @@ export const getAllProductsService = async (queryStr) => {
   }
 
   if (fabric) {
-    filter.fabric = { $in: Array.isArray(fabric) ? fabric : [fabric] };
+    // Case-insensitive fabric match — handles "silk", "Silk", "SILK" etc.
+    const fabricList = Array.isArray(fabric) ? fabric : [fabric];
+    filter.fabric = {
+      $in: fabricList.map((f) => new RegExp(`^${f.trim()}$`, "i")),
+    };
   }
+
+  if (minPrice != null || maxPrice != null) {
+    // variants is an array-of-objects; sizes inside it is also an array.
+    // Dot-notation range queries on double-nested arrays don't work in MongoDB —
+    // we need explicit $elemMatch at each level.
+    const sizeCondition = {};
+    if (minPrice != null) sizeCondition.$gte = Number(minPrice);
+    if (maxPrice != null) sizeCondition.$lte = Number(maxPrice);
+
+    filter.variants = {
+      $elemMatch: {
+        sizes: {
+          $elemMatch: { price: sizeCondition },
+        },
+      },
+    };
+  }
+
 
   if (productType) {
     filter.productType = { $in: Array.isArray(productType) ? productType : [productType] };
@@ -92,6 +116,12 @@ export const getAllProductsService = async (queryStr) => {
 
   const pipeline = [
     { $match: filter },
+    {
+      $addFields: {
+        // Use the product's own threshold, falling back to 5 if not set
+        _threshold: { $ifNull: ["$lowStockThreshold", 5] },
+      },
+    },
     {
       $addFields: {
         lowStockVariantCount: {
@@ -106,7 +136,7 @@ export const getAllProductsService = async (queryStr) => {
                     as: "size",
                     in: {
                       $and: [
-                        { $lte: ["$$size.stock", lowStockThreshold] },
+                        { $lte: ["$$size.stock", "$_threshold"] },
                         { $gt: ["$$size.stock", 0] },
                       ],
                     },
@@ -558,28 +588,34 @@ export const deleteProductService = async (id) => {
 };
 
 export const getLowStockProductsService = async () => {
-  const lowStockThreshold = 5;
-
   const lowStockProducts = await Product.aggregate([
+    // Carry the product-level threshold through the pipeline
     {
-      $unwind: "$variants",
+      $addFields: {
+        threshold: { $ifNull: ["$lowStockThreshold", 5] },
+      },
     },
+    { $unwind: "$variants" },
+    { $unwind: "$variants.sizes" },
     {
-      $unwind: "$variants.sizes",
-    },
-    {
+      // Match sizes where stock is above 0 but at or below the product's own threshold
       $match: {
-        "variants.sizes.stock": { $lte: lowStockThreshold, $gt: 0 },
+        $expr: {
+          $and: [
+            { $gt: ["$variants.sizes.stock", 0] },
+            { $lte: ["$variants.sizes.stock", "$threshold"] },
+          ],
+        },
       },
     },
     {
-
       $group: {
         _id: {
           productId: "$_id",
           name: "$name",
           color: "$variants.color.name",
           v_sku: "$variants.v_sku",
+          threshold: "$threshold",
         },
         mainImage: { $first: "$mainImage" },
         sizes: {
@@ -595,6 +631,7 @@ export const getLowStockProductsService = async () => {
         _id: "$_id.productId",
         name: { $first: "$_id.name" },
         mainImage: { $first: "$mainImage" },
+        lowStockThreshold: { $first: "$_id.threshold" },
         lowStockVariants: {
           $push: {
             color: "$_id.color",
@@ -609,6 +646,7 @@ export const getLowStockProductsService = async () => {
         _id: 1,
         name: 1,
         mainImage: 1,
+        lowStockThreshold: 1,
         lowStockVariants: 1,
       },
     },
@@ -616,6 +654,7 @@ export const getLowStockProductsService = async () => {
 
   return { success: true, data: lowStockProducts };
 };
+
 
 export const getProductReviewsService = async (productId) => {
   const reviews = await Review.find({ product: productId, isApproved: true })

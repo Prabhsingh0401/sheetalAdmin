@@ -29,6 +29,7 @@ const productSchema = new mongoose.Schema(
       required: [true, "Material and Care instructions are required"],
     },
     gstPercent: { type: Number, default: 0 },
+    lowStockThreshold: { type: Number, default: 5, min: 0 },
 
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     stock: { type: Number, required: true, default: 0 },
