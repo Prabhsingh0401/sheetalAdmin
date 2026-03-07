@@ -12,6 +12,7 @@ import {
   TicketPercent,
   Monitor,
   Newspaper,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,6 +30,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: Users, label: "Customers", href: "/admin/customers" },
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
+    { icon: ChartNoAxesCombined, label: "Sales & Reports", href: "/admin/sales-report" },
     { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
     { icon: Monitor, label: "Site Content", href: "/admin/cms" },
