@@ -55,11 +55,12 @@ const sendEmailOtp = async (email) => {
     });
     return { success: true, message: "OTP sent to email successfully." };
   } catch (error) {
+    console.error("Nodemailer Email Error:", error);
     throw new Error("Email could not be sent. Please try again.");
   }
 };
 
-const verifyEmailOtp = async (email, otp) => {
+const verifyEmailOtp = async (email, otp, currentUserId = null) => {
   const otpRecord = await Otp.findOne({ email, otp }).sort({ createdAt: -1 });
 
   if (!otpRecord) {
@@ -69,26 +70,56 @@ const verifyEmailOtp = async (email, otp) => {
   // Delete used OTP
   await Otp.deleteOne({ _id: otpRecord._id });
 
-  let user = await User.findOne({ email });
+  let userByEmail = await User.findOne({ email });
+  let currentUser = null;
+  let finalUser = null;
 
-  if (!user) {
-    // If verifyEmailOtp is called standalone (e.g. initial sign in), create user?
-    // Usually it's better to update existing user context.
-    // For now assuming this is used to verify email for an existing session or new user creation flow.
-    // But if we want to allow login via Email OTP alone:
-    user = await User.create({ email, isVerified: true });
+  if (currentUserId) {
+    currentUser = await User.findById(currentUserId);
+  }
+
+  if (currentUser) {
+    if (userByEmail) {
+      if (userByEmail._id.toString() === currentUser._id.toString()) {
+        finalUser = currentUser;
+        if (!finalUser.isVerified) {
+          finalUser.isVerified = true;
+          await finalUser.save();
+        }
+      } else {
+        finalUser = await mergeAccounts(currentUser, userByEmail);
+        if (!finalUser.isVerified) {
+          finalUser.isVerified = true;
+          await finalUser.save();
+        }
+      }
+    } else {
+      currentUser.email = email;
+      currentUser.isVerified = true;
+      await currentUser.save();
+      finalUser = currentUser;
+    }
   } else {
-    if (!user.isVerified) {
-      user.isVerified = true;
-      await user.save();
+    if (userByEmail) {
+      finalUser = userByEmail;
+      if (!finalUser.isVerified) {
+        finalUser.isVerified = true;
+        await finalUser.save();
+      }
+    } else {
+      finalUser = await User.create({ email, isVerified: true });
     }
   }
 
-  const token = signToken({ id: user._id, role: user.role });
+  if (!finalUser) {
+    throw new Error("Authentication failed to resolve a user.");
+  }
+
+  const token = signToken({ id: finalUser._id, role: finalUser.role });
 
   return {
     success: true,
-    user: sanitizeUser(user),
+    user: sanitizeUser(finalUser),
     token,
   };
 };

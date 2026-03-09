@@ -29,11 +29,15 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
     const handleImagesChange = (e) => {
         const files = Array.from(e.target.files);
-        // Filter for images
-        const validImages = files.filter(file => file.type.startsWith('image/'));
+        // Filter for images: check mime type OR common image extensions
+        const validImages = files.filter(file => {
+            if (file.type.startsWith('image/')) return true;
+            const ext = file.name.split('.').pop().toLowerCase();
+            return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'heic'].includes(ext);
+        });
 
         if (validImages.length !== files.length) {
-            toast.error("Some files were skipped because they are not images");
+            toast.error("Some files were skipped because they are not recognized as images.");
         }
 
         setImageFiles(prev => [...prev, ...validImages]);
@@ -80,8 +84,9 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
             if (res.success) {
                 setResult({
                     success: true,
-                    count: res.data?.length || 0,
-                    message: res.message || "Products imported successfully"
+                    count: res.data?.imported || 0,
+                    message: res.message || "Products imported successfully",
+                    errors: res.data?.errors || []
                 });
                 setStep(3);
                 onSuccess?.();
@@ -195,7 +200,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                                                 const url = window.URL.createObjectURL(blob);
                                                 const a = document.createElement('a');
                                                 a.href = url;
-                                                a.download = "product_import_template.xlsx";
+                                                a.download = "sample_product_import.xlsx";
                                                 document.body.appendChild(a);
                                                 a.click();
                                                 a.remove();
@@ -336,6 +341,17 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                                     </p>
                                 )}
                             </div>
+
+                            {result.errors && result.errors.length > 0 && (
+                                <div className="w-full max-w-md bg-red-50/50 border border-red-100 rounded-lg p-3 text-left max-h-40 overflow-y-auto">
+                                    <p className="text-xs font-bold text-red-800 mb-2">Warnings/Errors ({result.errors.length}):</p>
+                                    <ul className="list-disc list-inside text-xs text-red-600 space-y-1">
+                                        {result.errors.map((err, i) => (
+                                            <li key={i}>{typeof err === 'string' ? err : JSON.stringify(err)}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
 
                             <div className="pt-6">
                                 <button

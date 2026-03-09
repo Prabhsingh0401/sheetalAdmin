@@ -25,7 +25,7 @@ export const uploadTo = (folderName) => {
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         cb(
           null,
-          `${folderName}-${uniqueSuffix}${path.extname(file.originalname)}`,
+          `${folderName.replace(/\//g, "-")}-${uniqueSuffix}${path.extname(file.originalname)}`,
         );
       },
     });
@@ -55,30 +55,29 @@ export const uploadTo = (folderName) => {
     // Check extension
     const extname = path.extname(file.originalname).toLowerCase();
 
-    // For temp/excel, allow spreadsheet extensions
+    // For temp/excel, allow spreadsheet extensions only
     if (folderName === 'temp/excel') {
       if (['.xlsx', '.xls', '.csv'].includes(extname)) {
         return cb(null, true);
       }
+      return cb(ErrorResponse("Only Excel/CSV files are allowed for this route.", 400), false);
     }
 
-    // For temp/bulk, allow spreadsheet AND images
+    // For temp/bulk, allow spreadsheet AND images — reject anything else explicitly
     if (folderName === 'temp/bulk') {
       const isSpreadsheet = ['.xlsx', '.xls', '.csv'].includes(extname);
-      const isImage = /jpeg|jpg|png|webp/.test(extname) && /image/.test(file.mimetype);
+      const isImage = /\.(jpeg|jpg|png|webp|gif|svg|heic)$/i.test(extname) &&
+        (/image/i.test(file.mimetype) || file.mimetype === 'application/octet-stream' || !file.mimetype || extname === '.heic');
       if (isSpreadsheet || isImage) {
         return cb(null, true);
       }
+      return cb(ErrorResponse("Only Excel/CSV files and accepted images are allowed for bulk import.", 400), false);
     }
 
     const isExtValid = /jpeg|jpg|png|webp|mp4|webm|mov/.test(extname);
     const isMimeValid = /image|video/.test(file.mimetype);
 
-    if (folderName === 'temp/excel') {
-      // Fallback if specific check above failed but we want to fail strict
-      // Actually the above if returns, so here we just check for images/videos
-      cb(ErrorResponse("Only excel files are allowed for this route.", 400), false);
-    } else if (isExtValid && isMimeValid) {
+    if (isExtValid && isMimeValid) {
       cb(null, true);
     } else {
       cb(ErrorResponse("Only images and videos are allowed.", 400), false);

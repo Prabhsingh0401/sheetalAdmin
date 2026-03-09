@@ -47,10 +47,7 @@ export const getProductStats = async () => {
   return handleResponse(res);
 };
 
-export const bulkImportProducts = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-
+export const bulkImportProducts = async (formData) => {
   const res = await fetch(`${API_BASE_URL}/products/admin/import`, {
     method: "POST",
     credentials: "include",
