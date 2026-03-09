@@ -196,11 +196,6 @@ export default function SalesPage() {
 
   return (
     <main className="flex-1 px-4 lg:px-10 max-w-350 mx-auto w-full">
-      <SalesPageHeader
-        title="Sales Report"
-        subtitle="Detailed overview of your store's performance metrics."
-        dateRange="Oct 1 - Oct 31, 2023"
-      />
 
       <StatsRow stats={stats} />
 
