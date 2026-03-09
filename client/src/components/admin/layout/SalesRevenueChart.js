@@ -55,13 +55,18 @@ function SkeletonChart() {
   );
 }
 
-export default function SalesRevenueChart() {
+export default function SalesRevenueChart({ onPeriodChange }) {
   const [period, setPeriod]         = useState("weekly");
   const [activeLine, setActiveLine] = useState("sales");
   const [chartData, setChartData]   = useState([]);
   const [totals, setTotals]         = useState({ sales: 0, revenue: 0 });
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
+
+  const handlePeriodChange = (p) => {
+    setPeriod(p);
+    onPeriodChange?.(p);
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -108,7 +113,7 @@ export default function SalesRevenueChart() {
           {PERIODS.map((p) => (
             <button
               key={p.key}
-              onClick={() => setPeriod(p.key)}
+              onClick={() => handlePeriodChange(p.key)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 period === p.key
                   ? "bg-white text-indigo-600 shadow-sm"

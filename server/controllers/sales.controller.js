@@ -23,15 +23,20 @@ function buildDateMatch(query) {
   let from;
 
   switch (period) {
-    case 'monthly': from = new Date(now.getFullYear(), now.getMonth() - 11, 1); break; // last 12 months
-    case 'yearly':  from = new Date(now.getFullYear() - 4, 0, 1);               break; // last 5 years
+    case 'monthly': from = new Date(now.getFullYear(), now.getMonth(), 1); break;    // 1st of current calendar month
+    case 'yearly':  from = new Date(now.getFullYear(), 0, 1);              break;    // Jan 1st of current year
     case 'weekly':
-    default:        from = new Date(now); from.setDate(now.getDate() - 6);      break; // last 7 days
+    default: {                                                                        // Mon of current calendar week
+      const diff = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+      break;
+    }
   }
 
   from.setHours(0, 0, 0, 0);
   return { createdAt: { $gte: from } };
 }
+
 
 /**
  * Returns the $dateToString format + groupId depending on period.

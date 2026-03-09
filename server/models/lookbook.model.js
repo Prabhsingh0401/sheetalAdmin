@@ -17,7 +17,7 @@ const lookbookSchema = new mongoose.Schema(
         leftSliderImages: [
             {
                 url: { type: String, required: true },
-                key: { type: String, required: true }, // S3 key for deletion
+                key: { type: String, required: true },
                 alt: String,
             },
         ],
@@ -28,6 +28,12 @@ const lookbookSchema = new mongoose.Schema(
                 alt: String,
             },
         ],
+        centerContent: {
+            label:       { type: String, default: "Exclusive Deal · Few Days Left" },
+            heading:     { type: String, default: "Timeless Women's Collection" },
+            description: { type: String, default: "" },
+            buttonLink:  { type: String, default: "#" },
+        },
         isActive: {
             type: Boolean,
             default: true,
