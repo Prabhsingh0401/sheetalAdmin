@@ -36,7 +36,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
   }, []);
 
   const suggestions = [
-    { title: "iPhone 15 Pro", category: "Products" },
+    { title: "Saree", category: "Category" },
     { title: "New Orders", category: "Sales" },
     { title: "Customer Support", category: "Tickets" },
   ].filter((item) =>

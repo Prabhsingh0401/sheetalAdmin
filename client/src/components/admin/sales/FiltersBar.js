@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mail, Phone, Filter } from "lucide-react";
+import { getCategories } from "@/services/categoryService";
 
 const CATEGORIES = [
   "All Categories",
@@ -19,6 +20,21 @@ export default function FiltersBar({ onApply }) {
     mobile: "",
     category: "All Categories",
   });
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await getCategories(1, 100, "");
+        if (res.success) {
+          setCategories(res.data.categories);
+        }
+      } catch (err) {
+        console.log("Failed to fetch Categories", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleApply = () => {
     onApply?.(filters);
@@ -33,11 +49,16 @@ export default function FiltersBar({ onApply }) {
             Search by Email
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Mail
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={16}
+            />
             <input
               type="text"
               value={filters.email}
-              onChange={(e) => setFilters({ ...filters, email: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, email: e.target.value })
+              }
               placeholder="customer@example.com"
               className="form-input text-slate-900 border-2 w-full pl-10 pr-4 py-2.5 bg-slate-50 border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-primary"
             />
@@ -50,12 +71,17 @@ export default function FiltersBar({ onApply }) {
             Search by Mobile
           </label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Phone
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={16}
+            />
             <input
               type="text"
               value={filters.mobile}
-              onChange={(e) => setFilters({ ...filters, mobile: e.target.value })}
-              placeholder="+1 234 567 890"
+              onChange={(e) =>
+                setFilters({ ...filters, mobile: e.target.value })
+              }
+              placeholder="+91 99999 99999"
               className="form-input text-slate-900 border-2 w-full pl-10 pr-4 py-2.5 bg-slate-50 border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-primary"
             />
           </div>
@@ -63,16 +89,17 @@ export default function FiltersBar({ onApply }) {
 
         {/* Category */}
         <div className="flex flex-col gap-2">
-          <label className="text-slate-700 text-sm font-bold">
-            Category
-          </label>
+          <label className="text-slate-700 text-sm font-bold">Category</label>
           <select
             value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, category: e.target.value })
+            }
             className="form-select text-slate-900 border-2 w-full px-4 py-2.5 bg-slate-50 border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-primary"
           >
-            {CATEGORIES.map((cat) => (
-              <option key={cat}>{cat}</option>
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat}>{cat.name}</option>
             ))}
           </select>
         </div>

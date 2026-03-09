@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { Package } from "lucide-react";
+import { Package, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 function SkeletonRow() {
   return (
@@ -28,8 +29,6 @@ export default function BestSellingProducts({
   const maxRevenue = products?.length
     ? Math.max(...products.map((p) => p.totalRevenue))
     : 1;
-
-    console.log(products)
 
   return (
     <div
@@ -70,16 +69,12 @@ export default function BestSellingProducts({
             Best Selling Products
           </h3>
         </div>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#94a3b8",
-            letterSpacing: "0.05em",
-          }}
+        <Link
+          href="/admin/products"
+          className="text-sm font-semibold text-indigo-500 hover:text-indigo-700 flex items-center gap-1 transition-colors"
         >
-          {products?.length ?? 0} products
-        </span>
+          See all Products <ArrowRight size={14} />
+        </Link>
       </div>
 
       {error && (

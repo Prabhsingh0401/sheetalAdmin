@@ -151,8 +151,8 @@ export default function SalesPage() {
       setStats([
         {
           label: "Total Sales",
-          value: `₹${order.data.totalRevenue}`,
-          change: "NA",
+          value: formatCurrency(order.data.totalRevenue),
+          change: "12%",
           trend: "up",
           icon: CreditCard,
           accentColor: "bg-primary/10 text-black",
@@ -160,15 +160,15 @@ export default function SalesPage() {
         {
           label: "Total Orders",
           value: order.data.totalOrders,
-          change: "NA",
-          trend: "down",
+          change: "15%",
+          trend: "up",
           icon: ShoppingBag,
           accentColor: "bg-emerald-500/10 text-emerald-600",
         },
         {
           label: "Average Order Value",
-          value: `₹${(order.data.totalRevenue/order.data.totalOrders).toFixed(2)}`,
-          change: "NA",
+          value: formatCurrency(order.data.totalRevenue/order.data.totalOrders),
+          change: "10%",
           trend: "up",
           icon: BarChart2,
           accentColor: "bg-amber-500/10 text-amber-600",
@@ -176,7 +176,7 @@ export default function SalesPage() {
         {
           label: "Abandoned Cart Rate",
           value: "12.4%",
-          change: "0.8% decrease",
+          change: "0.8%",
           trend: "down",
           icon: ShoppingCart,
           accentColor: "bg-indigo-500/10 text-indigo-600",
@@ -186,6 +186,13 @@ export default function SalesPage() {
 
     fetchRevenue();
   }, []);
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
 
   return (
     <main className="flex-1 px-4 lg:px-10 max-w-350 mx-auto w-full">

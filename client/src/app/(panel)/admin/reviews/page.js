@@ -1,337 +1,137 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import {
-  Star,
-  Trash2,
-  CheckCircle2,
-  Package,
-  XCircle,
-  Clock,
-  Edit,
-  X,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, ThumbsUp, AlertCircle } from "lucide-react";
 import PageHeader from "@/components/admin/layout/PageHeader.js";
 import { getAdminReviews, updateReviewStatusAdmin, deleteReviewAdmin } from "@/services/productService";
 import toast from "react-hot-toast";
+import ReviewModal from "@/components/admin/reviews/ReviewModal";
+import ReviewTable from "@/components/admin/reviews/ReviewTable";
+import { StatCard, FilterTab, StarRow } from "@/components/admin/reviews/ReviewShared"; 
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ average: 0, approved: 0, pending: 0 });
-  const [editingReview, setEditingReview] = useState(null);
-  const [editForm, setEditForm] = useState({ comment: "", rating: 5, userName: "" });
+  const [stats, setStats]     = useState({ average: 0, approved: 0, pending: 0 });
+  const [filter, setFilter]   = useState("all");
 
-  useEffect(() => {
-    fetchReviews();
-  }, []);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm]   = useState({ comment: "", rating: 5, userName: "" });
+
+  useEffect(() => { fetchReviews(); }, []);
 
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      // Fetch all reviews
-      const resAll = await getAdminReviews(1, 100, "all");
-      if (resAll.success) {
-        const fetchedReviews = resAll.data || []; // Use resAll.data instead of resAll.reviews
-        setReviews(fetchedReviews);
-
-        let approvedCount = 0;
-        let pendingCount = 0;
-        let totalRating = 0;
-
-        fetchedReviews.forEach(r => {
-          if (r.isApproved) {
-            approvedCount++;
-            totalRating += r.rating;
-          } else {
-            pendingCount++;
-          }
+      const res = await getAdminReviews(1, 100, "all");
+      if (res.success) {
+        const fetched = res.data || [];
+        setReviews(fetched);
+        let approved = 0, pending = 0, totalRating = 0;
+        fetched.forEach((r) => {
+          if (r.isApproved) { approved++; totalRating += r.rating; } else pending++;
         });
-
-        const avg = approvedCount > 0 ? (totalRating / approvedCount).toFixed(1) : 0;
-        setStats({ average: avg, approved: approvedCount, pending: pendingCount });
+        setStats({ average: approved > 0 ? (totalRating / approved).toFixed(1) : 0, approved, pending });
       }
-    } catch (error) {
-      toast.error("Failed to fetch reviews");
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error("Failed to fetch reviews"); }
+    finally { setLoading(false); }
   };
 
-  const openEditModal = (review) => {
-    setEditingReview(review._id);
+  // Modal handlers
+  const openEdit = (review) => {
+    setEditingId(review._id);
     setEditForm({ comment: review.comment, rating: review.rating, userName: review.userName });
   };
-
-  const closeEditModal = () => {
-    setEditingReview(null);
-    setEditForm({ comment: "", rating: 5, userName: "" });
-  };
+  const closeEdit = () => { setEditingId(null); setEditForm({ comment: "", rating: 5, userName: "" }); };
+  const handleFormChange = (field, value) => setEditForm((p) => ({ ...p, [field]: value }));
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await updateReviewStatusAdmin(editingReview, editForm);
-      if (res.success) {
-        toast.success("Review updated successfully");
-        fetchReviews(); // Refresh
-        closeEditModal();
-      } else {
-        toast.error(res.message || "Failed to update review");
-      }
-    } catch (error) {
-      toast.error("Error updating review");
-    }
+      const res = await updateReviewStatusAdmin(editingId, editForm);
+      if (res.success) { toast.success("Review updated"); fetchReviews(); closeEdit(); }
+      else toast.error(res.message || "Failed to update");
+    } catch { toast.error("Error updating review"); }
   };
 
-  const handleStatusChange = async (id, isApproved) => {
+  const handleStatus = async (id, isApproved) => {
     try {
       const res = await updateReviewStatusAdmin(id, { isApproved });
-      if (res.success) {
-        toast.success(`Review ${isApproved ? 'approved' : 'rejected'} successfully`);
-        fetchReviews(); // Refresh
-      } else {
-        toast.error(res.message || "Failed to update review status");
-      }
-    } catch (error) {
-      toast.error("Error updating status");
-    }
+      if (res.success) { toast.success(`Review ${isApproved ? "approved" : "rejected"}`); fetchReviews(); }
+      else toast.error(res.message || "Failed to update status");
+    } catch { toast.error("Error updating status"); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    if (!window.confirm("Delete this review?")) return;
     try {
       const res = await deleteReviewAdmin(id);
-      if (res.success) {
-        toast.success("Review deleted");
-        fetchReviews(); // Refresh
-      } else {
-        toast.error(res.message || "Failed to delete review");
-      }
-    } catch (error) {
-      toast.error("Error deleting review");
-    }
+      if (res.success) { toast.success("Review deleted"); fetchReviews(); }
+      else toast.error(res.message || "Failed to delete");
+    } catch { toast.error("Error deleting review"); }
   };
 
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, i) => (
-      <Star
-        key={i}
-        size={14}
-        className={
-          i < rating ? "fill-orange-400 text-orange-400" : "text-slate-200"
-        }
-      />
-    ));
-  };
+  const filtered = reviews.filter((r) => {
+    if (filter === "approved") return r.isApproved;
+    if (filter === "pending") return !r.isApproved;
+    return true;
+  });
 
   return (
     <div className="w-full animate-in fade-in duration-500 pb-10">
-      <PageHeader
-        title="Customer Reviews"
-        subtitle="Monitor and moderate product feedback"
+      <PageHeader title="Customer Reviews" subtitle="Monitor and moderate product feedback" />
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 mb-6">
+        <StatCard
+          icon={<Star size={18} />} label="Average Rating"
+          value={stats.average} color="#f59e0b"
+          subtext={<StarRow rating={Math.round(stats.average)} />}
+        />
+        <StatCard
+          icon={<ThumbsUp size={18} />} label="Approved"
+          value={stats.approved} color="#10b981"
+          subtext={
+            <p className="text-xs text-slate-400">
+              {reviews.length > 0 ? Math.round((stats.approved / reviews.length) * 100) : 0}% of total
+            </p>
+          }
+        />
+        <StatCard
+          icon={<AlertCircle size={18} />} label="Awaiting Review"
+          value={stats.pending} color="#f97316"
+          subtext={
+            <p className="text-xs text-slate-400">
+              {stats.pending > 0 ? "Action required" : "All caught up!"}
+            </p>
+          }
+        />
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 w-fit mb-5 border border-slate-100">
+        <FilterTab label="All"      active={filter === "all"}      count={reviews.length} onClick={() => setFilter("all")} />
+        <FilterTab label="Approved" active={filter === "approved"} count={stats.approved} onClick={() => setFilter("approved")} />
+        <FilterTab label="Pending"  active={filter === "pending"}  count={stats.pending}  onClick={() => setFilter("pending")} />
+      </div>
+
+      {/* Table */}
+      <ReviewTable
+        reviews={filtered}
+        loading={loading}
+        total={reviews.length}
+        onEdit={openEdit}
+        onStatus={handleStatus}
+        onDelete={handleDelete}
       />
 
-      {/* --- Stats Summary --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 mb-8">
-        <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 font-black text-xl">
-            {stats.average}
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Average Rating
-            </p>
-            <div className="flex gap-1 mt-1">{renderStars(Math.round(stats.average))}</div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex items-center gap-4 text-emerald-600">
-          <CheckCircle2 size={32} className="opacity-20" />
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Total Approved
-            </p>
-            <h4 className="text-xl font-black text-slate-900 leading-none mt-1">
-              {stats.approved}
-            </h4>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex items-center gap-4 text-orange-500">
-          <Clock size={32} className="opacity-20" />
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Pending Review
-            </p>
-            <h4 className="text-xl font-black text-slate-900 leading-none mt-1">
-              {stats.pending}
-            </h4>
-          </div>
-        </div>
-      </div>
-
-      {/* --- Review Feed --- */}
-      <div className="space-y-4">
-        {loading ? (
-          <p className="text-center text-slate-500 py-10">Loading reviews...</p>
-        ) : reviews.length === 0 ? (
-          <p className="text-center text-slate-500 py-10">No reviews found.</p>
-        ) : (
-          reviews.map((review) => {
-            const isApproved = review.isApproved;
-            return (
-              <div
-                key={review._id}
-                className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-200 shadow-sm hover:border-indigo-200 transition-all group"
-              >
-                <div className="flex flex-col md:flex-row gap-6">
-                  {/* Left: Customer Info */}
-                  <div className="flex md:flex-col items-center md:items-start gap-4 md:w-48 shrink-0">
-                    <div className="w-12 h-12 rounded-full bg-slate-900 text-emerald-400 flex items-center justify-center font-black text-xs shadow-lg uppercase">
-                      {review.userName?.substring(0, 2) || "U"}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 leading-none">
-                        {review.userName || "Unknown"}
-                      </h4>
-                      <p className="text-[10px] font-bold text-slate-400 mt-2 flex items-center gap-1 uppercase tracking-tighter">
-                        <Clock size={10} /> {new Date(review.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Center: Content */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex gap-0.5">
-                        {renderStars(review.rating)}
-                      </div>
-                      <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                      <p className="text-xs font-black text-indigo-600 flex items-center gap-1.5 uppercase tracking-tight">
-                        <Package size={12} /> {review.product?.name || "Deleted Product"}
-                      </p>
-                    </div>
-                    <p className="text-slate-700 font-medium text-[15px] leading-relaxed italic">
-                      "{review.comment}"
-                    </p>
-                  </div>
-
-                  {/* Right: Actions */}
-                  <div className="flex md:flex-col justify-end md:justify-start gap-2">
-                    <span
-                      className={`self-start px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border mb-2 ${isApproved
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        : "bg-orange-50 text-orange-600 border-orange-100"
-                        }`}
-                    >
-                      {isApproved ? "Approved" : "Pending"}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        title="Edit"
-                        onClick={() => openEditModal(review)}
-                        className="p-2.5 bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                      >
-                        <Edit size={18} />
-                      </button>
-                      {!isApproved ? (
-                        <button
-                          title="Approve"
-                          onClick={() => handleStatusChange(review._id, true)}
-                          className="p-2.5 bg-slate-50 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
-                        >
-                          <CheckCircle2 size={18} />
-                        </button>
-                      ) : (
-                        <button
-                          title="Reject / Unapprove"
-                          onClick={() => handleStatusChange(review._id, false)}
-                          className="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <XCircle size={18} />
-                        </button>
-                      )}
-                      <button
-                        title="Delete"
-                        onClick={() => handleDelete(review._id)}
-                        className="p-2.5 bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* --- Edit Modal --- */}
-      {editingReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-black text-slate-900 text-lg">Edit Review</h3>
-              <button
-                onClick={closeEditModal}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">User Name</label>
-                <input
-                  type="text"
-                  value={editForm.userName}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, userName: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-slate-900"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rating</label>
-                <select
-                  value={editForm.rating}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, rating: Number(e.target.value) }))}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-slate-900"
-                  required
-                >
-                  <option value={1}>1 Star</option>
-                  <option value={2}>2 Stars</option>
-                  <option value={3}>3 Stars</option>
-                  <option value={4}>4 Stars</option>
-                  <option value={5}>5 Stars</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Comment</label>
-                <textarea
-                  value={editForm.comment}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, comment: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all resize-none h-28 text-slate-900"
-                  required
-                ></textarea>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Edit Modal */}
+      <ReviewModal
+        isOpen={!!editingId}
+        editForm={editForm}
+        onChange={handleFormChange}
+        onSubmit={handleEditSubmit}
+        onClose={closeEdit}
+      />
     </div>
   );
 }
