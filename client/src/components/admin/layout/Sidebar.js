@@ -20,6 +20,7 @@ import {
   BookOpen,
   InstagramIcon,
   UserIcon,
+  ClipboardClock,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,6 +38,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: Users, label: "Customers", href: "/admin/customers" },
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
+    { icon: ClipboardClock, label: "Appointments", href: "/admin/appointments" },
     { icon: Star, label: "Reviews", href: "/admin/reviews" },
     { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     {

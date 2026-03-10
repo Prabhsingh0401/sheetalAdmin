@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import useLogoutModal from "@/hooks/useLogoutModal";
 import ChangePasswordModal from "@/components/admin/common/ChangePasswordModal";
+import LowStockNotification from "../product/LowStockNotification";
 
 export default function TopNav({ storeName = "Admin", setIsOpen }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,6 +110,9 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
         </div>
 
         <div className="flex items-center gap-4">
+          <div>
+            <LowStockNotification/>
+          </div>
           <div className="relative border-l border-slate-200 pl-4 ml-2">
             <button
               onClick={() => {

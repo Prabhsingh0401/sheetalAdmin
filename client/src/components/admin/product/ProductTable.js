@@ -23,6 +23,7 @@ import SettingsModal from "./SettingsModal";
 import BulkImportModal from "./BulkImportModal";
 
 import { getProducts, deleteProduct } from "@/services/productService";
+import { useProductModal } from "@/hooks/useProductModal";
 
 export default function ProductTable({ refreshStats }) {
   const [products, setProducts] = useState([]);
@@ -46,6 +47,20 @@ export default function ProductTable({ refreshStats }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+
+  const { openProductId, closeModal } = useProductModal();
+
+useEffect(() => {
+    if (!openProductId) return;
+    if (products.length === 0) return; // wait for products to load
+
+    const product = products.find((p) => p._id === openProductId);
+    if (product) {
+        setEditData(product);
+        setShowModal(true);
+        closeModal();
+    }
+}, [openProductId, products]);
 
   useEffect(() => {
     fetchProducts();
