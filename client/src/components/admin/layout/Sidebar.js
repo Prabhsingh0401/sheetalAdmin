@@ -22,6 +22,7 @@ import {
   UserIcon,
   ClipboardClock,
   Home,
+  Headset,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,6 +41,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
     { icon: ClipboardClock, label: "Appointments", href: "/admin/appointments" },
+    { icon: Headset, label: "Enquiry", href: "/admin/enquiry" },
     { icon: Star, label: "Reviews", href: "/admin/reviews" },
     { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     {
