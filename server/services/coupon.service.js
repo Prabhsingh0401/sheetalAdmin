@@ -293,29 +293,35 @@ export const applyCouponService = async (
   }
 };
 
-export const getAllCouponsService = async ({ page, limit, search }) => {
+export const getAllCouponsService = async ({ page, limit, search, showOnHomepage }) => {
   try {
     const now = new Date();
     const baseQuery = {
       isActive: true,
       endDate: { $gte: now },
     };
-    const query = search
-      ? { ...baseQuery, code: { $regex: search, $options: "i" } }
-      : baseQuery;
+
+    if (search) {
+      baseQuery.code = { $regex: search, $options: "i" };
+    }
+
+    if (showOnHomepage === true) {
+      baseQuery.showOnHomepage = true;
+    }
 
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
-      Coupon.find(query)
+      Coupon.find(baseQuery)
         .populate({
           path: "applicableIds",
-          select: "name", // Only retrieve the name field
+          select: "name",
         })
         .sort("-createdAt")
         .skip(skip)
         .limit(limit),
-      Coupon.countDocuments(query),
+      Coupon.countDocuments(baseQuery),
     ]);
+
     return { success: true, data, pagination: { total, page, limit } };
   } catch (error) {
     return { success: false, statusCode: 500, message: error.message };

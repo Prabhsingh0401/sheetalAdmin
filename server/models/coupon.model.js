@@ -35,7 +35,9 @@ const couponSchema = new mongoose.Schema(
       enum: ["Category", "Product", "None"],
       default: "None",
     },
-    applicableIds: [{ type: mongoose.Schema.Types.ObjectId, refPath: "modelRef" }],
+    applicableIds: [
+      { type: mongoose.Schema.Types.ObjectId, refPath: "modelRef" },
+    ],
     usageLimitPerUser: { type: Number, default: 1 },
     totalUsageLimit: { type: Number, required: true },
     usedCount: { type: Number, default: 0 },
@@ -51,6 +53,7 @@ const couponSchema = new mongoose.Schema(
       },
     ],
     isActive: { type: Boolean, default: true },
+    showOnHomepage: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

@@ -13,6 +13,9 @@ import {
   FileText,
   ChevronDown,
   User,
+  Clock,
+  ThumbsUp,
+  AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -67,7 +70,6 @@ export default function AppointmentsPage() {
     confirmed: 0,
     cancelled: 0,
   });
-
 
   // Update fetchAppointments to derive counts after fetching
   const fetchAppointments = useCallback(async () => {
@@ -165,69 +167,81 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              label: "Total",
-              value: counts.total,
-              bg: "bg-slate-50",
-              text: "text-black",
-              sub: "text-slate-600",
-              icon: "🗓️",
-            },
-            {
-              label: "Pending",
-              value: counts.pending,
-              bg: "bg-amber-50",
-              text: "text-amber-700",
-              sub: "text-amber-400",
-              border: "border border-amber-200",
-              icon: "⏳",
-            },
-            {
-              label: "Confirmed",
-              value: counts.confirmed,
-              bg: "bg-emerald-50",
-              text: "text-emerald-700",
-              sub: "text-emerald-400",
-              border: "border border-emerald-200",
-              icon: "✅",
-            },
-            {
-              label: "Cancelled",
-              value: counts.cancelled,
-              bg: "bg-rose-50",
-              text: "text-rose-500",
-              sub: "text-rose-300",
-              border: "border border-rose-200",
-              icon: "✕",
-            },
-          ].map((card) => (
-            <button
-              key={card.label}
-              onClick={() =>
-                setStatusFilter(
-                  card.label === "Total" ? "all" : card.label.toLowerCase(),
-                )
-              }
-              className={`${card.bg} ${card.border ?? ""} rounded-3xl p-5 text-left shadow-sm hover:scale-[1.02] transition-transform active:scale-95 cursor-pointer`}
-            >
-              <p className={`text-2xl font-black ${card.text}`}>{card.value}</p>
-              <div className="flex items-center justify-between mt-1">
-                <p
-                  className={`text-[11px] font-black uppercase tracking-widest ${card.text} opacity-70`}
-                >
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Total",
+            value: counts.total,
+            sub: "All appointments",
+            icon: Calendar,
+            iconBg: "bg-slate-100",
+            iconColor: "text-slate-500",
+            filter: "all",
+          },
+          {
+            label: "Pending",
+            value: counts.pending,
+            sub: counts.total
+              ? `${Math.round((counts.pending / counts.total) * 100)}% of total`
+              : "0% of total",
+            icon: Clock,
+            iconBg: "bg-amber-100",
+            iconColor: "text-amber-500",
+            filter: "pending",
+          },
+          {
+            label: "Confirmed",
+            value: counts.confirmed,
+            sub: counts.total
+              ? `${Math.round((counts.confirmed / counts.total) * 100)}% of total`
+              : "0% of total",
+            icon: ThumbsUp,
+            iconBg: "bg-emerald-100",
+            iconColor: "text-emerald-500",
+            filter: "confirmed",
+          },
+          {
+            label: "Cancelled",
+            value: counts.cancelled,
+            sub:
+              counts.cancelled === 0
+                ? "All caught up!"
+                : `${Math.round((counts.cancelled / counts.total) * 100)}% of total`,
+            icon: AlertCircle,
+            iconBg: "bg-rose-100",
+            iconColor: "text-rose-400",
+            filter: "cancelled",
+          },
+        ].map((card) => (
+          <button
+            key={card.label}
+            onClick={() => setStatusFilter(card.filter)}
+            className={`bg-white border rounded-2xl p-5 text-left shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer ${
+              statusFilter === card.filter
+                ? "border-slate-400"
+                : "border-slate-200"
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              <div className={`${card.iconBg} p-2.5 rounded-xl shrink-0`}>
+                <card.icon size={18} className={card.iconColor} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
                   {card.label}
                 </p>
-                <span className="text-base">{card.icon}</span>
+                <p className="text-3xl font-black text-slate-900 mt-1 leading-none">
+                  {card.value}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">{card.sub}</p>
               </div>
-            </button>
-          ))}
-        </div>
+            </div>
+          </button>
+        ))}
+      </div>
       {/* Header + Filters */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-        
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
             <h3 className="text-sm font-black text-slate-900 uppercase">
@@ -239,7 +253,6 @@ export default function AppointmentsPage() {
             </p>
           </div>
         </div>
-        
 
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search */}

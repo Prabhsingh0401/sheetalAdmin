@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Ticket, Edit3, Zap, Gift, Info, Search } from "lucide-react";
+import {
+  X,
+  Loader2,
+  Ticket,
+  Edit3,
+  Zap,
+  Gift,
+  Info,
+  Search,
+} from "lucide-react";
 import { addCoupon, updateCoupon } from "@/services/couponService";
 import { getCategories } from "@/services/categoryService";
 import { getProducts } from "@/services/productService";
@@ -34,6 +43,7 @@ export default function CouponModal({
     totalUsageLimit: "",
     usageLimitPerUser: 1,
     status: "Active",
+    showOnHomepage: false,
   });
 
   const [products, setProducts] = useState([]);
@@ -43,7 +53,8 @@ export default function CouponModal({
   // Search Products Effect
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (formData.scope === "Specific_Product") { // Search even if string empty to show initial list
+      if (formData.scope === "Specific_Product") {
+        // Search even if string empty to show initial list
         setIsSearchingProducts(true);
         try {
           const res = await getProducts(1, 20, productSearch);
@@ -99,13 +110,14 @@ export default function CouponModal({
         totalUsageLimit: initialData?.totalUsageLimit || "",
         usageLimitPerUser: initialData?.usageLimitPerUser || 1,
         status: initialData?.isActive !== false ? "Active" : "Inactive",
+        showOnHomepage: initialData?.showOnHomepage || false,
       });
 
       if (initialData?.applicableIds) {
-        // If populated, they are objects. If not, they might be strings (unlikely based on backend). 
-        // Backend populates name. 
-        const items = initialData.applicableIds.map(item =>
-          typeof item === 'object' ? item : { _id: item, name: "ID: " + item }
+        // If populated, they are objects. If not, they might be strings (unlikely based on backend).
+        // Backend populates name.
+        const items = initialData.applicableIds.map((item) =>
+          typeof item === "object" ? item : { _id: item, name: "ID: " + item },
         );
         setSelectedItems(items);
       } else {
@@ -138,7 +150,8 @@ export default function CouponModal({
           : formData.maxDiscountAmount
             ? Number(formData.maxDiscountAmount)
             : undefined,
-      applicableIds: selectedItems.map(i => i._id),
+      applicableIds: selectedItems.map((i) => i._id),
+      showOnHomepage: formData.showOnHomepage,
     };
 
     try {
@@ -204,6 +217,40 @@ export default function CouponModal({
           onSubmit={handleSubmit}
           className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar"
         >
+          {/* Show on Homepage */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <Gift size={15} className="text-slate-500" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-800 uppercase tracking-wide">
+                  Show on Homepage
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Display this offer in the homepage promotions section
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  showOnHomepage: !prev.showOnHomepage,
+                }))
+              }
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                formData.showOnHomepage ? "bg-slate-900" : "bg-slate-200"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                  formData.showOnHomepage ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
           {/* Type Selectors */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -278,7 +325,7 @@ export default function CouponModal({
               <select
                 value={formData.scope}
                 onChange={(e) => {
-                  setFormData(prev => ({
+                  setFormData((prev) => ({
                     ...prev,
                     scope: e.target.value,
                   }));
@@ -291,6 +338,7 @@ export default function CouponModal({
                 <option value="Specific_Product">Specific Product</option>
               </select>
             </div>
+
             {formData.scope === "Category" && (
               <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
                 <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -299,7 +347,9 @@ export default function CouponModal({
                 <select
                   value={selectedItems[0]?._id || ""}
                   onChange={(e) => {
-                    const cat = categories.find(c => c._id === e.target.value);
+                    const cat = categories.find(
+                      (c) => c._id === e.target.value,
+                    );
                     if (cat) setSelectedItems([cat]);
                   }}
                   className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
@@ -337,36 +387,50 @@ export default function CouponModal({
                 </div>
                 {/* Product Search Results Dropdown */}
                 {isSearchingProducts && (
-                  <div className="text-xs text-slate-500 mt-1">Found {products.length} products...</div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    Found {products.length} products...
+                  </div>
                 )}
                 {products.length > 0 && (
                   <div className="mt-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-slate-50 p-2 space-y-1">
                     {products.map((prod) => {
-                      const isSelected = selectedItems.some(item => item._id === prod._id);
+                      const isSelected = selectedItems.some(
+                        (item) => item._id === prod._id,
+                      );
                       return (
                         <div
                           key={prod._id}
                           className={`flex items-center justify-between p-2 rounded cursor-pointer ${isSelected ? "bg-slate-200" : "hover:bg-white"}`}
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedItems(prev => prev.filter(item => item._id !== prod._id));
+                              setSelectedItems((prev) =>
+                                prev.filter((item) => item._id !== prod._id),
+                              );
                             } else {
-                              setSelectedItems(prev => [...prev, prod]);
+                              setSelectedItems((prev) => [...prev, prod]);
                             }
                           }}
                         >
                           <div className="flex items-center gap-2">
                             {/* Small image preview */}
                             {prod.mainImage?.url && (
-                              <img src={prod.mainImage.url} alt="" className="w-8 h-8 rounded object-cover" />
+                              <img
+                                src={prod.mainImage.url}
+                                alt=""
+                                className="w-8 h-8 rounded object-cover"
+                              />
                             )}
-                            <span className="text-sm font-medium">{prod.name}</span>
+                            <span className="text-sm font-medium">
+                              {prod.name}
+                            </span>
                           </div>
                           {isSelected && (
-                            <span className="text-xs bg-black text-white px-2 py-0.5 rounded">Selected</span>
+                            <span className="text-xs bg-black text-white px-2 py-0.5 rounded">
+                              Selected
+                            </span>
                           )}
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 )}
@@ -374,11 +438,18 @@ export default function CouponModal({
                 {selectedItems.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {selectedItems.map((item) => (
-                      <div key={item._id} className="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-xs flex items-center gap-2">
+                      <div
+                        key={item._id}
+                        className="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-xs flex items-center gap-2"
+                      >
                         <span>{item.name || "Unknown Product"}</span>
                         <button
                           type="button"
-                          onClick={() => setSelectedItems(prev => prev.filter(i => i._id !== item._id))}
+                          onClick={() =>
+                            setSelectedItems((prev) =>
+                              prev.filter((i) => i._id !== item._id),
+                            )
+                          }
                           className="text-slate-400 hover:text-red-500"
                         >
                           <X size={12} />
@@ -452,8 +523,8 @@ export default function CouponModal({
                       ? " (all products)"
                       : formData.scope === "Category"
                         ? " (matching category items only)"
-                        : " (matching products only)"}.
-                    It will never exceed the applicable cart total.
+                        : " (matching products only)"}
+                    . It will never exceed the applicable cart total.
                   </p>
                 </div>
               ) : (
@@ -472,7 +543,7 @@ export default function CouponModal({
                         let value = e.target.value;
                         if (Number(value) > 100) {
                           toast.error(
-                            "Discount percentage cannot exceed 100%. Setting to 100."
+                            "Discount percentage cannot exceed 100%. Setting to 100.",
                           );
                           value = "100";
                         }
@@ -485,7 +556,9 @@ export default function CouponModal({
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1">
                       Max Discount (₹)
-                      <span className="text-[10px] font-normal text-slate-400 normal-case">optional cap</span>
+                      <span className="text-[10px] font-normal text-slate-400 normal-case">
+                        optional cap
+                      </span>
                     </label>
                     <input
                       type="number"
