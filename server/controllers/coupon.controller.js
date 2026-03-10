@@ -36,11 +36,12 @@ export const updateCoupon = async (req, res, next) => {
 
 export const getAllCoupons = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 10, search = "", showOnHomepage } = req.query;
     const result = await couponService.getAllCouponsService({
       page: Number(page),
       limit: Number(limit),
       search,
+      showOnHomepage: showOnHomepage === "true" ? true : undefined,
     });
     if (!result.success)
       return res.status(result.statusCode || 500).json(result);

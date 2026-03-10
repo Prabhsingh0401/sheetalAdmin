@@ -113,7 +113,7 @@ export default function AbandonedCarts({ carts = [], onSendRecovery }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                ${cart.cartValue.toFixed(2)}
+                ₹{cart.cartValue.toFixed(2)}
               </div>
 
               {/* Action */}

@@ -30,6 +30,11 @@ import pagesRoutes from "./routes/pages.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import salesRouter from './routes/sales.routes.js'
+import instaRouter from './routes/instagram.routes.js'
+import testimonialRouter from './routes/testimonial.routes.js'
+import appointmentRouter from './routes/appointment.routes.js'
+import homepageRouter from './routes/homepage.routes.js'
+import enquiryRouter from './routes/enquiry.routes.js'
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -79,7 +84,7 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -156,6 +161,11 @@ app.use("/api/v1/lookbooks", lookbookRoutes);
 app.use("/api/v1/pages", pagesRoutes);
 app.use("/api/v1/payment", paymentRoutes);
 app.use('/api/v1/sales', salesRouter)
+app.use('/api/v1/instacards', instaRouter)
+app.use('/api/v1/testimonials', testimonialRouter)
+app.use('/api/v1/appointments', appointmentRouter)
+app.use('/api/v1/homepage', homepageRouter)
+app.use('/api/v1/enquiry', enquiryRouter)
 
 app.get("/", (req, res) => {
   const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;

@@ -11,6 +11,7 @@ import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
+router.get("/", getAllCoupons);
 router.post("/apply", isAuthenticated, applyCoupon);
 router.get("/all", isAuthenticated, getAllCoupons);
 router.get("/admin/all", isAuthenticated, isAdmin, getAllCoupons);

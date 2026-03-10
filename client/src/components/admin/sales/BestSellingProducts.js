@@ -196,7 +196,7 @@ export default function BestSellingProducts({
                             fontFamily: "'DM Mono', monospace",
                           }}
                         >
-                          ${product.totalRevenue.toLocaleString()}
+                          ₹{product.totalRevenue.toLocaleString()}
                         </span>
                         <div
                           style={{

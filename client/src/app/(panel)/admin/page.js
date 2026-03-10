@@ -6,6 +6,9 @@ import {
   ArrowRight,
   Calendar,
   Download,
+  ArrowUp,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import SalesRevenueChart from "@/components/admin/layout/SalesRevenueChart";
 import BestSellingProducts from "@/components/admin/sales/BestSellingProducts";
@@ -142,10 +145,7 @@ export default function AdminDashboard() {
             <p className="text-sm text-slate-500 mt-0.5">Visualizing performance metrics and customer trends.</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all">
-              <Calendar size={15} />
-              Last 30 Days
-            </button>
+            
             <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">
               <Download size={15} />
               Export Report
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
                 <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
                   stat.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
                 }`}>
-                  {stat.positive ? "↑" : "↓"}{stat.change}
+                  {stat.positive ? <TrendingUp/> : <TrendingDown/>}{stat.change}
                 </span>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
                     { name: "David Chen",    time: "yesterday"   },
                   ].map((u, i) => (
                     <div key={i} className="flex items-center gap-3 py-1.5">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0 ${["bg-rose-400","bg-blue-400","bg-amber-400","bg-teal-400"][i]}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 ${["bg-rose-400","bg-blue-400","bg-amber-400","bg-teal-400"][i]}`}>
                         {u.name.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Bottom Row: Best Selling + Recent Orders + Top Reviews */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_280px] gap-5 pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-10">
           <BestSellingProducts products={bestSellingProducts?.data} />
 
           {/* Recent Orders */}
@@ -265,8 +265,8 @@ export default function AdminDashboard() {
             </table>
           </div>
 
-          <TopReviews />
         </div>
+          <TopReviews />
 
       </div>
 
