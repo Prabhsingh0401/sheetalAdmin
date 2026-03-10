@@ -14,7 +14,11 @@ export const createCouponService = async (data) => {
         };
     }
 
-    // Enforce Scope and ModelRef based on applicableIds
+    // If this coupon is set as homepage, unset all others
+    if (data.showOnHomepage === true) {
+      await Coupon.updateMany({}, { $set: { showOnHomepage: false } });
+    }
+
     if (data.applicableIds && data.applicableIds.length > 0) {
       if (data.scope === "Specific_Product") {
         data.modelRef = "Product";
@@ -39,7 +43,14 @@ export const updateCouponService = async (id, updateData) => {
       updateData.code = updateData.code.toUpperCase();
     }
 
-    // Enforce Scope and ModelRef based on applicableIds
+    // If this coupon is set as homepage, unset all others first
+    if (updateData.showOnHomepage === true) {
+      await Coupon.updateMany(
+        { _id: { $ne: id } },
+        { $set: { showOnHomepage: false } },
+      );
+    }
+
     if (updateData.applicableIds && updateData.applicableIds.length > 0) {
       if (updateData.scope === "Specific_Product") {
         updateData.modelRef = "Product";
@@ -197,25 +208,23 @@ export const applyCouponService = async (
         // Calculate TOTAL QUANTITY of applicable items, not just line item count.
         const totalApplicableQuantity = bogoApplicableItems.reduce(
           (sum, item) => sum + item.quantity,
-          0
+          0,
         );
 
-        if (
-          totalApplicableQuantity <
-          coupon.buyQuantity + coupon.getQuantity
-        ) {
+        if (totalApplicableQuantity < coupon.buyQuantity + coupon.getQuantity) {
           return {
             success: false,
             statusCode: 400,
-            message: `BOGO requires at least ${coupon.buyQuantity + coupon.getQuantity
-              } qualifying items in cart`,
+            message: `BOGO requires at least ${
+              coupon.buyQuantity + coupon.getQuantity
+            } qualifying items in cart`,
           };
         }
 
         // 3. Sort items by effective price to find the cheapest ones
         // We want to make the CHEAPEST units free.
         const sortedItems = [...bogoApplicableItems].sort(
-          (a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price)
+          (a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price),
         );
 
         let bogoDiscount = 0;
@@ -256,7 +265,8 @@ export const applyCouponService = async (
 
             // Calculate proportional discount for this specific line item
             // based on how many units of it were considered "free"
-            const itemTotalDiscount = (unitsToDiscount * itemPrice) * discountRatio;
+            const itemTotalDiscount =
+              unitsToDiscount * itemPrice * discountRatio;
 
             itemWiseDiscount[item._id] = Math.round(itemTotalDiscount);
             remainingFreeUnits -= unitsToDiscount;
@@ -293,7 +303,12 @@ export const applyCouponService = async (
   }
 };
 
-export const getAllCouponsService = async ({ page, limit, search, showOnHomepage }) => {
+export const getAllCouponsService = async ({
+  page,
+  limit,
+  search,
+  showOnHomepage,
+}) => {
   try {
     const now = new Date();
     const baseQuery = {

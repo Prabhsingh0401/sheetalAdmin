@@ -21,6 +21,7 @@ import {
   InstagramIcon,
   UserIcon,
   ClipboardClock,
+  Home,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -58,6 +59,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
       label: "Site Content",
       href: "#",
       children: [
+        { icon: Home, label: "Homepage", href: "/admin/cms/homepage" },
         { icon: Layout, label: "Banners", href: "/admin/cms/banners" },
         { icon: BookOpen, label: "Lookbooks", href: "/admin/cms/lookbooks" },
         { icon: FileText, label: "Text Pages", href: "/admin/cms/pages" },

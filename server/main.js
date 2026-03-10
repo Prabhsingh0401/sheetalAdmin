@@ -33,6 +33,7 @@ import salesRouter from './routes/sales.routes.js'
 import instaRouter from './routes/instagram.routes.js'
 import testimonialRouter from './routes/testimonial.routes.js'
 import appointmentRouter from './routes/appointment.routes.js'
+import homepageRouter from './routes/homepage.routes.js'
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -162,6 +163,7 @@ app.use('/api/v1/sales', salesRouter)
 app.use('/api/v1/instacards', instaRouter)
 app.use('/api/v1/testimonials', testimonialRouter)
 app.use('/api/v1/appointments', appointmentRouter)
+app.use('/api/v1/homepage', homepageRouter)
 
 app.get("/", (req, res) => {
   const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;

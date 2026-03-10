@@ -21,6 +21,7 @@ export default function CouponModal({
   onClose,
   onSuccess,
   initialData = null,
+  allCoupons = [],
 }) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]); // State for categories
@@ -234,12 +235,25 @@ export default function CouponModal({
             </div>
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                // If trying to enable, check if another coupon already has it
+                if (!formData.showOnHomepage) {
+                  const conflict = allCoupons.find(
+                    (c) => c.showOnHomepage && c._id !== initialData?._id,
+                  );
+                  if (conflict) {
+                    toast.error(
+                      `"${conflict.code || conflict.description}" is already set as the homepage coupon. Disable it first.`,
+                      { duration: 4000 },
+                    );
+                    return;
+                  }
+                }
                 setFormData((prev) => ({
                   ...prev,
                   showOnHomepage: !prev.showOnHomepage,
-                }))
-              }
+                }));
+              }}
               className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
                 formData.showOnHomepage ? "bg-slate-900" : "bg-slate-200"
               }`}

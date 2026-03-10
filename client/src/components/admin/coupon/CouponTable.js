@@ -282,10 +282,11 @@ export default function CouponTable({ refreshStats }) {
 
                   <td className="px-4 py-4">
                     <span
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${c.isActive
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-rose-50 text-rose-700 border-rose-200"
-                        }`}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${
+                        c.isActive
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
+                      }`}
                     >
                       {c.isActive ? "Live" : "Paused"}
                     </span>
@@ -420,6 +421,7 @@ export default function CouponTable({ refreshStats }) {
         onClose={() => setShowModal(false)}
         onSuccess={fetchCoupons}
         initialData={editData}
+        allCoupons={coupons} // ← add this
       />
       <ViewCouponDrawer
         isOpen={showDrawer}
