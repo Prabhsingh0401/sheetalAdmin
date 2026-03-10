@@ -1,54 +1,165 @@
-import Order from '../models/order.model.js';
+import Order from "../models/order.model.js";
 
 /**
  * Helper — builds a $match stage from query params.
  * Accepts:  ?period=weekly|monthly|yearly  OR  ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
  * Falls back to last 7 days when nothing is supplied.
  */
-function buildDateMatch(query) {
-  const { period, startDate, endDate } = query;
 
-  if (startDate || endDate) {
-    const match = {};
-    if (startDate) match.$gte = new Date(startDate);
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);          // include the full end day
-      match.$lte = end;
-    }
-    return { createdAt: match };
+/* ---------------- GROUPING ---------------- */
+
+function buildGrouping(period) {
+  switch (period) {
+    case "monthly":
+      return {
+        format: "%Y-%U", // week number
+        label: "Week %U",
+      };
+
+    case "yearly":
+      return {
+        format: "%Y-%m", // month
+        label: "%b",
+      };
+
+    default:
+      return {
+        format: "%Y-%m-%d", // day
+        label: "%d %b",
+      };
   }
+}
 
+// FIX 1: Added missing `getGrouping` function used by `getChartData`
+function getDateRange(period) {
   const now = new Date();
   let from;
 
   switch (period) {
-    case 'monthly': from = new Date(now.getFullYear(), now.getMonth(), 1); break;    // 1st of current calendar month
-    case 'yearly':  from = new Date(now.getFullYear(), 0, 1);              break;    // Jan 1st of current year
-    case 'weekly':
-    default: {                                                                        // Mon of current calendar week
-      const diff = now.getDay() === 0 ? 6 : now.getDay() - 1;
-      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+    case "monthly":
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
-    }
+
+    case "yearly":
+      from = new Date(now.getFullYear(), 0, 1);
+      break;
+
+    case "weekly":
+    default:
+      from = new Date();
+      from.setDate(now.getDate() - 6);
+      break;
   }
 
   from.setHours(0, 0, 0, 0);
-  return { createdAt: { $gte: from } };
+  return { $gte: from };
 }
 
+/* ---------------- GROUPING ---------------- */
 
-/**
- * Returns the $dateToString format + groupId depending on period.
- */
-function buildGrouping(period) {
+function getGrouping(period) {
   switch (period) {
-    case 'monthly': return { format: '%Y-%m', label: '%b %Y' };   // Jan 2025
-    case 'yearly':  return { format: '%Y',    label: '%Y'      };  // 2025
-    default:        return { format: '%Y-%m-%d', label: '%d %b' }; // 14 Jun
+    case "monthly":
+      return "%Y-%U"; // week number
+
+    case "yearly":
+      return "%Y-%m"; // month
+
+    default:
+      return "%Y-%m-%d"; // day
   }
 }
 
+/* ---------------- WEEKLY FILL ---------------- */
+
+function fillWeeklyData(results) {
+  const days = [];
+  const today = new Date();
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+
+    const key = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
+
+    const found = results.find(r => r.date === key);
+
+    days.push(
+      found || {
+        date: key,
+        name: label,
+        sales: 0,
+        revenue: 0,
+        unitsSold: 0
+      }
+    );
+  }
+
+  return days;
+}
+
+/* ---------------- MONTHLY FILL ---------------- */
+
+function fillMonthlyData(results) {
+  const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
+  const data = [];
+
+  weeks.forEach((week, i) => {
+    const found = results[i];
+
+    data.push(
+      found || {
+        name: week,
+        sales: 0,
+        revenue: 0,
+        unitsSold: 0,
+      },
+    );
+  });
+
+  return data;
+}
+
+/* ---------------- YEARLY FILL ---------------- */
+
+function fillYearlyData(results) {
+  const months = [];
+  const year = new Date().getFullYear();
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  for (let i = 0; i < 12; i++) {
+    const key = `${year}-${String(i + 1).padStart(2, "0")}`;
+
+    const found = results.find((r) => r.date === key);
+
+    months.push(
+      found || {
+        date: key,
+        name: monthNames[i],
+        sales: 0,
+        revenue: 0,
+        unitsSold: 0,
+      },
+    );
+  }
+
+  return months;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/sales-data
 // Query: period=weekly|monthly|yearly  OR  startDate / endDate
@@ -56,7 +167,7 @@ function buildGrouping(period) {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getSalesData = async (req, res) => {
   try {
-    const period = req.query.period || 'weekly';
+    const period = req.query.period || "weekly";
     const dateMatch = buildDateMatch(req.query);
     const { format, label } = buildGrouping(period);
 
@@ -65,17 +176,19 @@ export const getSalesData = async (req, res) => {
       {
         $match: {
           ...dateMatch,
-          orderStatus: { $nin: ['Cancelled'] },
+          orderStatus: { $nin: ["Cancelled"] },
         },
       },
 
       // 2. Group by date bucket — count orders + total items sold
       {
         $group: {
-          _id: { $dateToString: { format, date: '$createdAt' } },
-          label: { $first: { $dateToString: { format: label, date: '$createdAt' } } },
+          _id: { $dateToString: { format, date: "$createdAt" } },
+          label: {
+            $first: { $dateToString: { format: label, date: "$createdAt" } },
+          },
           orders: { $sum: 1 },
-          unitsSold: { $sum: { $sum: '$orderItems.quantity' } },
+          unitsSold: { $sum: { $sum: "$orderItems.quantity" } },
         },
       },
 
@@ -86,9 +199,9 @@ export const getSalesData = async (req, res) => {
       {
         $project: {
           _id: 0,
-          date: '$_id',
-          name: '$label',
-          sales: '$orders',
+          date: "$_id",
+          name: "$label",
+          sales: "$orders",
           unitsSold: 1,
         },
       },
@@ -101,10 +214,10 @@ export const getSalesData = async (req, res) => {
       data: results,
     });
   } catch (error) {
-    console.error('[getSalesData]', error);
+    console.error("[getSalesData]", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch sales data.',
+      message: "Failed to fetch sales data.",
       error: error.message,
     });
   }
@@ -117,7 +230,7 @@ export const getSalesData = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getRevenueData = async (req, res) => {
   try {
-    const period = req.query.period || 'weekly';
+    const period = req.query.period || "weekly";
     const dateMatch = buildDateMatch(req.query);
     const { format, label } = buildGrouping(period);
 
@@ -126,19 +239,21 @@ export const getRevenueData = async (req, res) => {
       {
         $match: {
           ...dateMatch,
-          orderStatus: { $nin: ['Cancelled', 'Returned'] },
+          orderStatus: { $nin: ["Cancelled", "Returned"] },
         },
       },
 
       // 2. Group by date bucket — sum revenue fields
       {
         $group: {
-          _id: { $dateToString: { format, date: '$createdAt' } },
-          label: { $first: { $dateToString: { format: label, date: '$createdAt' } } },
-          revenue: { $sum: '$totalPrice' },
-          itemsRevenue: { $sum: '$itemsPrice' },
-          tax: { $sum: '$taxPrice' },
-          shipping: { $sum: '$shippingPrice' },
+          _id: { $dateToString: { format, date: "$createdAt" } },
+          label: {
+            $first: { $dateToString: { format: label, date: "$createdAt" } },
+          },
+          revenue: { $sum: "$totalPrice" },
+          itemsRevenue: { $sum: "$itemsPrice" },
+          tax: { $sum: "$taxPrice" },
+          shipping: { $sum: "$shippingPrice" },
           orders: { $sum: 1 },
         },
       },
@@ -150,12 +265,12 @@ export const getRevenueData = async (req, res) => {
       {
         $project: {
           _id: 0,
-          date: '$_id',
-          name: '$label',
-          revenue: { $round: ['$revenue', 2] },
-          itemsRevenue: { $round: ['$itemsRevenue', 2] },
-          tax: { $round: ['$tax', 2] },
-          shipping: { $round: ['$shipping', 2] },
+          date: "$_id",
+          name: "$label",
+          revenue: { $round: ["$revenue", 2] },
+          itemsRevenue: { $round: ["$itemsRevenue", 2] },
+          tax: { $round: ["$tax", 2] },
+          shipping: { $round: ["$shipping", 2] },
           orders: 1,
         },
       },
@@ -168,10 +283,10 @@ export const getRevenueData = async (req, res) => {
       data: results,
     });
   } catch (error) {
-    console.error('[getRevenueData]', error);
+    console.error("[getRevenueData]", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch revenue data.',
+      message: "Failed to fetch revenue data.",
       error: error.message,
     });
   }
@@ -183,60 +298,76 @@ export const getRevenueData = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getChartData = async (req, res) => {
   try {
-    const period = req.query.period || 'weekly';
-    const dateMatch = buildDateMatch(req.query);
-    const { format, label } = buildGrouping(period);
+    const period = req.query.period || "weekly";
 
     const results = await Order.aggregate([
       {
         $match: {
-          ...dateMatch,
-          orderStatus: { $nin: ['Cancelled', 'Returned'] },
+          createdAt: getDateRange(period),
+          orderStatus: { $nin: ["Cancelled", "Returned"] },
         },
       },
       {
         $group: {
-          _id: { $dateToString: { format, date: '$createdAt' } },
-          name: { $first: { $dateToString: { format: label, date: '$createdAt' } } },
+          _id: {
+            $dateToString: {
+              format: getGrouping(period),
+              date: "$createdAt",
+            },
+          },
           sales: { $sum: 1 },
-          revenue: { $sum: '$totalPrice' },
-          unitsSold: { $sum: { $sum: '$orderItems.quantity' } },
+          revenue: { $sum: "$totalPrice" },
+          unitsSold: { $sum: { $sum: "$orderItems.quantity" } },
         },
       },
       { $sort: { _id: 1 } },
       {
         $project: {
           _id: 0,
-          date: '$_id',
-          name: 1,
+          date: "$_id",
+          name: "$_id",
           sales: 1,
-          revenue: { $round: ['$revenue', 2] },
+          revenue: { $round: ["$revenue", 2] },
           unitsSold: 1,
         },
       },
     ]);
 
-    // Summary totals for the stat pills
-    const totals = results.reduce(
+    let data = results;
+
+    if (period === "weekly") {
+      data = fillWeeklyData(results);
+    }
+
+    if (period === "monthly") {
+      data = fillMonthlyData(results);
+    }
+
+    if (period === "yearly") {
+      data = fillYearlyData(results);
+    }
+
+    const totals = data.reduce(
       (acc, d) => ({
         sales: acc.sales + d.sales,
         revenue: acc.revenue + d.revenue,
         unitsSold: acc.unitsSold + d.unitsSold,
       }),
-      { sales: 0, revenue: 0, unitsSold: 0 }
+      { sales: 0, revenue: 0, unitsSold: 0 },
     );
 
     res.status(200).json({
       success: true,
       period,
       totals,
-      data: results,
+      data,
     });
   } catch (error) {
-    console.error('[getChartData]', error);
+    console.error("[getChartData]", error);
+
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch chart data.',
+      message: "Failed to fetch chart data",
       error: error.message,
     });
   }
@@ -247,16 +378,16 @@ export const getBestSellingProducts = async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 5, 50);
 
     const results = await Order.aggregate([
-      { $match: { orderStatus: 'Delivered' } },
-      { $unwind: '$orderItems' },
+      { $match: { orderStatus: "Delivered" } },
+      { $unwind: "$orderItems" },
       {
         $group: {
-          _id: '$orderItems.product',
-          name: { $first: '$orderItems.name' },
-          image: { $first: '$orderItems.image' },
-          unitsSold: { $sum: '$orderItems.quantity' },
+          _id: "$orderItems.product",
+          name: { $first: "$orderItems.name" },
+          image: { $first: "$orderItems.image" },
+          unitsSold: { $sum: "$orderItems.quantity" },
           totalRevenue: {
-            $sum: { $multiply: ['$orderItems.quantity', '$orderItems.price'] },
+            $sum: { $multiply: ["$orderItems.quantity", "$orderItems.price"] },
           },
         },
       },
@@ -265,7 +396,7 @@ export const getBestSellingProducts = async (req, res) => {
       {
         $project: {
           _id: 0,
-          productId: '$_id',
+          productId: "$_id",
           name: 1,
           image: 1,
           unitsSold: 1,
@@ -274,12 +405,14 @@ export const getBestSellingProducts = async (req, res) => {
       },
     ]);
 
-    res.status(200).json({ success: true, count: results.length, data: results });
+    res
+      .status(200)
+      .json({ success: true, count: results.length, data: results });
   } catch (error) {
-    console.error('[getBestSellingProducts]', error);
+    console.error("[getBestSellingProducts]", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch best-selling products.',
+      message: "Failed to fetch best-selling products.",
       error: error.message,
     });
   }

@@ -1,11 +1,10 @@
 "use client";
+
 import {
   LayoutDashboard,
   ShoppingBag,
   Users,
-  Settings,
   X,
-  LogOut,
   ShoppingCart,
   ListTree,
   Star,
@@ -13,9 +12,18 @@ import {
   Monitor,
   Newspaper,
   ChartNoAxesCombined,
+  ChevronDown,
+  BarChart2,
+  FileText,
+  TrendingUp,
+  Layout,
+  BookOpen,
+  InstagramIcon,
+  UserIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useRef } from "react";
 import useLogoutModal from "@/hooks/useLogoutModal";
 
 export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
@@ -29,12 +37,34 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: Users, label: "Customers", href: "/admin/customers" },
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
-    { icon: ChartNoAxesCombined, label: "Sales & Reports", href: "/admin/sales-report" },
-    { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
-    { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
-    { icon: Monitor, label: "Site Content", href: "/admin/cms" },
-    { icon: ListTree, label: "Size Chart", href: "/admin/size-chart" },
     { icon: Star, label: "Reviews", href: "/admin/reviews" },
+    { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
+    {
+      icon: ChartNoAxesCombined,
+      label: "Sales & Reports",
+      href: "/admin/sales-report",
+      children: [
+        {
+          icon: BarChart2,
+          label: "Sales Overview",
+          href: "/admin/sales-report",
+        },
+      ],
+    },
+    {
+      icon: Monitor,
+      label: "Site Content",
+      href: "#",
+      children: [
+        { icon: Layout, label: "Banners", href: "/admin/cms/banners" },
+        { icon: BookOpen, label: "Lookbooks", href: "/admin/cms/lookbooks" },
+        { icon: FileText, label: "Text Pages", href: "/admin/cms/pages" },
+        { icon: InstagramIcon, label: "Instagram Cards", href: "/admin/cms/instagram" },
+        { icon: UserIcon, label: "Testimonials", href: "/admin/cms/testimonials" },
+      ],
+    },
+    { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
+    { icon: ListTree, label: "Size Chart", href: "/admin/size-chart" },
   ];
 
   return (
@@ -52,12 +82,12 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
         }`}
       >
         <div className="h-full flex flex-col">
-
-          {/* Logo */}
           <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="font-bold text-base text-white leading-none">S</span>
+                <span className="font-bold text-base text-white leading-none">
+                  S
+                </span>
               </div>
               <span className="text-base font-bold tracking-tight text-slate-900">
                 {storeName}
@@ -72,50 +102,142 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
             </button>
           </div>
 
-          {/* Nav */}
           <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
-            {menuItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/admin" && pathname.startsWith(item.href));
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 group ${
-                    isActive
-                      ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-                      : "text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-800"
-                  }`}
-                >
-                  <Icon
-                    size={17}
-                    className={
-                      isActive
-                        ? "text-white"
-                        : "text-slate-400 group-hover:text-slate-600 transition-colors"
-                    }
-                  />
-                  <span className="flex-1">{item.label}</span>
-                </Link>
-              );
-            })}
+            {menuItems.map((item) => (
+              <NavItem
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                setIsOpen={setIsOpen}
+              />
+            ))}
           </nav>
-
         </div>
       </aside>
 
       <LogoutModal />
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+        }
       `}</style>
     </>
+  );
+}
+
+function NavItem({ item, pathname, setIsOpen }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const timeoutRef = useRef(null);
+  const Icon = item.icon;
+
+  const isActive =
+    pathname === item.href ||
+    (item.href !== "/admin" && pathname.startsWith(item.href));
+
+  if (!item.children) {
+    return (
+      <Link
+        href={item.href}
+        onClick={() => setIsOpen(false)}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 group ${
+          isActive
+            ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
+            : "text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-800"
+        }`}
+      >
+        <Icon
+          size={17}
+          className={
+            isActive
+              ? "text-white"
+              : "text-slate-400 group-hover:text-slate-600 transition-colors"
+          }
+        />
+        <span className="flex-1">{item.label}</span>
+      </Link>
+    );
+  }
+
+  const isParentActive = item.children.some(
+    (child) => pathname === child.href || pathname.startsWith(child.href),
+  );
+
+  return (
+    <div>
+      <Link
+        href={item.href}
+        onClick={() => setIsOpen(false)}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 group ${
+          isParentActive
+            ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
+            : "text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-800"
+        }`}
+      >
+        <Icon
+          size={17}
+          className={
+            isParentActive
+              ? "text-white"
+              : "text-slate-400 group-hover:text-slate-600 transition-colors"
+          }
+        />
+        <span className="flex-1">{item.label}</span>
+        <span onClick={()=> setIsHovered(!isHovered)} className="hover:bg-white/30 rounded w-4 h-4 flex items-center justify-center">
+          <ChevronDown
+          size={14}
+          className={`transition-transform duration-300 ${isHovered ? "rotate-180" : "rotate-0"} ${
+            isParentActive ? "text-white/70" : "text-slate-400"
+          }`}
+        />
+        </span>
+      </Link>
+
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isHovered ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="mt-0.5 ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5 py-1">
+          {item.children.map((child) => {
+            const ChildIcon = child.icon;
+            const isChildActive =
+              pathname === child.href || pathname.startsWith(child.href);
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 group ${
+                  isChildActive
+                    ? "bg-indigo-50 text-indigo-600 font-semibold"
+                    : "text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-800"
+                }`}
+              >
+                <ChildIcon
+                  size={15}
+                  className={
+                    isChildActive
+                      ? "text-indigo-500"
+                      : "text-slate-400 group-hover:text-slate-600"
+                  }
+                />
+                <span>{child.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
