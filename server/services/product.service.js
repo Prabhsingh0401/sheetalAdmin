@@ -686,7 +686,7 @@ export const bulkImportService = async (files, userId) => {
   // Filename -> File Object
   const imageMap = new Map();
   imageFiles.forEach(file => {
-    imageMap.set(file.originalname, file);
+    imageMap.set(file.originalname.trim().toLowerCase(), file);
   });
 
   // Pre-fetch all categories to avoid N+1 queries
@@ -720,7 +720,7 @@ export const bulkImportService = async (files, userId) => {
       // 3. Image Processing Helper
       const processImage = async (filename, folder = "products") => {
         if (!filename) return null;
-        const file = imageMap.get(filename.trim());
+        const file = imageMap.get(filename.trim().toLowerCase());
         if (file) {
           // Upload to S3
           const s3Result = await uploadS3File(file.path, folder);
@@ -738,8 +738,13 @@ export const bulkImportService = async (files, userId) => {
 
       // 5. Process Gallery Images
       let galleryImages = [];
+      const safeSplit = (val) => {
+        if (val == null) return [];
+        return val.toString().split(',').map(s => s.trim()).filter(Boolean);
+      };
+
       if (item.Images) {
-        const imageNames = item.Images.split(',').map(s => s.trim());
+        const imageNames = safeSplit(item.Images);
         for (const imgName of imageNames) {
           const img = await processImage(imgName);
           if (img) galleryImages.push(img);
@@ -750,7 +755,16 @@ export const bulkImportService = async (files, userId) => {
       let variants = [];
       if (item.Variants) {
         try {
-          const parsedVariants = JSON.parse(item.Variants);
+          let vStr = item.Variants.toString().trim();
+          // Relax parsing: replace typographer/smart quotes with normal double quotes
+          vStr = vStr.replace(/[“”]/g, '"');
+          
+          // Naive fix if user exclusively used single quotes for the JSON keys/values
+          if (vStr.includes("'") && !vStr.includes('"')) {
+            vStr = vStr.replace(/'/g, '"');
+          }
+
+          const parsedVariants = JSON.parse(vStr);
           for (const v of parsedVariants) {
             let v_image = null;
             if (v.imageFilename) {
@@ -764,7 +778,7 @@ export const bulkImportService = async (files, userId) => {
             });
           }
         } catch (e) {
-          errors.push(`Row ${rowIndex}: Invalid Variants JSON`);
+          errors.push(`Row ${rowIndex}: Invalid Variants JSON - ${e.message}`);
         }
       }
 
@@ -786,13 +800,13 @@ export const bulkImportService = async (files, userId) => {
         price: Number(item.Price) || 0,
         stock: Number(item.Stock) || 0,
         status: item.Status || "Active",
-        wearType: item.WearType?.split(',').map(s => s.trim()) || [],
-        occasion: item.Occasion?.split(',').map(s => s.trim()) || [],
-        tags: item.Tags?.split(',').map(s => s.trim()) || [],
-        style: item.Style?.split(',').map(s => s.trim()) || [],
-        work: item.Work?.split(',').map(s => s.trim()) || [],
-        fabric: item.Fabric?.split(',').map(s => s.trim()) || [],
-        productType: item.Type?.split(',').map(s => s.trim()) || [],
+        wearType: safeSplit(item.WearType),
+        occasion: safeSplit(item.Occasion),
+        tags: safeSplit(item.Tags),
+        style: safeSplit(item.Style),
+        work: safeSplit(item.Work),
+        fabric: safeSplit(item.Fabric),
+        productType: safeSplit(item.Type),
         mainImage: mainImage || { url: "", public_id: "" }, // Schema might require url
         hoverImage: hoverImage || { url: "", public_id: "" },
         images: galleryImages,

@@ -29,7 +29,18 @@ const sendEmailOtp = async (req, res, next) => {
 const verifyEmailOtp = async (req, res, next) => {
   try {
     const { email, otp } = req.body;
-    const result = await verifyEmailOtpService(email, otp);
+    let currentUserId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        const decoded = verifyToken(token);
+        currentUserId = decoded.id;
+      } catch (e) {
+        console.error("Invalid token in email verification:", e.message);
+      }
+    }
+    const result = await verifyEmailOtpService(email, otp, currentUserId);
     res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);

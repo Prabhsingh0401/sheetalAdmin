@@ -47,7 +47,7 @@ router.post(
   isAdmin,
   uploadTo("temp/bulk").fields([
     { name: "file", maxCount: 1 },
-    { name: "images", maxCount: 50 }, // Allow up to 50 images
+    { name: "images", maxCount: 500 }, // Allow up to 500 images for bulk import
   ]),
   bulkImportProducts,
 );

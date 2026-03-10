@@ -125,9 +125,9 @@ export const bulkImportProducts = async (req, res, next) => {
 
 export const getSampleExcel = async (req, res, next) => {
   try {
-    const filePath = "dummy_product_upload.xlsx";
+    const filePath = "sample_product_import.xlsx";
     if (fs.existsSync(filePath)) {
-      res.download(filePath, "product_import_template.xlsx");
+      res.download(filePath, "sample_product_import.xlsx");
     } else {
       res.status(404).json({ success: false, message: "Sample file not found" });
     }
