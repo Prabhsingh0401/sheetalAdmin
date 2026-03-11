@@ -13,6 +13,7 @@ import TrafficSources from "@/components/admin/sales/TrafficSource";
 
 import { getBestSellingItems } from "@/services/salesService";
 import { getOrderStats } from "@/services/orderService";
+import { useMostViewed } from "@/hooks/useMostViewed";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data — swap each for a real API call when ready
@@ -131,6 +132,7 @@ export default function SalesPage() {
   const [bestSellingProducts, setBestSellingProducts] = useState([]);
   const [stats, setStats] = useState([]);
   const [fetchError, setFetchError] = useState(null);
+  const { items, loading } = useMostViewed(10);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -167,7 +169,9 @@ export default function SalesPage() {
         },
         {
           label: "Average Order Value",
-          value: formatCurrency(order.data.totalRevenue/order.data.totalOrders),
+          value: formatCurrency(
+            order.data.totalRevenue / order.data.totalOrders,
+          ),
           change: "10%",
           trend: "up",
           icon: BarChart2,
@@ -196,7 +200,6 @@ export default function SalesPage() {
 
   return (
     <main className="flex-1 px-4 lg:px-10 max-w-350 mx-auto w-full">
-
       <StatsRow stats={stats} />
 
       <FiltersBar />
@@ -212,7 +215,7 @@ export default function SalesPage() {
           products={bestSellingProducts.data}
           error={fetchError}
         />
-        <MostViewedItems items={MOCK_MOST_VIEWED} />
+        <MostViewedItems items={loading ? [] : items} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

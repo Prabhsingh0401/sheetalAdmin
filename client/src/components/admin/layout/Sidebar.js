@@ -23,6 +23,7 @@ import {
   ClipboardClock,
   Home,
   Headset,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -50,9 +51,19 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
       href: "/admin/sales-report",
       children: [
         {
-          icon: BarChart2,
-          label: "Sales Overview",
-          href: "/admin/sales-report",
+          icon: TrendingUp,
+          label: "Best Selling Products",
+          href: "/admin/sales-report/best-selling",
+        },
+        {
+          icon: Eye,
+          label: "Most Viewed Products",
+          href: "/admin/sales-report/most-viewed",
+        },
+        {
+          icon: Users,
+          label: "Traffic Source",
+          href: "/admin/sales-report/traffic",
         },
       ],
     },

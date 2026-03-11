@@ -3,6 +3,7 @@ import successResponse from "../utils/successResponse.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import fs from "fs";
+import Product from "../models/product.model.js";
 
 const clearFiles = async (files) => {
   if (!files) return;
@@ -268,12 +269,43 @@ export const getTrendingProducts = async (req, res, next) => {
   }
 };
 
-export const incrementViewCount = async (req, res, next) => {
+// INCREMENT view count (call on Quick View OR product page visit)
+export const incrementViewCount = async (req, res) => {
   try {
-    const result = await productService.incrementViewCountService(req.params.id);
-    if (!result.success) return res.status(result.statusCode).json(result);
-    return successResponse(res, 200, null, "View count incremented");
-  } catch (error) {
-    next(error);
+    const { slug } = req.params;
+    const product = await Product.findOneAndUpdate(
+      { slug },
+      { $inc: { viewCount: 1 } },
+      { new: true, select: "viewCount" }
+    );
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    res.json({ success: true, viewCount: product.viewCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET most viewed products (admin dashboard)
+export const getMostViewedProducts = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const products = await Product.find({ isActive: true })
+      .sort({ viewCount: -1 })
+      .limit(limit)
+      .select("name viewCount category slug mainImage")
+      .populate("category", "name");
+
+    const items = products.map((p, i) => ({
+      rank: i + 1,
+      name: p.name,
+      slug: p.slug,
+      category: p.category?.name || "Uncategorized",
+      views: p.viewCount,
+      image: p.mainImage?.url || null,
+    }));
+
+    res.json({ success: true, items });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
