@@ -50,7 +50,7 @@ export function FilterTab({ label, active, count, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+      className={`flex items-center gap-2 px-4 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all ${
         active
           ? "bg-white text-slate-900 shadow-sm border border-slate-200"
           : "text-slate-500 hover:text-slate-700"

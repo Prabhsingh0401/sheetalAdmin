@@ -24,7 +24,7 @@ export default function ProductsPage() {
     }
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { 
     fetchStats();
   }, [fetchStats]);
 

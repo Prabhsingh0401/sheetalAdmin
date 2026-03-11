@@ -91,14 +91,14 @@ function SortableBannerRow({ banner, onEdit, onDelete }) {
         <div className="flex justify-end gap-4 text-slate-400">
           <button
             title="Edit"
-            className="hover:text-blue-600 transition-colors"
+            className="hover:text-blue-600 transition-colors cursor-pointer"
             onClick={() => onEdit(banner)}
           >
             <Edit3 size={18} />
           </button>
           <button
             title="Delete"
-            className="hover:text-rose-600 transition-colors"
+            className="hover:text-rose-600 transition-colors cursor-pointer"
             onClick={() => onDelete(banner)}
           >
             <Trash2 size={18} />
@@ -220,7 +220,7 @@ export default function BannerTable({ refreshStats }) {
           <button
             onClick={() => fetchBanners(true)}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+            className="p-2 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -230,7 +230,7 @@ export default function BannerTable({ refreshStats }) {
             setEditData(null);
             setShowModal(true);
           }}
-          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95"
+          className="bg-slate-900 hover:bg-black cursor-pointer text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95"
         >
           + Add Banner
         </button>

@@ -22,7 +22,7 @@ export default function DeleteConfirmModal({
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700"
+          className="absolute cursor-pointer top-4 right-4 text-slate-400 hover:text-slate-700"
         >
           <X size={18} />
         </button>
@@ -46,13 +46,13 @@ export default function DeleteConfirmModal({
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 border border-slate-300 text-slate-700 py-2 rounded hover:bg-slate-50"
+            className="flex-1 border cursor-pointer border-slate-300 text-slate-700 py-2 rounded hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 bg-rose-600 text-white py-2 rounded hover:bg-rose-700"
+            className="flex-1 cursor-pointer bg-rose-600 text-white py-2 rounded hover:bg-rose-700"
           >
             Yes, Delete
           </button>

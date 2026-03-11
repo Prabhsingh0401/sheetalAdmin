@@ -1,4 +1,5 @@
 import Enquiry from "../models/enquiry.model.js";
+import {sendAvailabilityEmail} from '../services/enquiry.service.js'
 
 // @desc    Submit an enquiry
 // @route   POST /api/v1/enquiries
@@ -87,4 +88,37 @@ export const deleteEnquiry = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+// @desc    Send Enquiry email
+// @route   DELETE /api/v1/enquiries/:id/send-availability
+// @access  Private/Admin
+export const sendAvailability = async (req, res) => {
+  try {
+    const enquiry = await Enquiry.findById(req.params.id);
+
+    console.log(enquiry)
+    if (!enquiry) {
+      return res.status(404).json({ success: false, message: "Enquiry not found" });
+    }
+
+
+    await sendAvailabilityEmail({
+      name: enquiry.name,
+      email: enquiry.email,
+      productName: enquiry.productName,
+      size: enquiry.size,
+    });
+
+    enquiry.status = "replied";
+    await enquiry.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Availability email sent",
+      enquiry,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

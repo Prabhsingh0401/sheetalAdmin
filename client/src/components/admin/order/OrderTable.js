@@ -158,7 +158,7 @@ export default function OrderTable({ refreshStats }) {
           <button
             onClick={() => fetchOrders(true)}
             disabled={loading}
-            className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+            className="p-2.5 text-slate-400 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
           >
             <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
           </button>
@@ -166,7 +166,7 @@ export default function OrderTable({ refreshStats }) {
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-xl text-sm font-black tracking-tight transition-all shadow-lg shadow-slate-200 active:scale-95 flex items-center gap-2"
+          className="bg-slate-900 cursor-pointer   hover:bg-black text-white px-6 py-2.5 rounded-xl text-sm font-black tracking-tight transition-all shadow-lg shadow-slate-200 active:scale-95 flex items-center gap-2"
         >
           <Plus size={18} /> Add Manual Order
         </button>
@@ -280,7 +280,7 @@ export default function OrderTable({ refreshStats }) {
                         onClick={() => handleAssignAwb(o._id)}
                         disabled={awbLoading === o._id}
                         title="Assign AWB via Shiprocket"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100 hover:border-violet-400 transition-all text-[10px] font-black uppercase tracking-wide disabled:opacity-50 disabled:cursor-wait"
+                        className="inline-flex cursor-pointer items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100 hover:border-violet-400 transition-all text-[10px] font-black uppercase tracking-wide disabled:opacity-50 disabled:cursor-wait"
                       >
                         {awbLoading === o._id ? (
                           <Loader2 size={11} className="animate-spin" />
@@ -300,7 +300,7 @@ export default function OrderTable({ refreshStats }) {
                           setViewOrder(o);
                           setShowDrawer(true);
                         }}
-                        className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all"
+                        className="p-2 cursor-pointer hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all"
                       >
                         <Eye size={16} />
                       </button>
@@ -309,7 +309,7 @@ export default function OrderTable({ refreshStats }) {
                           setEditData(o);
                           setShowStatusModal(true);
                         }}
-                        className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
+                        className="p-2 cursor-pointer hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
                       >
                         <Edit3 size={16} />
                       </button>
@@ -370,7 +370,7 @@ export default function OrderTable({ refreshStats }) {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
-              className="p-2 border border-slate-200 rounded-xl bg-white disabled:opacity-30 hover:bg-slate-100 transition-all shadow-sm"
+              className="p-2 border border-slate-200 cursor-pointer rounded-xl bg-white disabled:opacity-30 hover:bg-slate-100 transition-all shadow-sm"
             >
               <ChevronLeft size={16} />
             </button>
@@ -380,7 +380,7 @@ export default function OrderTable({ refreshStats }) {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`h-9 min-w-[36px] rounded-xl text-xs font-black transition-all ${currentPage === i + 1
+                  className={`h-9 min-w-[36px] cursor-pointer rounded-xl text-xs font-black transition-all ${currentPage === i + 1
                     ? "bg-slate-900 text-white shadow-lg"
                     : "bg-white border border-slate-200 text-slate-500 hover:border-slate-400"
                     }`}
@@ -393,7 +393,7 @@ export default function OrderTable({ refreshStats }) {
             <button
               disabled={currentPage === totalPages || totalPages === 0}
               onClick={() => setCurrentPage((p) => p + 1)}
-              className="p-2 border border-slate-200 rounded-xl bg-white disabled:opacity-30 hover:bg-slate-100 transition-all shadow-sm"
+              className="p-2 border cursor-pointer border-slate-200 rounded-xl bg-white disabled:opacity-30 hover:bg-slate-100 transition-all shadow-sm"
             >
               <ChevronRight size={16} />
             </button>

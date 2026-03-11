@@ -122,7 +122,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
               }}
               className="flex items-center gap-3 group"
             >
-              <div className="text-right hidden sm:block">
+              <div className="text-right hidden sm:block ">
                 <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors leading-none mb-1">
                   {storeName}
                 </p>
@@ -130,7 +130,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
                   {storeName} Panel
                 </p>
               </div>
-              <div className="h-9 w-9 bg-[#111827] rounded-xl flex items-center justify-center text-emerald-400 font-bold text-sm shadow-lg shadow-slate-200 group-hover:scale-105 transition-transform">
+              <div className="h-9 w-9 cursor-pointer bg-[#111827] rounded-xl flex items-center justify-center text-emerald-400 font-bold text-sm shadow-lg shadow-slate-200 group-hover:scale-105 transition-transform">
                 SS
               </div>
             </button>
@@ -142,7 +142,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
                     setIsPasswordModalOpen(true);
                     setShowUserDrop(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group"
+                  className="w-full flex items-center gap-3 cursor-pointer px-4 py-2.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl text-sm font-medium transition-all group"
                 >
                   <User
                     size={16}
@@ -153,7 +153,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
                 <div className="h-px bg-slate-100 my-1.5 mx-2"></div>
                 <button
                   onClick={openModal}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-bold transition-all"
+                  className="w-full flex cursor-pointer items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-bold transition-all"
                 >
                   <LogOut size={16} /> Logout System
                 </button>

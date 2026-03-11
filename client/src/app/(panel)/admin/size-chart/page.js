@@ -106,14 +106,14 @@ export default function SizeChartPage() {
       <div className="flex justify-end gap-4 mb-8">
         <button
           onClick={() => setIsSizeModalOpen(true)}
-          className="whitespace-nowrap w-fit px-4 py-2 md:px-5 md:py-2.5 bg-indigo-600 text-white rounded-lg font-semibold text-[13px] md:text-sm shadow-md shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+          className="whitespace-nowrap cursor-pointer w-fit px-4 py-2 md:px-5 md:py-2.5 bg-indigo-600 text-white rounded-lg font-semibold text-[13px] md:text-sm shadow-md shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
         >
           <Plus size={16} strokeWidth={2.5} />
           <span className="inline-block">Add New Size</span>
         </button>
         <button
           onClick={() => setIsHowToMeasureModalOpen(true)}
-          className="whitespace-nowrap w-fit px-4 py-2 md:px-5 md:py-2.5 bg-gray-600 text-white rounded-lg font-semibold text-[13px] md:text-sm shadow-md shadow-gray-100 hover:bg-gray-700 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+          className="whitespace-nowrap cursor-pointer w-fit px-4 py-2 md:px-5 md:py-2.5 bg-gray-600 text-white rounded-lg font-semibold text-[13px] md:text-sm shadow-md shadow-gray-100 hover:bg-gray-700 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
         >
           <ImageIcon size={16} strokeWidth={2.5} />
           <span className="inline-block">How to Measure</span>
@@ -234,13 +234,13 @@ export default function SizeChartPage() {
                         <>
                           <button
                             onClick={handleSave}
-                            className="font-medium text-green-600 hover:text-green-800"
+                            className="font-medium cursor-pointer text-green-600 hover:text-green-800"
                           >
                             <Save size={18} />
                           </button>
                           <button
                             onClick={handleCancel}
-                            className="font-medium text-red-600 hover:text-red-800"
+                            className="font-medium cursor-pointer text-red-600 hover:text-red-800"
                           >
                             <X size={18} />
                           </button>
@@ -249,13 +249,13 @@ export default function SizeChartPage() {
                         <>
                           <button
                             onClick={() => handleEdit(row._id)}
-                            className="font-medium text-indigo-600 hover:text-indigo-800"
+                            className="font-medium cursor-pointer text-indigo-600 hover:text-indigo-800"
                           >
                             <Edit size={18} />
                           </button>
                           <button
                             onClick={() => handleDelete(row._id)}
-                            className="font-medium text-red-600 hover:text-red-800"
+                            className="font-medium cursor-pointer text-red-600 hover:text-red-800"
                           >
                             <Trash2 size={18} />
                           </button>

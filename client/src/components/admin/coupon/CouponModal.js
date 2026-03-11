@@ -208,7 +208,7 @@ export default function CouponModal({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
+            className="text-slate-400 cursor-pointer hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
           >
             <X size={20} />
           </button>
@@ -254,7 +254,7 @@ export default function CouponModal({
                   showOnHomepage: !prev.showOnHomepage,
                 }));
               }}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+              className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors duration-200 focus:outline-none ${
                 formData.showOnHomepage ? "bg-slate-900" : "bg-slate-200"
               }`}
             >
@@ -268,7 +268,7 @@ export default function CouponModal({
           {/* Type Selectors */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <label className="text-xs font-bold  text-slate-900 uppercase tracking-wider">
                 Campaign Type
               </label>
               <select
@@ -276,7 +276,7 @@ export default function CouponModal({
                 onChange={(e) =>
                   setFormData({ ...formData, couponType: e.target.value })
                 }
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
+                className="w-full bg-white border cursor-pointer border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
               >
                 <option value="CouponCode">Coupon Code</option>
                 <option value="FestiveSale">Festive Sale (Auto)</option>
@@ -291,7 +291,7 @@ export default function CouponModal({
                 onChange={(e) =>
                   setFormData({ ...formData, offerType: e.target.value })
                 }
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
+                className="w-full bg-white border cursor-pointer border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
               >
                 <option value="Percentage">Percentage (%)</option>
                 <option value="FixedAmount">Fixed Amount (₹)</option>
@@ -345,7 +345,7 @@ export default function CouponModal({
                   }));
                   setSelectedItems([]); // Clear selection on scope change
                 }}
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
+                className="w-full cursor-pointer bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
               >
                 <option value="All">All Products</option>
                 <option value="Category">Specific Category</option>
@@ -617,7 +617,7 @@ export default function CouponModal({
                 onChange={(e) =>
                   setFormData({ ...formData, status: e.target.value })
                 }
-                className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-bold focus:border-slate-900 outline-none"
+                className="w-full cursor-pointer bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-bold focus:border-slate-900 outline-none"
               >
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
@@ -714,14 +714,14 @@ export default function CouponModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition"
+              className="flex-1 px-4 cursor-pointer py-3 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`flex-[2] ${formData.couponType === "FestiveSale" ? "bg-orange-600 hover:bg-orange-700" : initialData ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-3 rounded-lg font-bold text-sm transition shadow-lg flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
+              className={`flex-[2] cursor-pointer ${formData.couponType === "FestiveSale" ? "bg-orange-600 hover:bg-orange-700" : initialData ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-3 rounded-lg font-bold text-sm transition shadow-lg flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={18} />

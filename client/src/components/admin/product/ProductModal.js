@@ -373,7 +373,7 @@ export default function ProductModal({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
+            className="text-slate-400 cursor-pointer hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
           >
             <X size={20} />
           </button>
@@ -417,7 +417,7 @@ export default function ProductModal({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 flex-shrink-0 flex items-center gap-2 transition-all relative snap-align-start ${activeTab === tab.id ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
+                className={`py-4 shrink-0 cursor-pointer flex items-center gap-2 transition-all relative snap-align-start ${activeTab === tab.id ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <span
                   className={`${activeTab === tab.id ? "scale-110" : ""} transition-transform`}
@@ -488,7 +488,7 @@ export default function ProductModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition uppercase tracking-wider"
+            className="flex-1 px-4 cursor-pointer py-2.5 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition uppercase tracking-wider"
           >
             Cancel Action
           </button>
@@ -496,7 +496,7 @@ export default function ProductModal({
             form="productForm"
             type="submit"
             disabled={loading}
-            className={`flex-[2] ${initialData ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2`}
+            className={`flex-2 cursor-pointer ${initialData ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2`}
           >
             <Save size={16} />{" "}
             {loading

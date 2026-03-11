@@ -114,7 +114,7 @@ export default function SalesRevenueChart({ onPeriodChange }) {
             <button
               key={p.key}
               onClick={() => handlePeriodChange(p.key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`px-3 cursor-pointer py-1.5 rounded-md text-xs font-semibold transition-all ${
                 period === p.key
                   ? "bg-white text-indigo-600 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -134,7 +134,7 @@ export default function SalesRevenueChart({ onPeriodChange }) {
             <button
               key={key}
               onClick={() => setActiveLine(key)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all select-none ${
+              className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all select-none ${
                 isActive
                   ? "bg-white shadow-sm text-slate-800"
                   : "text-slate-500 hover:text-slate-700"
@@ -170,7 +170,7 @@ export default function SalesRevenueChart({ onPeriodChange }) {
           No data for this period
         </div>
       ) : (
-        <div className="h-[200px]">
+        <div className="h-[200px] cursor-crosshair">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>

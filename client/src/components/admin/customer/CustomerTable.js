@@ -174,7 +174,7 @@ export default function CustomerTable({ refreshStats }) {
           <button
             onClick={() => fetchUsers(true)}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+            className="p-2 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -185,7 +185,7 @@ export default function CustomerTable({ refreshStats }) {
             setEditUser(null);
             setShowModal(true);
           }}
-          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95"
+          className="bg-slate-900 cursor-pointer hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95"
         >
           + Add User
         </button>
@@ -249,13 +249,13 @@ export default function CustomerTable({ refreshStats }) {
                       <Link
                         href={`/admin/customers/${u._id}`}
                         title="View Full Profile"
-                        className=" hover:text-slate-900 transition-colors"
+                        className=" hover:text-slate-900 transition-colors cursor-pointer" 
                       >
                         <UserCircle size={18} />
                       </Link>
                       <button
                         title="View"
-                        className="hover:text-slate-900 transition-colors"
+                        className="hover:text-slate-900 transition-colors cursor-pointer"
                         onClick={() => {
                           setViewUser(u);
                           setShowDrawer(true);
@@ -265,7 +265,7 @@ export default function CustomerTable({ refreshStats }) {
                       </button>
                       <button
                         title="Edit"
-                        className="hover:text-blue-600 transition-colors"
+                        className="hover:text-blue-600 transition-colors cursor-pointer"
                         onClick={() => {
                           setEditUser(u);
                           setShowModal(true);
@@ -275,7 +275,7 @@ export default function CustomerTable({ refreshStats }) {
                       </button>
                       <button
                         title="Delete"
-                        className="hover:text-rose-600 transition-colors"
+                        className="hover:text-rose-600 transition-colors cursor-pointer"
                         onClick={() => {
                           setDeleteUserId(u._id);
                           setSelectedUserName(u.name);
@@ -354,9 +354,9 @@ export default function CustomerTable({ refreshStats }) {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors shadow-sm"
+              className="p-2 border border-slate-200 rounded-lg cursor-pointer bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors shadow-sm"
             >
-              <ChevronLeft size={16} className="text-slate-600" />
+              <ChevronLeft size={16} className="text-slate-600 " />
             </button>
 
             <div className="flex items-center gap-1">
@@ -383,7 +383,7 @@ export default function CustomerTable({ refreshStats }) {
                 currentPage >= Math.ceil(filteredUsers.length / rowsPerPage)
               }
               onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors shadow-sm"
+              className="p-2 border border-slate-200 rounded-lg cursor-pointer bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors shadow-sm"
             >
               <ChevronRight size={16} className="text-slate-600" />
             </button>

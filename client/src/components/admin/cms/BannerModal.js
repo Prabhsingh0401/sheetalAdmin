@@ -241,7 +241,7 @@ export default function BannerModal({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
+            className="text-slate-400 hover:text-slate-900 cursor-pointer hover:bg-slate-100 p-1.5 rounded-lg transition"
           >
             <X size={20} />
           </button>
@@ -422,14 +422,14 @@ export default function BannerModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+              className="flex-1 cursor-pointer px-4 py-2.5 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`flex-[2] ${isEdit ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
+              className={`flex-[2] cursor-pointer ${isEdit ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg flex items-center justify-center active:scale-[0.98] disabled:opacity-70`}
             >
               {loading ? <Loader2 className="animate-spin" size={18} /> : (isEdit ? "Update Details" : "Confirm & Add")}
             </button>

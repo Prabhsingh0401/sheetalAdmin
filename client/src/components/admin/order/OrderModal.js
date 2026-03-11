@@ -103,7 +103,7 @@ export default function OrderModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2.5 hover:bg-rose-50 rounded-full text-slate-400 hover:text-rose-500 transition-all border border-slate-200"
+            className="p-2.5 cursor-pointer hover:bg-rose-50 rounded-full text-slate-400 hover:text-rose-500 transition-all border border-slate-200"
           >
             <X size={18} />
           </button>
@@ -211,14 +211,14 @@ export default function OrderModal({
         <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
           <button
             onClick={onClose}
-            className="flex-1 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
+            className="flex-1 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors cursor-pointer"
           >
             Back
           </button>
           <button
             onClick={handleUpdate}
             disabled={loading}
-            className="flex-[2] py-4 bg-slate-900 text-white rounded-[1.25rem] font-black text-xs uppercase tracking-[2px] hover:bg-black transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-[2] cursor-pointer py-4 bg-slate-900 text-white rounded-[1.25rem] font-black text-xs uppercase tracking-[2px] hover:bg-black transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>

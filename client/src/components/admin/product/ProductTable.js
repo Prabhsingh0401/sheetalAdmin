@@ -163,7 +163,7 @@ useEffect(() => {
           <button
             onClick={() => fetchProducts(true)}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+            className="p-2 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -171,7 +171,7 @@ useEffect(() => {
 
         <button
           onClick={() => setShowSettingsModal(true)}
-          className="p-2.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+          className="p-2.5 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           title="Global Settings"
         >
           <SettingsIcon size={18} />
@@ -179,7 +179,7 @@ useEffect(() => {
 
         <button
           onClick={() => setShowBulkImportModal(true)}
-          className="p-2.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+          className="p-2.5 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           title="Bulk Import"
         >
           <UploadCloud size={18} />
@@ -190,7 +190,7 @@ useEffect(() => {
             setEditData(null);
             setShowModal(true);
           }}
-          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
+          className="bg-slate-900 cursor-pointer hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
         >
           + Add Product
         </button>
@@ -327,7 +327,7 @@ useEffect(() => {
                       </button> */}
                       <button
                         title="Edit"
-                        className="hover:text-blue-600 transition-colors"
+                        className="hover:text-blue-600 cursor-pointer transition-colors"
                         onClick={() => {
                           setEditData(p);
                           setShowModal(true);
@@ -337,7 +337,7 @@ useEffect(() => {
                       </button>
                       <button
                         title="Delete"
-                        className="hover:text-rose-600 transition-colors"
+                        className="hover:text-rose-600 cursor-pointer transition-colors"
                         onClick={() => {
                           setDeleteId(p._id);
                           setShowDeleteModal(true);

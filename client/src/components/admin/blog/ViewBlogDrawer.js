@@ -28,7 +28,7 @@ export default function ViewBlogDrawer({ isOpen, onClose, blog }) {
           <h2 className="text-xl font-bold text-slate-900">Blog Preview</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors"
+            className="p-2 cursor-pointer hover:bg-slate-200 rounded-full text-slate-500 transition-colors"
           >
             <X size={24} />
           </button>
@@ -117,7 +117,7 @@ export default function ViewBlogDrawer({ isOpen, onClose, blog }) {
         <div className="absolute bottom-0 left-0 w-full p-6 border-t border-slate-100 bg-white">
           <button
             onClick={onClose}
-            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200 uppercase text-xs tracking-widest"
+            className="w-full bg-slate-900 cursor-pointer text-white py-3.5 rounded-xl font-bold hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200 uppercase text-xs tracking-widest"
           >
             Close Preview
           </button>

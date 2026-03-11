@@ -70,7 +70,7 @@ const LowStockNotification: React.FC = () => {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen((p) => !p)}
-        className="relative bg-amber-500 text-white p-3 rounded-full shadow-lg hover:bg-amber-600"
+        className="relative cursor-pointer bg-amber-500 text-white p-3 rounded-full shadow-lg hover:bg-amber-600"
       >
         <AlertTriangle className="h-6 w-6" />
         <span className="absolute -top-1 -right-1 bg-red-600 text-xs rounded-full h-5 w-5 flex items-center justify-center">

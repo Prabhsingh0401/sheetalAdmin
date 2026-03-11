@@ -61,7 +61,7 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
+            className="text-slate-400 cursor-pointer hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
           >
             <X size={20} />
           </button>
@@ -132,13 +132,13 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
+              className="flex-1 px-4 py-2.5 border cursor-pointer border-slate-400 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`flex-[2] ${editUser ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg active:scale-[0.98]`}
+              className={`flex-[2] cursor-pointer ${editUser ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-900 hover:bg-black"} text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg active:scale-[0.98]`}
             >
               {editUser ? "Update Details" : "Confirm & Add User"}
             </button>

@@ -90,21 +90,21 @@ export default function UserDetailPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-white cursor-pointer border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
           >
             <ArrowLeft size={14} /> Back
           </button>
 
           <button
             onClick={() => setShowEditModal(true)}
-            className="px-4 py-2 bg-white border border-slate-200 text-indigo-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-white border cursor-pointer border-slate-200 text-indigo-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
           >
             <Edit size={14} /> Edit
           </button>
 
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 bg-rose-50 border border-rose-100 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-rose-50 border cursor-pointer border-rose-100 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 transition-all flex items-center gap-2"
           >
             <Trash2 size={14} /> Delete
           </button>
@@ -145,7 +145,7 @@ export default function UserDetailPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-8 py-4 text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${activeTab === tab ? "text-slate-900 bg-white" : "text-slate-400 hover:text-slate-600"}`}
+              className={`px-8 py-4 cursor-pointer text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${activeTab === tab ? "text-slate-900 bg-white" : "text-slate-400 hover:text-slate-600"}`}
             >
               {tab}
               {activeTab === tab && (
