@@ -41,10 +41,6 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: Users, label: "Customers", href: "/admin/customers" },
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
-    { icon: ClipboardClock, label: "Appointments", href: "/admin/appointments" },
-    { icon: Headset, label: "Enquiry", href: "/admin/enquiry" },
-    { icon: Star, label: "Reviews", href: "/admin/reviews" },
-    { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     {
       icon: ChartNoAxesCombined,
       label: "Sales & Reports",
@@ -65,8 +61,21 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
           label: "Traffic Source",
           href: "/admin/sales-report/traffic",
         },
+        {
+          icon: ShoppingCart,
+          label: "Abandoned Carts",
+          href: "/admin/sales-report/abandoned-carts",
+        },
       ],
     },
+    {
+      icon: ClipboardClock,
+      label: "Appointments",
+      href: "/admin/appointments",
+    },
+    { icon: Headset, label: "Enquiry", href: "/admin/enquiry" },
+    { icon: Star, label: "Reviews", href: "/admin/reviews" },
+    { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     {
       icon: Monitor,
       label: "Site Content",
@@ -76,8 +85,16 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
         { icon: Layout, label: "Banners", href: "/admin/cms/banners" },
         { icon: BookOpen, label: "Lookbooks", href: "/admin/cms/lookbooks" },
         { icon: FileText, label: "Text Pages", href: "/admin/cms/pages" },
-        { icon: InstagramIcon, label: "Instagram Cards", href: "/admin/cms/instagram" },
-        { icon: UserIcon, label: "Testimonials", href: "/admin/cms/testimonials" },
+        {
+          icon: InstagramIcon,
+          label: "Instagram Cards",
+          href: "/admin/cms/instagram",
+        },
+        {
+          icon: UserIcon,
+          label: "Testimonials",
+          href: "/admin/cms/testimonials",
+        },
       ],
     },
     { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
@@ -210,13 +227,16 @@ function NavItem({ item, pathname, setIsOpen }) {
           }
         />
         <span className="flex-1">{item.label}</span>
-        <span onClick={()=> setIsHovered(!isHovered)} className="hover:bg-white/30 rounded w-4 h-4 flex items-center justify-center">
+        <span
+          onClick={() => setIsHovered(!isHovered)}
+          className="hover:bg-white/30 rounded w-4 h-4 flex items-center justify-center"
+        >
           <ChevronDown
-          size={14}
-          className={`transition-transform duration-300 ${isHovered ? "rotate-180" : "rotate-0"} ${
-            isParentActive ? "text-white/70" : "text-slate-400"
-          }`}
-        />
+            size={14}
+            className={`transition-transform duration-300 ${isHovered ? "rotate-180" : "rotate-0"} ${
+              isParentActive ? "text-white/70" : "text-slate-400"
+            }`}
+          />
         </span>
       </Link>
 

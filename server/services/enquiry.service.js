@@ -104,9 +104,6 @@ export async function sendAvailabilityEmail({
   productName,
   size,
 }) {
-  console.log("Transporter:", transporter);
-  console.log("SMTP_MAIL:", process.env.SMTP_MAIL);
-  console.log("Sending to:", email);
 
   await transporter.sendMail({
     from: `"${process.env.STORE_NAME || "Our Store"}" <${process.env.SMTP_MAIL}>`,

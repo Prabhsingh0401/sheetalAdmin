@@ -15,7 +15,7 @@ export default function MostViewedItems() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    getMostViewedProducts(5)
+    getMostViewedProducts()
       .then(setItems)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));

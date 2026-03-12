@@ -57,3 +57,21 @@ export const getSalesData = async ({ period, startDate, endDate } = {}) => {
   });
   return handleResponse(res);
 };
+
+export const getAbandonedCarts = async (limit = 10) => {
+  const res = await fetch(`${API_BASE_URL}/sales/abandoned-carts?limit=${limit}`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return handleResponse(res);
+};
+ 
+export const sendCartRecoveryEmail = async (email) => {
+  const res = await fetch(`${API_BASE_URL}/sales/abandoned-carts/send-recovery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse(res);
+};

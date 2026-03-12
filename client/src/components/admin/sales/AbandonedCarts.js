@@ -3,6 +3,7 @@
 import { Send, ShoppingCart } from "lucide-react";
 
 export default function AbandonedCarts({ carts = [], onSendRecovery }) {
+  console.log(carts)
   return (
     <div
       style={{ fontFamily: "'DM Sans', sans-serif" }}
@@ -118,7 +119,7 @@ export default function AbandonedCarts({ carts = [], onSendRecovery }) {
 
               {/* Action */}
               <button
-                onClick={() => onSendRecovery?.(cart.email)}
+                onClick={() => onSendRecovery(cart.email)}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
