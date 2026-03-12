@@ -294,7 +294,7 @@ export const getTrendingProducts = async (req, res, next) => {
 // INCREMENT view count (call on Quick View OR product page visit)
 export const incrementViewCount = async (req, res, next) => {
   try {
-    const slug = req.params.id;
+    const slug = req.params.slug || req.params.id;
     const product = await Product.findOneAndUpdate(
       { slug },
       { $inc: { viewCount: 1 } },

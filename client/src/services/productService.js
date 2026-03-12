@@ -106,7 +106,7 @@ export const deleteReviewAdmin = async (id) => {
 
 export const incrementProductView = async (slug) => {
   try {
-    await fetch(`${API_BASE_URL}/products/admin/view/${slug}`, { method: "PATCH" });
+    await fetch(`${API_BASE_URL}/products/view/${slug}`, { method: "PATCH" });
   } catch (err) {
     // Silent fail — don't block UX for a view count
     console.error("View increment failed:", err);

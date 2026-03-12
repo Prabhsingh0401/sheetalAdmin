@@ -30,6 +30,10 @@ export const createOrderService = async (data, userId) => {
 
     // Product stock kam karein
     product.stock -= item.quantity;
+
+    product.orderStats.totalOrders += item.quantity;
+    product.orderStats.totalRevenue += item.quantity * item.price;
+
     await product.save({ validateBeforeSave: false });
   }
 
@@ -66,7 +70,10 @@ export const createOrderService = async (data, userId) => {
   try {
     await User.findByIdAndUpdate(userId, { $push: { orders: order._id } });
   } catch (userUpdateErr) {
-    console.error(`[Order] Failed to push order ref to user ${userId}:`, userUpdateErr.message);
+    console.error(
+      `[Order] Failed to push order ref to user ${userId}:`,
+      userUpdateErr.message,
+    );
   }
 
   // 5. COD: Push to Shiprocket immediately + clear cart
@@ -76,18 +83,30 @@ export const createOrderService = async (data, userId) => {
     try {
       await Cart.findOneAndUpdate({ user: userId }, { $set: { items: [] } });
     } catch (cartErr) {
-      console.error(`[COD] Failed to clear cart for user ${userId}:`, cartErr.message);
+      console.error(
+        `[COD] Failed to clear cart for user ${userId}:`,
+        cartErr.message,
+      );
     }
 
     // Push to Shiprocket
     try {
       const user = await User.findById(userId).lean();
-      const { shiprocketOrderId, shipmentId } = await createShiprocketOrder(order, user);
-      await Order.findByIdAndUpdate(order._id, { shiprocketOrderId, shipmentId });
+      const { shiprocketOrderId, shipmentId } = await createShiprocketOrder(
+        order,
+        user,
+      );
+      await Order.findByIdAndUpdate(order._id, {
+        shiprocketOrderId,
+        shipmentId,
+      });
       order.shiprocketOrderId = shiprocketOrderId;
       order.shipmentId = shipmentId;
     } catch (srError) {
-      console.error(`[Shiprocket] Failed to push COD order ${order._id}:`, srError.message);
+      console.error(
+        `[Shiprocket] Failed to push COD order ${order._id}:`,
+        srError.message,
+      );
     }
   }
 
@@ -113,14 +132,27 @@ export const updateOrderStatusService = async (
       const product = await Product.findById(item.product);
       if (product) {
         product.stock += item.quantity;
+        product.orderStats.totalOrders = Math.max(
+          0,
+          product.orderStats.totalOrders - item.quantity,
+        );
+        product.orderStats.totalRevenue = Math.max(
+          0,
+          product.orderStats.totalRevenue - item.quantity * item.price,
+        );
         await product.save();
       }
     }
     // Remove order reference from user's orders array
     try {
-      await User.findByIdAndUpdate(order.user, { $pull: { orders: order._id } });
+      await User.findByIdAndUpdate(order.user, {
+        $pull: { orders: order._id },
+      });
     } catch (userUpdateErr) {
-      console.error(`[Order] Failed to pull order ref from user ${order.user}:`, userUpdateErr.message);
+      console.error(
+        `[Order] Failed to pull order ref from user ${order.user}:`,
+        userUpdateErr.message,
+      );
     }
   }
 
@@ -147,7 +179,10 @@ export const getMyOrdersService = async (userId) => {
  * @param {string} userId  - ObjectId of the authenticated user
  */
 export const getSingleOrderService = async (orderId, userId) => {
-  const order = await Order.findById(orderId).populate("orderItems.product", "name mainImage slug");
+  const order = await Order.findById(orderId).populate(
+    "orderItems.product",
+    "name mainImage slug",
+  );
   if (!order) throw new ErrorResponse("Order not found", 404);
   // Make sure this order belongs to the requesting user
   if (order.user.toString() !== userId.toString()) {

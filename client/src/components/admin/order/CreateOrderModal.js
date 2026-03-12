@@ -211,7 +211,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
 
       const res = await createOrder(orderData);
       if (res.success) {
-        toast.success("Order सफलतापूर्वक बन गया!");
+        toast.success("Order Placed");
         onSuccess();
         onClose();
         resetForm();

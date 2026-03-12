@@ -9,18 +9,11 @@ function formatViews(views) {
   return views.toString();
 }
 
-export default function MostViewedItems() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    getMostViewedProducts()
-      .then(setItems)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
+export default function MostViewedItems({
+  items = [],
+  loading = false,
+  error = null,
+}) {
   const maxViews = items.length ? Math.max(...items.map((i) => i.views)) : 1;
 
   return (
@@ -94,7 +87,9 @@ export default function MostViewedItems() {
       {/* Empty */}
       {!loading && !error && items.length === 0 && (
         <div className="flex items-center justify-center py-12 text-slate-400">
-          <p style={{ fontSize: 13, fontWeight: 500 }}>No data available yet.</p>
+          <p style={{ fontSize: 13, fontWeight: 500 }}>
+            No data available yet.
+          </p>
         </div>
       )}
 

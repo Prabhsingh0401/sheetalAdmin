@@ -1,6 +1,7 @@
 import Order from "../models/order.model.js";
 import Cart from "../models/cart.model.js";
 import User from "../models/user.model.js";
+import Product from "../models/product.model.js";
 import { sendAbandonedCartEmail } from "../services/sales.service.js";
 
 /**
@@ -383,37 +384,21 @@ export const getBestSellingProducts = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 5, 50);
 
-    const results = await Order.aggregate([
-      { $match: { orderStatus: "Delivered" } },
-      { $unwind: "$orderItems" },
-      {
-        $group: {
-          _id: "$orderItems.product",
-          name: { $first: "$orderItems.name" },
-          image: { $first: "$orderItems.image" },
-          unitsSold: { $sum: "$orderItems.quantity" },
-          totalRevenue: {
-            $sum: { $multiply: ["$orderItems.quantity", "$orderItems.price"] },
-          },
-        },
-      },
-      { $sort: { totalRevenue: -1 } },
-      { $limit: limit },
-      {
-        $project: {
-          _id: 0,
-          productId: "$_id",
-          name: 1,
-          image: 1,
-          unitsSold: 1,
-          totalRevenue: 1,
-        },
-      },
-    ]);
+    const results = await Product.find({ "orderStats.totalOrders": { $gt: 0 } })
+      .sort({ "orderStats.totalRevenue": -1 })
+      .limit(limit)
+      .select("name mainImage orderStats")
+      .lean();
 
-    res
-      .status(200)
-      .json({ success: true, count: results.length, data: results });
+    const data = results.map((p) => ({
+      productId: p._id,
+      name: p.name,
+      image: p.mainImage?.url,
+      unitsSold: p.orderStats.totalOrders,
+      totalRevenue: p.orderStats.totalRevenue,
+    }));
+
+    res.status(200).json({ success: true, count: data.length, data });
   } catch (error) {
     console.error("[getBestSellingProducts]", error);
     res.status(500).json({

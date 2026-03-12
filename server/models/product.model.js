@@ -134,6 +134,11 @@ const productSchema = new mongoose.Schema(
       size: { type: Number },
     },
 
+    orderStats: {
+      totalOrders: { type: Number, default: 0 },
+      totalRevenue: { type: Number, default: 0 },
+    },
+
     averageRating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
 
