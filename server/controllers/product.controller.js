@@ -84,7 +84,10 @@ export const createProductReview = async (req, res, next) => {
 export const checkCanReview = async (req, res, next) => {
   try {
     const { productId } = req.query;
-    const result = await productService.canReviewService(productId, req.user._id);
+    const result = await productService.canReviewService(
+      productId,
+      req.user._id,
+    );
     return successResponse(res, 200, result, "Eligibility check completed");
   } catch (error) {
     next(error);
@@ -116,7 +119,9 @@ export const bulkImportProducts = async (req, res, next) => {
       res,
       200,
       { imported: result.data.length, errors: result.errors },
-      result.errors?.length > 0 ? "Import completed with warnings" : "All products imported successfully",
+      result.errors?.length > 0
+        ? "Import completed with warnings"
+        : "All products imported successfully",
     );
   } catch (error) {
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -130,7 +135,9 @@ export const getSampleExcel = async (req, res, next) => {
     if (fs.existsSync(filePath)) {
       res.download(filePath, "sample_product_import.xlsx");
     } else {
-      res.status(404).json({ success: false, message: "Sample file not found" });
+      res
+        .status(404)
+        .json({ success: false, message: "Sample file not found" });
     }
   } catch (error) {
     next(error);
@@ -219,13 +226,17 @@ export const deleteReview = async (req, res, next) => {
 export const getAllReviews = async (req, res, next) => {
   try {
     const { page, limit, status } = req.query;
-    const result = await productService.getAllReviewsService(page, limit, status);
+    const result = await productService.getAllReviewsService(
+      page,
+      limit,
+      status,
+    );
     return successResponse(
       res,
       200,
       result.reviews,
       "Reviews fetched successfully",
-      { total: result.total, page: result.page, limit: result.limit }
+      { total: result.total, page: result.page, limit: result.limit },
     );
   } catch (error) {
     next(error);
@@ -237,7 +248,13 @@ export const updateReviewStatus = async (req, res, next) => {
     console.log("UPDATE REVIEW BODY:", req.body);
     const { isApproved, comment, rating, userName } = req.body;
     const reviewId = req.params.id || req.query.id;
-    const result = await productService.updateReviewStatusService(reviewId, isApproved, comment, rating, userName);
+    const result = await productService.updateReviewStatusService(
+      reviewId,
+      isApproved,
+      comment,
+      rating,
+      userName,
+    );
     if (!result.success) return res.status(result.statusCode).json(result);
     return successResponse(res, 200, result.review, "Review status updated");
   } catch (error) {
@@ -263,30 +280,38 @@ export const getLowStockProducts = async (req, res, next) => {
 export const getTrendingProducts = async (req, res, next) => {
   try {
     const result = await productService.getTrendingProductsService();
-    return successResponse(res, 200, result.products, "Trending products fetched");
+    return successResponse(
+      res,
+      200,
+      result.products,
+      "Trending products fetched",
+    );
   } catch (error) {
     next(error);
   }
 };
 
 // INCREMENT view count (call on Quick View OR product page visit)
-export const incrementViewCount = async (req, res) => {
+export const incrementViewCount = async (req, res, next) => {
   try {
-    const { slug } = req.params;
+    const slug = req.params.id;
     const product = await Product.findOneAndUpdate(
       { slug },
       { $inc: { viewCount: 1 } },
-      { new: true, select: "viewCount" }
+      { new: true, select: "viewCount" },
     );
-    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     res.json({ success: true, viewCount: product.viewCount });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    next(err);
   }
 };
 
 // GET most viewed products (admin dashboard)
-export const getMostViewedProducts = async (req, res) => {
+export const getMostViewedProducts = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
     const products = await Product.find({ isActive: true })
@@ -306,6 +331,6 @@ export const getMostViewedProducts = async (req, res) => {
 
     res.json({ success: true, items });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    next(err);
   }
 };

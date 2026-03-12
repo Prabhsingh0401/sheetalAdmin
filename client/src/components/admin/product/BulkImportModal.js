@@ -37,7 +37,6 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
   const handleImagesChange = (e) => {
     const files = Array.from(e.target.files);
-    // Filter for images: check mime type OR common image extensions
     const validImages = files.filter((file) => {
       if (file.type.startsWith("image/")) return true;
       const ext = file.name.split(".").pop().toLowerCase();
@@ -50,11 +49,19 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
       );
     }
 
-    setImageFiles((prev) => [...prev, ...validImages]);
+    // Create URLs once — not on every render
+    const newEntries = validImages.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    setImageFiles((prev) => [...prev, ...newEntries]);
   };
 
   const removeImage = (index) => {
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImageFiles((prev) => {
+      URL.revokeObjectURL(prev[index].url);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async () => {
@@ -115,6 +122,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
   };
 
   const resetForm = () => {
+    imageFiles.forEach(({ url }) => URL.revokeObjectURL(url)); // clean up all
     setExcelFile(null);
     setImageFiles([]);
     setStep(1);
@@ -226,6 +234,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                         document.body.appendChild(a);
                         a.click();
                         a.remove();
+                        window.URL.revokeObjectURL(url);
                       } catch (err) {
                         toast.error("Failed to download sample file");
                       }
@@ -265,7 +274,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                         className="aspect-square relative rounded-lg overflow-hidden border border-slate-200 bg-white group"
                       >
                         <img
-                          src={URL.createObjectURL(file)}
+                          src={entry.url}
                           className="w-full h-full object-cover"
                           alt="preview"
                         />

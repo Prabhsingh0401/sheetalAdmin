@@ -98,7 +98,16 @@ function buildAvailabilityEmailHtml({ name, productName, size }) {
  * Sends a product availability notification email.
  * @param {{ name: string, email: string, productName: string, size: string }} options
  */
-export async function sendAvailabilityEmail({ name, email, productName, size }) {
+export async function sendAvailabilityEmail({
+  name,
+  email,
+  productName,
+  size,
+}) {
+  console.log("Transporter:", transporter);
+  console.log("SMTP_MAIL:", process.env.SMTP_MAIL);
+  console.log("Sending to:", email);
+
   await transporter.sendMail({
     from: `"${process.env.STORE_NAME || "Our Store"}" <${process.env.SMTP_MAIL}>`,
     to: email,
