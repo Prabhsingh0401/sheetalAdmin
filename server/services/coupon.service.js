@@ -77,6 +77,36 @@ export const updateCouponService = async (id, updateData) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Helper: distribute `totalDiscount` across `items` proportionally using each
+// item's effective line total, with floor-truncation per item and the leftover
+// remainder assigned to the last item so the sum always equals `totalDiscount`.
+// ---------------------------------------------------------------------------
+const distributeDiscount = (items, applicableTotal, totalDiscount) => {
+  const itemWiseDiscount = {};
+  if (!items.length || applicableTotal <= 0 || totalDiscount <= 0) {
+    return itemWiseDiscount;
+  }
+
+  let assignedSum = 0;
+  let lastItemId = null;
+
+  for (const item of items) {
+    const lineTotal = (item.discountPrice ?? item.price) * item.quantity;
+    const share = Math.floor((lineTotal / applicableTotal) * totalDiscount);
+    itemWiseDiscount[item._id] = share;
+    assignedSum += share;
+    lastItemId = item._id;
+  }
+
+  // Add any rounding remainder to the last item so totals reconcile exactly
+  if (lastItemId !== null) {
+    itemWiseDiscount[lastItemId] += totalDiscount - assignedSum;
+  }
+
+  return itemWiseDiscount;
+};
+
 export const applyCouponService = async (
   code,
   cartTotal,
@@ -133,43 +163,33 @@ export const applyCouponService = async (
     }
 
     switch (coupon.offerType) {
-      case "Percentage":
-        let totalApplicableDiscount =
-          (applicableTotal * coupon.offerValue) / 100;
-        if (coupon.maxDiscountAmount)
-          totalApplicableDiscount = Math.min(
-            totalApplicableDiscount,
-            coupon.maxDiscountAmount,
-          );
-        discount = totalApplicableDiscount;
-
-        if (applicableItems.length > 0 && applicableTotal > 0) {
-          applicableItems.forEach((item) => {
-            const itemEffectivePrice =
-              (item.discountPrice ?? item.price) * item.quantity;
-            itemWiseDiscount[item._id] = Math.round(
-              (itemEffectivePrice / applicableTotal) * totalApplicableDiscount,
-            );
-          });
+      case "Percentage": {
+        let rawDiscount = (applicableTotal * coupon.offerValue) / 100;
+        if (coupon.maxDiscountAmount) {
+          rawDiscount = Math.min(rawDiscount, coupon.maxDiscountAmount);
         }
+        discount = Math.round(rawDiscount);
+
+        itemWiseDiscount = distributeDiscount(
+          applicableItems,
+          applicableTotal,
+          discount,
+        );
         break;
+      }
 
-      case "FixedAmount":
-        let fixedDiscountAmount = Math.min(coupon.offerValue, applicableTotal);
-        discount = fixedDiscountAmount;
+      case "FixedAmount": {
+        discount = Math.round(Math.min(coupon.offerValue, applicableTotal));
 
-        if (applicableItems.length > 0 && applicableTotal > 0) {
-          applicableItems.forEach((item) => {
-            const itemEffectivePrice =
-              (item.discountPrice ?? item.price) * item.quantity;
-            itemWiseDiscount[item._id] = Math.round(
-              (itemEffectivePrice / applicableTotal) * fixedDiscountAmount,
-            );
-          });
-        }
+        itemWiseDiscount = distributeDiscount(
+          applicableItems,
+          applicableTotal,
+          discount,
+        );
         break;
+      }
 
-      case "BOGO":
+      case "BOGO": {
         const isCategoryScope = coupon.scope === "Category";
         const isProductScope = coupon.scope === "Specific_Product";
 
@@ -229,24 +249,37 @@ export const applyCouponService = async (
         if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
           finalBogoDiscount = Math.min(bogoDiscount, coupon.maxDiscountAmount);
         }
+        discount = Math.round(finalBogoDiscount);
 
         if (bogoDiscount > 0) {
+          // Build per-item raw (unrounded) shares then apply floor + remainder
           const discountRatio = finalBogoDiscount / bogoDiscount;
           remainingFreeUnits = coupon.getQuantity;
 
+          // Collect BOGO line items with their unrounded share
+          const bogoLines = [];
           for (const item of sortedItems) {
             if (remainingFreeUnits <= 0) break;
             const itemPrice = item.discountPrice ?? item.price;
             const unitsToDiscount = Math.min(item.quantity, remainingFreeUnits);
-            const itemTotalDiscount =
-              unitsToDiscount * itemPrice * discountRatio;
-            itemWiseDiscount[item._id] = Math.round(itemTotalDiscount);
+            const rawShare = unitsToDiscount * itemPrice * discountRatio;
+            bogoLines.push({ id: item._id, rawShare });
             remainingFreeUnits -= unitsToDiscount;
           }
-        }
 
-        discount = finalBogoDiscount;
+          // Floor each share, assign remainder to last line
+          let assignedSum = 0;
+          for (const line of bogoLines) {
+            itemWiseDiscount[line.id] = Math.floor(line.rawShare);
+            assignedSum += itemWiseDiscount[line.id];
+          }
+          if (bogoLines.length > 0) {
+            const lastId = bogoLines[bogoLines.length - 1].id;
+            itemWiseDiscount[lastId] += discount - assignedSum;
+          }
+        }
         break;
+      }
 
       case "FreeShipping":
         discount = 0;
@@ -259,7 +292,7 @@ export const applyCouponService = async (
     return {
       success: true,
       data: {
-        discount: Math.round(discount),
+        discount,
         couponCode: coupon.code,
         offerType: coupon.offerType,
         isMaxApplied: coupon.maxDiscountAmount
@@ -279,7 +312,6 @@ export const applyCouponService = async (
 // shows the full picture. Public /api/v1/coupons/ still filters by active+valid.
 export const getAllCouponsService = async ({ page, limit, search, isAdmin = false }) => {
   try {
-    // Admin sees everything; public only sees active non-expired
     const baseQuery = isAdmin
       ? {}
       : { isActive: true, endDate: { $gte: new Date() } };
@@ -362,9 +394,6 @@ export const getCouponStatsService = async () => {
   }
 };
 
-// Returns the single coupon marked showOnHomepage: true, or null.
-// Used by the admin modal to check for conflicts without relying on
-// the paginated/filtered local list.
 export const getHomepageCouponService = async () => {
   try {
     const coupon = await Coupon.findOne({ showOnHomepage: true }).lean();

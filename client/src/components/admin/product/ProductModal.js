@@ -78,6 +78,7 @@ export default function ProductModal({
     videoFile: null,
     isTrending: false,
     isNewArrival: false,
+    isCollection: false,
   });
 
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function ProductModal({
           subCategory: initialData.subCategory || "",
           isTrending: initialData.isTrending ?? false,
           isNewArrival: initialData.isNewArrival ?? false,
+          isCollection: initialData.isCollection ?? false,
           displayCollections: Array.isArray(initialData.displayCollections)
             ? initialData.displayCollections
             : [],
@@ -187,6 +189,7 @@ export default function ProductModal({
       returnPolicy: "7 Days Easy Return",
       isTrending: false,
       isNewArrival: false,
+      isCollection: false,
     });
     setImageFiles([]);
     setExistingImages([]);
@@ -253,7 +256,9 @@ export default function ProductModal({
       ];
 
       Object.keys(formData).forEach((key) => {
-        if (
+        if (key === "isTrending" || key === "isNewArrival") {
+          data.append(key, formData[key] === true ? "true" : "false");
+        } else if (
           [
             "specifications",
             "keyBenefits",
@@ -269,16 +274,6 @@ export default function ProductModal({
           ].includes(key)
         ) {
           data.append(key, JSON.stringify(formData[key] || []));
-        } else if (!excludedKeys.includes(key)) {
-          if (formData[key] !== null && formData[key] !== undefined) {
-            data.append(key, formData[key]);
-          }
-        } else if (key === "isTrending" || key === "isNewArrival") {
-          data.append(key, formData[key] === true ? "true" : "false");
-        } else if (!excludedKeys.includes(key)) {
-          if (formData[key] !== null && formData[key] !== undefined) {
-            data.append(key, formData[key]);
-          }
         }
       });
 

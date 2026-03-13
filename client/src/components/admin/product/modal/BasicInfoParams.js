@@ -35,7 +35,7 @@ export default function BasicInfoParams({
           onChange={handleChange}
           placeholder="Write a brief summary for product cards..."
           className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none shadow-sm min-h-[80px]"
-          required
+          
         />
       </div>
 
@@ -143,8 +143,12 @@ export default function BasicInfoParams({
             {
               name: "isNewArrival",
               label: "Push for New Arrivals",
-              track:
-                "peer-checked:border-emerald-500 peer-checked:bg-emerald-500",
+              track: "peer-checked:border-emerald-500 peer-checked:bg-emerald-500",
+            },
+            {
+              name: "isCollection",
+              label: "Push for Collection",
+              track: "peer-checked:border-emerald-500 peer-checked:bg-emerald-500",
             },
           ].map(({ name, label, track }) => (
             <label
@@ -226,7 +230,6 @@ export default function BasicInfoParams({
       </div>
 
       {/* New Categorization Tags: Type, Fabric, Style, Work */}
-      {/* New Categorization Tags: Type, Fabric, Style, Work */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           {
@@ -304,7 +307,7 @@ export default function BasicInfoParams({
                   <div className="flex flex-wrap gap-1.5">
                     {selectedCategory[section.key].map((catTag, idx) => {
                       const isSelected = formData[section.key].includes(catTag);
-                      if (isSelected) return null; // Don't show if already selected
+                      if (isSelected) return null;
                       return (
                         <button
                           key={idx}

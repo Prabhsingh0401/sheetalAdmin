@@ -115,6 +115,8 @@ export const bulkImportProducts = async (req, res, next) => {
       req.user._id,
     );
 
+    
+
     return successResponse(
       res,
       200,
@@ -323,5 +325,15 @@ export const getMostViewedProducts = async (req, res, next) => {
     res.json({ success: true, items });
   } catch (err) {
     next(err);
+  }
+};
+
+export const getCollectionProducts = async (req, res) => {
+  try {
+    const products = await productService.fetchCollectionProducts();
+    return res.status(200).json({ success: true, products });
+  } catch (error) {
+    console.error("getCollectionProducts error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch collection products" });
   }
 };

@@ -54,11 +54,26 @@ export default function BlogModal({
     }
   }, [isOpen, initialData]);
 
+  useEffect(() => {
+    // Cleanup object URLs on unmount
+    return () => {
+      if (bannerPreview && bannerPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(bannerPreview);
+      }
+      if (contentImagePreview && contentImagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(contentImagePreview);
+      }
+    };
+  }, []);
+
   const handleBannerChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 3 * 1024 * 1024)
         return toast.error("File size should be less than 3MB");
+      if (bannerPreview && bannerPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(bannerPreview);
+      }
       setFormData({ ...formData, bannerImage: file });
       setBannerPreview(URL.createObjectURL(file));
     }
@@ -69,6 +84,9 @@ export default function BlogModal({
     if (file) {
       if (file.size > 3 * 1024 * 1024)
         return toast.error("File size should be less than 3MB");
+      if (contentImagePreview && contentImagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(contentImagePreview);
+      }
       setFormData({ ...formData, contentImage: file });
       setContentImagePreview(URL.createObjectURL(file));
     }

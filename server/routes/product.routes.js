@@ -19,6 +19,7 @@ import {
   getAllReviews,
   updateReviewStatus,
   getMostViewedProducts,
+  getCollectionProducts,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
@@ -33,6 +34,7 @@ router.get("/new-arrivals", getNewArrivals);
 router.get("/trending", getTrendingProducts);
 router.get("/reviews", getProductReviews);
 router.get("/can-review", isAuthenticated, checkCanReview);
+router.get("/collections", getCollectionProducts);
 
 // ─── Static admin routes (MUST be before /:id) ───────────────────────────────
 router.get("/admin/stats", isAuthenticated, isAdmin, getProductStats);

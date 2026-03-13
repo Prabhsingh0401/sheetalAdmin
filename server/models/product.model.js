@@ -111,6 +111,7 @@ const productSchema = new mongoose.Schema(
 
     isTrending: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },
+    isCollection: { type: Boolean, default: false },
 
     mainImage: {
       url: { type: String, required: true },

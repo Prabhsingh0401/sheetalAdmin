@@ -38,13 +38,12 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
   const handleImagesChange = (e) => {
     const files = Array.from(e.target.files);
     const validImages = files.filter((file) => {
-      if (file.type.startsWith("image/")) return true;
       const ext = file.name.split(".").pop().toLowerCase();
-      return ["jpg", "jpeg", "png", "gif", "webp", "svg", "heic"].includes(ext);
+      return ["jpg", "jpeg", "png", "webp"].includes(ext);
     });
 
     if (validImages.length !== files.length) {
-      toast.error("Some files were skipped because they are not recognized as images.");
+      toast.error("Some files were skipped. Only JPEG, PNG, and WebP images are allowed.");
     }
 
     const newEntries = validImages.map((file) => ({
@@ -160,7 +159,6 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   Upload Product Sheet
                 </p>
 
-                {/* Hidden input — triggered by the label below */}
                 <input
                   type="file"
                   id="excel-upload"
@@ -170,8 +168,6 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   onChange={handleExcelChange}
                 />
 
-                {/* <label> makes the whole drop zone keyboard-accessible and
-                    screen-reader friendly without any JS click forwarding */}
                 <label
                   htmlFor="excel-upload"
                   className={`block border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all
@@ -245,14 +241,13 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   ref={imagesInputRef}
                   className="sr-only"
                   multiple
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp"
                   onChange={handleImagesChange}
                 />
 
                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
 
-                    {/* Add images button — <label> ties directly to the hidden input */}
                     <label
                       htmlFor="images-upload"
                       className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-white transition-all bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1"
@@ -266,7 +261,6 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                         key={idx}
                         className="aspect-square relative rounded-lg overflow-hidden border border-slate-200 bg-white group"
                       >
-                        {/* Fixed: was `entry.url` on wrong variable name */}
                         <img
                           src={entry.url}
                           className="w-full h-full object-cover"
@@ -280,7 +274,6 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                         >
                           <X size={12} />
                         </button>
-                        {/* Fixed: was `file.name`, should be `entry.file.name` */}
                         <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate">
                           {entry.file.name}
                         </span>
@@ -304,7 +297,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <p className="text-xs text-slate-400 italic">
-                  Note: Image filenames must match exactly with the names provided in the Excel sheet.
+                  Note: Only JPEG, PNG, and WebP images are accepted. Filenames must match exactly with the names in the Excel sheet.
                 </p>
               </div>
             </div>

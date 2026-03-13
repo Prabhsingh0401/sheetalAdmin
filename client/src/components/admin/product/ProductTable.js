@@ -50,17 +50,17 @@ export default function ProductTable({ refreshStats }) {
 
   const { openProductId, closeModal } = useProductModal();
 
-useEffect(() => {
+  useEffect(() => {
     if (!openProductId) return;
     if (products.length === 0) return; // wait for products to load
 
     const product = products.find((p) => p._id === openProductId);
     if (product) {
-        setEditData(product);
-        setShowModal(true);
-        closeModal();
+      setEditData(product);
+      setShowModal(true);
+      closeModal();
     }
-}, [openProductId, products]);
+  }, [openProductId, products]);
 
   useEffect(() => {
     fetchProducts();
@@ -203,7 +203,8 @@ useEffect(() => {
             <tr>
               <th className="px-4 py-4 w-12 text-center">#</th>
               <th className="px-4 py-4 w-16 text-center">Image</th>
-              <th className="px-4 py-4 cursor-pointer group"
+              <th
+                className="px-4 py-4 cursor-pointer group"
                 onClick={() => handleSort("name")}
               >
                 <div className="flex items-center gap-1">
@@ -240,9 +241,12 @@ useEffect(() => {
                         setShowDrawer(true);
                       }}
                     >
-                      {p.images?.[0]?.url ? (
+                      {p.images?.[0]?.url || p.mainImage?.url ? (
                         <img
-                          src={p.images[0].url.replace(/\\/g, "/")}
+                          src={(p.images?.[0]?.url || p.mainImage?.url).replace(
+                            /\\/g,
+                            "/",
+                          )}
                           alt=""
                           className="w-full h-full object-cover"
                         />
@@ -287,8 +291,12 @@ useEffect(() => {
                           {tag}
                         </span>
                       ))}
-                      {(p.wearType?.length > 2 || p.occasion?.length > 2 || p.tags?.length > 1) && (
-                        <span className="text-[9px] text-slate-400 font-medium">+more</span>
+                      {(p.wearType?.length > 2 ||
+                        p.occasion?.length > 2 ||
+                        p.tags?.length > 1) && (
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          +more
+                        </span>
                       )}
                     </div>
                   </td>
@@ -310,9 +318,12 @@ useEffect(() => {
                   <td className="px-4 py-4">
                     {p.lowStockVariantCount > 0 ? (
                       <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        {p.lowStockVariantCount} Variant{p.lowStockVariantCount > 1 ? "s" : ""} Low Stock
+                        {p.lowStockVariantCount} Variant
+                        {p.lowStockVariantCount > 1 ? "s" : ""} Low Stock
                         {p.lowStockThreshold !== undefined && (
-                          <span className="ml-1 text-red-600 font-normal">(≤{p.lowStockThreshold})</span>
+                          <span className="ml-1 text-red-600 font-normal">
+                            (≤{p.lowStockThreshold})
+                          </span>
                         )}
                       </span>
                     ) : (
