@@ -84,7 +84,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-slate-400 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
+                        className="text-slate-400 cursor-pointer  hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition"
                     >
                         <X size={20} />
                     </button>
@@ -161,14 +161,14 @@ export default function SettingsModal({ isOpen, onClose }) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition uppercase tracking-wider"
+                            className="flex-1 px-4 py-2.5 cursor-pointer border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition uppercase tracking-wider"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-[2] bg-slate-900 hover:bg-black text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70"
+                            className="flex-[2] bg-slate-900 cursor-pointer hover:bg-black text-white py-2.5 rounded-lg font-bold text-sm transition shadow-lg active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70"
                         >
                             <Save size={16} />
                             {loading ? "Saving..." : "Save Settings"}

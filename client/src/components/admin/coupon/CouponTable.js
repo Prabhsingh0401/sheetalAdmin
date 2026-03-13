@@ -149,7 +149,7 @@ export default function CouponTable({ refreshStats }) {
           <button
             onClick={() => fetchCoupons(true)}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+            className="p-2 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -160,7 +160,7 @@ export default function CouponTable({ refreshStats }) {
             setEditData(null);
             setShowModal(true);
           }}
-          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap"
+          className="bg-slate-900 cursor-pointer hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap"
         >
           + Add Coupon
         </button>
@@ -296,7 +296,7 @@ export default function CouponTable({ refreshStats }) {
                     <div className="flex justify-end gap-3 text-slate-400">
                       <button
                         title="View"
-                        className="hover:text-slate-900 transition-colors p-1"
+                        className="hover:text-slate-900 transition-colors p-1 cursor-pointer"
                         onClick={() => {
                           setViewCoupon(c);
                           setShowDrawer(true);
@@ -306,7 +306,7 @@ export default function CouponTable({ refreshStats }) {
                       </button>
                       <button
                         title="Edit"
-                        className="hover:text-blue-600 transition-colors p-1"
+                        className="hover:text-blue-600 transition-colors p-1 cursor-pointer"
                         onClick={() => {
                           setEditData(c);
                           setShowModal(true);
@@ -316,7 +316,7 @@ export default function CouponTable({ refreshStats }) {
                       </button>
                       <button
                         title="Delete"
-                        className="hover:text-rose-600 transition-colors p-1"
+                        className="hover:text-rose-600 transition-colors p-1 cursor-pointer"
                         onClick={() => {
                           setDeleteId(c._id);
                           setShowDeleteModal(true);
@@ -386,7 +386,7 @@ export default function CouponTable({ refreshStats }) {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
+              className="p-2 border border-slate-200 rounded-lg cursor-pointer bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
             >
               <ChevronLeft size={16} className="text-slate-600" />
             </button>
@@ -408,7 +408,7 @@ export default function CouponTable({ refreshStats }) {
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
+              className="p-2 border border-slate-200 rounded-lg cursor-pointer bg-white disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-colors"
             >
               <ChevronRight size={16} className="text-slate-600" />
             </button>

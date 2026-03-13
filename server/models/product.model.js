@@ -109,6 +109,10 @@ const productSchema = new mongoose.Schema(
     ogImage: { type: String },
     canonicalUrl: { type: String },
 
+    isTrending: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
+    isCollection: { type: Boolean, default: false },
+
     mainImage: {
       url: { type: String, required: true },
       public_id: { type: String },
@@ -132,6 +136,11 @@ const productSchema = new mongoose.Schema(
       public_id: { type: String },
       mimeType: { type: String, default: "video/mp4" },
       size: { type: Number },
+    },
+
+    orderStats: {
+      totalOrders: { type: Number, default: 0 },
+      totalRevenue: { type: Number, default: 0 },
     },
 
     averageRating: { type: Number, default: 0 },

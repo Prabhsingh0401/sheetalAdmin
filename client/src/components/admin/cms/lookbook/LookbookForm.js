@@ -231,7 +231,7 @@ export default function LookbookForm() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
+          className="flex items-center cursor-pointer gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
         >
           {isSaving ? (
             <>

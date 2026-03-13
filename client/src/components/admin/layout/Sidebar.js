@@ -23,6 +23,7 @@ import {
   ClipboardClock,
   Home,
   Headset,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,22 +41,41 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     { icon: Users, label: "Customers", href: "/admin/customers" },
     { icon: TicketPercent, label: "Coupons", href: "/admin/coupons" },
     { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
-    { icon: ClipboardClock, label: "Appointments", href: "/admin/appointments" },
-    { icon: Headset, label: "Enquiry", href: "/admin/enquiry" },
-    { icon: Star, label: "Reviews", href: "/admin/reviews" },
-    { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     {
       icon: ChartNoAxesCombined,
       label: "Sales & Reports",
       href: "/admin/sales-report",
       children: [
         {
-          icon: BarChart2,
-          label: "Sales Overview",
-          href: "/admin/sales-report",
+          icon: TrendingUp,
+          label: "Best Selling Products",
+          href: "/admin/sales-report/best-selling",
+        },
+        {
+          icon: Eye,
+          label: "Most Viewed Products",
+          href: "/admin/sales-report/most-viewed",
+        },
+        {
+          icon: Users,
+          label: "Traffic Source",
+          href: "/admin/sales-report/traffic",
+        },
+        {
+          icon: ShoppingCart,
+          label: "Abandoned Carts",
+          href: "/admin/sales-report/abandoned-carts",
         },
       ],
     },
+    {
+      icon: ClipboardClock,
+      label: "Appointments",
+      href: "/admin/appointments",
+    },
+    { icon: Headset, label: "Enquiry", href: "/admin/enquiry" },
+    { icon: Star, label: "Reviews", href: "/admin/reviews" },
+    { icon: Newspaper, label: "Blogs", href: "/admin/blogs" },
     {
       icon: Monitor,
       label: "Site Content",
@@ -65,8 +85,16 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
         { icon: Layout, label: "Banners", href: "/admin/cms/banners" },
         { icon: BookOpen, label: "Lookbooks", href: "/admin/cms/lookbooks" },
         { icon: FileText, label: "Text Pages", href: "/admin/cms/pages" },
-        { icon: InstagramIcon, label: "Instagram Cards", href: "/admin/cms/instagram" },
-        { icon: UserIcon, label: "Testimonials", href: "/admin/cms/testimonials" },
+        {
+          icon: InstagramIcon,
+          label: "Instagram Cards",
+          href: "/admin/cms/instagram",
+        },
+        {
+          icon: UserIcon,
+          label: "Testimonials",
+          href: "/admin/cms/testimonials",
+        },
       ],
     },
     { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
@@ -143,8 +171,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
 }
 
 function NavItem({ item, pathname, setIsOpen }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const Icon = item.icon;
 
   const isActive =
@@ -179,6 +206,12 @@ function NavItem({ item, pathname, setIsOpen }) {
     (child) => pathname === child.href || pathname.startsWith(child.href),
   );
 
+  const handleChevronClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsExpanded((prev) => !prev);
+  };
+
   return (
     <div>
       <Link
@@ -199,19 +232,22 @@ function NavItem({ item, pathname, setIsOpen }) {
           }
         />
         <span className="flex-1">{item.label}</span>
-        <span onClick={()=> setIsHovered(!isHovered)} className="hover:bg-white/30 rounded w-4 h-4 flex items-center justify-center">
+        <span
+          onClick={handleChevronClick}
+          className="hover:bg-white/30 rounded w-4 h-4 flex items-center justify-center"
+        >
           <ChevronDown
-          size={14}
-          className={`transition-transform duration-300 ${isHovered ? "rotate-180" : "rotate-0"} ${
-            isParentActive ? "text-white/70" : "text-slate-400"
-          }`}
-        />
+            size={14}
+            className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : "rotate-0"} ${
+              isParentActive ? "text-white/70" : "text-slate-400"
+            }`}
+          />
         </span>
       </Link>
 
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isHovered ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="mt-0.5 ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5 py-1">

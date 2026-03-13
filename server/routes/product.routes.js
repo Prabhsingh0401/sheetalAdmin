@@ -18,6 +18,8 @@ import {
   checkCanReview,
   getAllReviews,
   updateReviewStatus,
+  getMostViewedProducts,
+  getCollectionProducts,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
@@ -25,34 +27,32 @@ import { uploadTo } from "../middlewares/multer.middleware.js";
 
 const router = express.Router();
 
-// public routes
+// ─── Static public routes ─────────────────────────────────────────────────────
 router.get("/", getAllProducts);
 router.get("/all", getAllProducts);
 router.get("/new-arrivals", getNewArrivals);
 router.get("/trending", getTrendingProducts);
-router.post("/view/:id", incrementViewCount);
-router.get("/detail/:id", getProductDetails);
 router.get("/reviews", getProductReviews);
 router.get("/can-review", isAuthenticated, checkCanReview);
-router.get("/:id", getProductDetails);
+router.get("/collections", getCollectionProducts);
 
-// protected routes
-router.put("/review", isAuthenticated, createProductReview);
-
-// admin routes
+// ─── Static admin routes (MUST be before /:id) ───────────────────────────────
 router.get("/admin/stats", isAuthenticated, isAdmin, getProductStats);
+router.get("/admin/sample-excel", isAuthenticated, isAdmin, getSampleExcel);
+router.get("/admin/reviews", isAuthenticated, isAdmin, getAllReviews);
+router.get("/admin/low-stock", isAuthenticated, isAdmin, getLowStockProducts);
+router.get("/admin/most-viewed", isAuthenticated, isAdmin, getMostViewedProducts);
+
 router.post(
   "/admin/import",
   isAuthenticated,
   isAdmin,
   uploadTo("temp/bulk").fields([
     { name: "file", maxCount: 1 },
-    { name: "images", maxCount: 500 }, // Allow up to 500 images for bulk import
+    { name: "images", maxCount: 500 },
   ]),
   bulkImportProducts,
 );
-
-router.get("/admin/sample-excel", isAuthenticated, isAdmin, getSampleExcel);
 
 router.post(
   "/admin/new",
@@ -85,9 +85,18 @@ router.put(
 );
 
 router.delete("/admin/:id", isAuthenticated, isAdmin, deleteProduct);
-router.get("/admin/reviews", isAuthenticated, isAdmin, getAllReviews);
 router.put("/admin/reviews/:id", isAuthenticated, isAdmin, updateReviewStatus);
 router.delete("/admin/reviews", isAuthenticated, isAdmin, deleteReview);
-router.get("/admin/low-stock", isAuthenticated, isAdmin, getLowStockProducts);
+
+// ─── View increment ───────────────────────────────────────────────────────────
+router.post("/view/:id", incrementViewCount);
+router.patch("/view/:slug", incrementViewCount);
+
+// ─── Protected routes ─────────────────────────────────────────────────────────
+router.put("/review", isAuthenticated, createProductReview);
+
+// ─── Param routes LAST (catch-all — must be at the bottom) ───────────────────
+router.get("/detail/:id", getProductDetails);
+router.get("/:id", getProductDetails);
 
 export default router;

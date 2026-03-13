@@ -1,4 +1,8 @@
 import Order from "../models/order.model.js";
+import Cart from "../models/cart.model.js";
+import User from "../models/user.model.js";
+import Product from "../models/product.model.js";
+import { sendAbandonedCartEmail } from "../services/sales.service.js";
 
 /**
  * Helper — builds a $match stage from query params.
@@ -81,9 +85,12 @@ function fillWeeklyData(results) {
     d.setDate(today.getDate() - i);
 
     const key = d.toISOString().slice(0, 10);
-    const label = d.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
+    const label = d.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+    });
 
-    const found = results.find(r => r.date === key);
+    const found = results.find((r) => r.date === key);
 
     days.push(
       found || {
@@ -91,8 +98,8 @@ function fillWeeklyData(results) {
         name: label,
         sales: 0,
         revenue: 0,
-        unitsSold: 0
-      }
+        unitsSold: 0,
+      },
     );
   }
 
@@ -377,42 +384,192 @@ export const getBestSellingProducts = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 5, 50);
 
-    const results = await Order.aggregate([
-      { $match: { orderStatus: "Delivered" } },
-      { $unwind: "$orderItems" },
-      {
-        $group: {
-          _id: "$orderItems.product",
-          name: { $first: "$orderItems.name" },
-          image: { $first: "$orderItems.image" },
-          unitsSold: { $sum: "$orderItems.quantity" },
-          totalRevenue: {
-            $sum: { $multiply: ["$orderItems.quantity", "$orderItems.price"] },
-          },
-        },
-      },
-      { $sort: { totalRevenue: -1 } },
-      { $limit: limit },
-      {
-        $project: {
-          _id: 0,
-          productId: "$_id",
-          name: 1,
-          image: 1,
-          unitsSold: 1,
-          totalRevenue: 1,
-        },
-      },
-    ]);
+    const results = await Product.find({ "orderStats.totalOrders": { $gt: 0 } })
+      .sort({ "orderStats.totalRevenue": -1 })
+      .limit(limit)
+      .select("name mainImage orderStats")
+      .lean();
 
-    res
-      .status(200)
-      .json({ success: true, count: results.length, data: results });
+    const data = results.map((p) => ({
+      productId: p._id,
+      name: p.name,
+      image: p.mainImage?.url,
+      unitsSold: p.orderStats.totalOrders,
+      totalRevenue: p.orderStats.totalRevenue,
+    }));
+
+    res.status(200).json({ success: true, count: data.length, data });
   } catch (error) {
     console.error("[getBestSellingProducts]", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch best-selling products.",
+      error: error.message,
+    });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/sales/abandoned-carts
+// Returns carts not updated in 7+ days, with user + product details populated.
+// Query: ?limit=20 (default 20, max 100)
+// ─────────────────────────────────────────────────────────────────────────────
+export const getAbandonedCarts = async (req, res) => {
+  try {
+    const ABANDONED_DAYS = 7;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - ABANDONED_DAYS);
+    cutoff.setHours(0, 0, 0, 0);
+
+    const carts = await Cart.find({ updatedAt: { $lt: cutoff } })
+      .populate("user", "name email")
+      .populate("items.product", "name images")
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const data = carts
+      .map((cart) => {
+        const cartValue = cart.items.reduce((sum, item) => {
+          const price =
+            item.discountPrice > 0 ? item.discountPrice : item.price;
+          return sum + price * item.quantity;
+        }, 0);
+
+        if (cartValue <= 0) return null; // ❗ skip empty carts
+
+        const name = cart.user?.name || cart.user?.email || "Unknown";
+        const initials = name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2);
+
+        const diffDays = Math.floor(
+          (Date.now() - new Date(cart.updatedAt)) / 86_400_000,
+        );
+
+        let date;
+        if (diffDays === 0) date = "Today";
+        else if (diffDays === 1) date = "Yesterday";
+        else if (diffDays < 7) date = `${diffDays}d ago`;
+        else if (diffDays < 30) date = `${Math.floor(diffDays / 7)}w ago`;
+        else
+          date = new Date(cart.updatedAt).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+          });
+
+        return {
+          cartId: cart._id,
+          userId: cart.user?._id,
+          email: cart.user?.email,
+          name,
+          initials,
+          cartValue: Math.round(cartValue * 100) / 100,
+          itemCount: cart.items.length,
+          date,
+          lastUpdated: cart.updatedAt,
+          previewImage:
+            cart.items[0]?.variantImage ||
+            cart.items[0]?.product?.images?.[0] ||
+            null,
+        };
+      })
+      .filter(Boolean);
+
+    const totalValue = data.reduce((sum, c) => sum + c.cartValue, 0);
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      totalAbandonedValue: Math.round(totalValue * 100) / 100,
+      data,
+    });
+  } catch (error) {
+    console.error("[getAbandonedCarts]", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch abandoned carts.",
+      error: error.message,
+    });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/abandoned-carts/send-recovery
+// Body: { email: string }
+// Triggers a recovery email and stamps recoverySentAt on the cart.
+// ─────────────────────────────────────────────────────────────────────────────
+export const sendAbandonedCartRecovery = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "email is required.",
+      });
+    }
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    const cart = await Cart.findOne({ user: user._id }).populate(
+      "items.product",
+      "name images",
+    );
+
+    if (!cart || !cart.items.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No abandoned cart found.",
+      });
+    }
+
+    const cartValue = cart.items.reduce((sum, item) => {
+      const price = item.discountPrice > 0 ? item.discountPrice : item.price;
+      return sum + price * item.quantity;
+    }, 0);
+
+    if (cartValue <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart has no value.",
+      });
+    }
+
+    await sendAbandonedCartEmail({
+      name: user.name || user.email,
+      email: user.email,
+      items: cart.items,
+      cartValue,
+    });
+
+    await Cart.findByIdAndUpdate(cart._id, {
+      recoverySentAt: new Date(),
+    });
+
+    console.log(`[AbandonedCarts] Recovery email sent → ${email}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Recovery email sent to ${email}.`,
+    });
+  } catch (error) {
+    console.error("[sendAbandonedCartRecovery]", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to send recovery email.",
       error: error.message,
     });
   }

@@ -14,7 +14,6 @@ export const createCouponService = async (data) => {
         };
     }
 
-    // If this coupon is set as homepage, unset all others
     if (data.showOnHomepage === true) {
       await Coupon.updateMany({}, { $set: { showOnHomepage: false } });
     }
@@ -43,7 +42,6 @@ export const updateCouponService = async (id, updateData) => {
       updateData.code = updateData.code.toUpperCase();
     }
 
-    // If this coupon is set as homepage, unset all others first
     if (updateData.showOnHomepage === true) {
       await Coupon.updateMany(
         { _id: { $ne: id } },
@@ -79,6 +77,36 @@ export const updateCouponService = async (id, updateData) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Helper: distribute `totalDiscount` across `items` proportionally using each
+// item's effective line total, with floor-truncation per item and the leftover
+// remainder assigned to the last item so the sum always equals `totalDiscount`.
+// ---------------------------------------------------------------------------
+const distributeDiscount = (items, applicableTotal, totalDiscount) => {
+  const itemWiseDiscount = {};
+  if (!items.length || applicableTotal <= 0 || totalDiscount <= 0) {
+    return itemWiseDiscount;
+  }
+
+  let assignedSum = 0;
+  let lastItemId = null;
+
+  for (const item of items) {
+    const lineTotal = (item.discountPrice ?? item.price) * item.quantity;
+    const share = Math.floor((lineTotal / applicableTotal) * totalDiscount);
+    itemWiseDiscount[item._id] = share;
+    assignedSum += share;
+    lastItemId = item._id;
+  }
+
+  // Add any rounding remainder to the last item so totals reconcile exactly
+  if (lastItemId !== null) {
+    itemWiseDiscount[lastItemId] += totalDiscount - assignedSum;
+  }
+
+  return itemWiseDiscount;
+};
+
 export const applyCouponService = async (
   code,
   cartTotal,
@@ -97,7 +125,6 @@ export const applyCouponService = async (
         message: "Invalid or inactive coupon",
       };
 
-    // Pass cartItems to isValid method
     const validation = coupon.isValid(userId, cartTotal, cartItems);
     if (!validation.valid)
       return { success: false, statusCode: 400, message: validation.message };
@@ -105,7 +132,7 @@ export const applyCouponService = async (
     let discount = 0;
     let applicableItems = cartItems;
     let applicableTotal = cartTotal;
-    let itemWiseDiscount = {}; // Initialize itemWiseDiscount
+    let itemWiseDiscount = {};
 
     if (coupon.scope === "Category") {
       applicableItems = cartItems.filter(
@@ -136,46 +163,33 @@ export const applyCouponService = async (
     }
 
     switch (coupon.offerType) {
-      case "Percentage":
-        let totalApplicableDiscount =
-          (applicableTotal * coupon.offerValue) / 100;
-        if (coupon.maxDiscountAmount)
-          totalApplicableDiscount = Math.min(
-            totalApplicableDiscount,
-            coupon.maxDiscountAmount,
-          );
-        discount = totalApplicableDiscount;
-
-        // Distribute discount proportionally
-        if (applicableItems.length > 0 && applicableTotal > 0) {
-          applicableItems.forEach((item) => {
-            const itemEffectivePrice =
-              (item.discountPrice ?? item.price) * item.quantity;
-            itemWiseDiscount[item._id] = Math.round(
-              (itemEffectivePrice / applicableTotal) * totalApplicableDiscount,
-            );
-          });
+      case "Percentage": {
+        let rawDiscount = (applicableTotal * coupon.offerValue) / 100;
+        if (coupon.maxDiscountAmount) {
+          rawDiscount = Math.min(rawDiscount, coupon.maxDiscountAmount);
         }
+        discount = Math.round(rawDiscount);
+
+        itemWiseDiscount = distributeDiscount(
+          applicableItems,
+          applicableTotal,
+          discount,
+        );
         break;
+      }
 
-      case "FixedAmount":
-        let fixedDiscountAmount = Math.min(coupon.offerValue, applicableTotal);
-        discount = fixedDiscountAmount;
+      case "FixedAmount": {
+        discount = Math.round(Math.min(coupon.offerValue, applicableTotal));
 
-        // Distribute fixed discount proportionally
-        if (applicableItems.length > 0 && applicableTotal > 0) {
-          applicableItems.forEach((item) => {
-            const itemEffectivePrice =
-              (item.discountPrice ?? item.price) * item.quantity;
-            itemWiseDiscount[item._id] = Math.round(
-              (itemEffectivePrice / applicableTotal) * fixedDiscountAmount,
-            );
-          });
-        }
+        itemWiseDiscount = distributeDiscount(
+          applicableItems,
+          applicableTotal,
+          discount,
+        );
         break;
+      }
 
-      case "BOGO":
-        // 1. Determine applicable items based on scope
+      case "BOGO": {
         const isCategoryScope = coupon.scope === "Category";
         const isProductScope = coupon.scope === "Specific_Product";
 
@@ -185,10 +199,7 @@ export const applyCouponService = async (
           bogoApplicableItems = cartItems.filter((item) => {
             const product = item.product;
             if (!product || !product.category) return false;
-
-            // Handle both populated category object and direct ID string
             const categoryId = product.category._id || product.category;
-
             return coupon.applicableIds.some(
               (id) => id.toString() === categoryId.toString(),
             );
@@ -204,8 +215,6 @@ export const applyCouponService = async (
           });
         }
 
-        // 2. Check minimum quantity requirement (Buy X + Get Y)
-        // Calculate TOTAL QUANTITY of applicable items, not just line item count.
         const totalApplicableQuantity = bogoApplicableItems.reduce(
           (sum, item) => sum + item.quantity,
           0,
@@ -221,8 +230,6 @@ export const applyCouponService = async (
           };
         }
 
-        // 3. Sort items by effective price to find the cheapest ones
-        // We want to make the CHEAPEST units free.
         const sortedItems = [...bogoApplicableItems].sort(
           (a, b) => (a.discountPrice ?? a.price) - (b.discountPrice ?? b.price),
         );
@@ -230,51 +237,49 @@ export const applyCouponService = async (
         let bogoDiscount = 0;
         let remainingFreeUnits = coupon.getQuantity;
 
-        // 4. Calculate total BOGO discount (Unit-based calculation)
-        // Iterate through cheapest items and make them free until we reach getQuantity limit
         for (const item of sortedItems) {
           if (remainingFreeUnits <= 0) break;
-
           const itemPrice = item.discountPrice ?? item.price;
-          // How many units of this item can we make free?
-          // Either all of them, or however many free units we have left.
           const unitsToDiscount = Math.min(item.quantity, remainingFreeUnits);
-
           bogoDiscount += unitsToDiscount * itemPrice;
           remainingFreeUnits -= unitsToDiscount;
         }
 
-        // 5. Apply max discount cap if exists
         let finalBogoDiscount = bogoDiscount;
         if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
           finalBogoDiscount = Math.min(bogoDiscount, coupon.maxDiscountAmount);
         }
+        discount = Math.round(finalBogoDiscount);
 
-        // 6. Distribute the final discount among items proportionally
         if (bogoDiscount > 0) {
-          const discountRatio = finalBogoDiscount / bogoDiscount; // Ratio to apply if capped
-
-          // Reset for distribution
+          // Build per-item raw (unrounded) shares then apply floor + remainder
+          const discountRatio = finalBogoDiscount / bogoDiscount;
           remainingFreeUnits = coupon.getQuantity;
 
+          // Collect BOGO line items with their unrounded share
+          const bogoLines = [];
           for (const item of sortedItems) {
             if (remainingFreeUnits <= 0) break;
-
             const itemPrice = item.discountPrice ?? item.price;
             const unitsToDiscount = Math.min(item.quantity, remainingFreeUnits);
-
-            // Calculate proportional discount for this specific line item
-            // based on how many units of it were considered "free"
-            const itemTotalDiscount =
-              unitsToDiscount * itemPrice * discountRatio;
-
-            itemWiseDiscount[item._id] = Math.round(itemTotalDiscount);
+            const rawShare = unitsToDiscount * itemPrice * discountRatio;
+            bogoLines.push({ id: item._id, rawShare });
             remainingFreeUnits -= unitsToDiscount;
           }
-        }
 
-        discount = finalBogoDiscount;
+          // Floor each share, assign remainder to last line
+          let assignedSum = 0;
+          for (const line of bogoLines) {
+            itemWiseDiscount[line.id] = Math.floor(line.rawShare);
+            assignedSum += itemWiseDiscount[line.id];
+          }
+          if (bogoLines.length > 0) {
+            const lastId = bogoLines[bogoLines.length - 1].id;
+            itemWiseDiscount[lastId] += discount - assignedSum;
+          }
+        }
         break;
+      }
 
       case "FreeShipping":
         discount = 0;
@@ -287,15 +292,15 @@ export const applyCouponService = async (
     return {
       success: true,
       data: {
-        discount: Math.round(discount),
+        discount,
         couponCode: coupon.code,
         offerType: coupon.offerType,
         isMaxApplied: coupon.maxDiscountAmount
           ? discount >= coupon.maxDiscountAmount
           : false,
-        applicableIds: coupon.applicableIds, // Pass applicableIds to frontend
+        applicableIds: coupon.applicableIds,
         scope: coupon.scope,
-        itemWiseDiscount: itemWiseDiscount, // New: item-wise discount breakdown
+        itemWiseDiscount,
       },
     };
   } catch (error) {
@@ -303,34 +308,25 @@ export const applyCouponService = async (
   }
 };
 
-export const getAllCouponsService = async ({
-  page,
-  limit,
-  search,
-  showOnHomepage,
-}) => {
+// Admin: returns ALL coupons regardless of isActive/expiry so the table
+// shows the full picture. Public /api/v1/coupons/ still filters by active+valid.
+export const getAllCouponsService = async ({ page, limit, search, isAdmin = false }) => {
   try {
-    const now = new Date();
-    const baseQuery = {
-      isActive: true,
-      endDate: { $gte: now },
-    };
+    const baseQuery = isAdmin
+      ? {}
+      : { isActive: true, endDate: { $gte: new Date() } };
 
     if (search) {
-      baseQuery.code = { $regex: search, $options: "i" };
-    }
-
-    if (showOnHomepage === true) {
-      baseQuery.showOnHomepage = true;
+      baseQuery.$or = [
+        { code: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
     }
 
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       Coupon.find(baseQuery)
-        .populate({
-          path: "applicableIds",
-          select: "name",
-        })
+        .populate({ path: "applicableIds", select: "name" })
         .sort("-createdAt")
         .skip(skip)
         .limit(limit),
@@ -360,37 +356,23 @@ export const getCouponStatsService = async () => {
 
     const stats = await Coupon.aggregate([
       {
-        // Match the same base filter used in the table so stats are consistent
-        $match: {
-          isActive: true,
-          endDate: { $gte: now },
-        },
-      },
-      {
         $group: {
           _id: null,
-          // Total = all active, non-expired coupons (matches the table's filter)
           total: { $sum: 1 },
-          // Active = isActive:true AND not yet expired (matches the table's own filter)
           active: {
             $sum: {
               $cond: [
-                {
-                  $and: [
-                    { $eq: ["$isActive", true] },
-                    { $gte: ["$endDate", now] },
-                  ],
-                },
+                { $and: [{ $eq: ["$isActive", true] }, { $gte: ["$endDate", now] }] },
                 1,
                 0,
               ],
             },
           },
-          // Total redemptions across all coupons
+          expired: {
+            $sum: { $cond: [{ $lt: ["$endDate", now] }, 1, 0] },
+          },
           totalUsed: { $sum: { $ifNull: ["$usedCount", 0] } },
-          // Total discount value generated
           totalSavings: { $sum: { $ifNull: ["$totalDiscountGenerated", 0] } },
-          // Count of FestiveSale type coupons
           festiveSales: {
             $sum: { $cond: [{ $eq: ["$couponType", "FestiveSale"] }, 1, 0] },
           },
@@ -401,11 +383,21 @@ export const getCouponStatsService = async () => {
     const result = stats[0] || {
       total: 0,
       active: 0,
+      expired: 0,
       totalUsed: 0,
       totalSavings: 0,
       festiveSales: 0,
     };
     return { success: true, data: result };
+  } catch (error) {
+    return { success: false, statusCode: 500, message: error.message };
+  }
+};
+
+export const getHomepageCouponService = async () => {
+  try {
+    const coupon = await Coupon.findOne({ showOnHomepage: true }).lean();
+    return { success: true, data: coupon ?? null };
   } catch (error) {
     return { success: false, statusCode: 500, message: error.message };
   }

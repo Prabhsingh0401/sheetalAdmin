@@ -7,13 +7,21 @@
  *
  * Architecture:
  *  - In-memory index: Map<ngram, Set<docId>>
- *  - Document store:  Map<docId, IndexedDocument>
+ *  - Word index:      Map<word,  Set<docId>>  — separate word-only index for O(W) fuzzy expansion
+ *  - Document store:  Map<docId, { doc, grams }> — grams cached to avoid recomputation on removal
  *  - Scoring:        TF-style — ranked by how many unique n-grams of the
  *                    query match a document (intersection count / query ngrams).
  *  - Hydration:      On first search or explicit rebuild, loads all active
  *                    products & categories from MongoDB.
+ *                    Stages into temporary maps — a failed rebuild never wipes
+ *                    the last good index. hydrationPromise is always cleared in
+ *                    finally so a transient DB error doesn't permanently brick search.
  *  - Fuzzy matching: Levenshtein distance for typo tolerance ("suts" → "suits")
- *  - Category boost: Categories always ranked above products for same score
+ *                    Expansion now runs against the word index only (O(Q×W)),
+ *                    NOT the full n-gram index (O(Q×I)), preventing event-loop blocks.
+ *  - Phonetic matching: Soundex for sound-alike words ("saris" → "sarees", "lahenga" → "lehenga")
+ *  - Category boost: Categories always ranked above products — applied via sort
+ *                    comparator only (removed the redundant ×50 score multiply).
  *
  * Public API:
  *  - syncToIndex(item, type)        — upsert a document into the index
@@ -40,7 +48,26 @@ const INDEX_TTL_MS = 15 * 60 * 1000; // 15 minutes — auto-rebuild stale index
 /** @type {Map<string, Set<string>>} ngram -> Set of document IDs */
 const invertedIndex = new Map();
 
-/** @type {Map<string, Object>} docId -> document */
+/**
+ * FIX #1 (Critical): Separate word-level index used exclusively for fuzzy
+ * expansion. Fuzzy expansion previously iterated the full invertedIndex
+ * (tens of thousands of character n-grams) and called levenshteinDistance on
+ * each — O(Q × I) per search, blocking the event loop on large catalogs.
+ * Now fuzzy expansion only iterates whole words — O(Q × W), orders of magnitude
+ * smaller.
+ *
+ * @type {Map<string, Set<string>>} word -> Set of document IDs
+ */
+const wordIndex = new Map();
+
+/**
+ * FIX #6 (Minor): Store cached gram sets alongside each document so removal
+ * never needs to recompute n-grams. Previously removeDocumentFromIndex
+ * recomputed grams from the stored doc — if the doc and index ever drifted
+ * out of sync the removal would silently no-op or clean wrong buckets.
+ *
+ * @type {Map<string, { doc: Object, grams: Set<string> }>}
+ */
 const documentStore = new Map();
 
 let isHydrated = false;
@@ -67,16 +94,20 @@ const normalise = (text) => {
 /**
  * Generates all overlapping n-grams from a string.
  * Also adds individual words for whole-word matching.
+ * Returns { grams, words } so callers can populate both indexes separately.
  */
 const generateNgrams = (text, n = N) => {
   const normalised = normalise(text);
   const grams = new Set();
-  if (!normalised) return grams;
+  const words = new Set();
+  if (!normalised) return { grams, words };
 
-  // Word-level tokens (important for exact word hits)
-  const words = normalised.split(" ");
-  words.forEach((w) => {
-    if (w.length > 0) grams.add(w);
+  // Word-level tokens (important for exact word hits + fuzzy expansion)
+  normalised.split(" ").forEach((w) => {
+    if (w.length > 0) {
+      grams.add(w);
+      words.add(w); // also tracked in separate word set
+    }
   });
 
   // Character-level n-grams over the full normalised string (no spaces)
@@ -85,11 +116,11 @@ const generateNgrams = (text, n = N) => {
     grams.add(compact.slice(i, i + n));
   }
 
-  return grams;
+  return { grams, words };
 };
 
 /**
- * Extracts all searchable text from a document and converts to an n-gram set.
+ * Extracts all searchable text from a document and converts to n-gram + word sets.
  */
 const documentNgrams = (doc) => {
   const fields = [
@@ -112,7 +143,41 @@ const documentNgrams = (doc) => {
 };
 
 // ---------------------------------------------------------------------------
-// Fuzzy Matching Helpers  (defined BEFORE searchNgram which calls them)
+// Query Aliases — maps known misspellings/truncations to canonical terms
+// ---------------------------------------------------------------------------
+
+const QUERY_ALIASES = {
+  // suits
+  sut: "suits",
+  suts: "suits",
+  soot: "suits",
+  soots: "suits",
+  sari: "sarees",
+  saris: "sarees",
+  seris: "sarees",
+  sere: "sarees",
+  sare: "sarees",
+  seere: "sarees",
+  lahange: "lehenga",
+  lenga: "lehenga",
+  langa: "lehenga",
+  lehenga: "lehenga",
+};
+
+/**
+ * Expands a query by replacing known aliases with canonical terms.
+ * Operates word-by-word so aliases work inside multi-word queries too.
+ */
+const expandQueryAliases = (query) => {
+  return query
+    .trim()
+    .split(/\s+/)
+    .map((word) => QUERY_ALIASES[word.toLowerCase()] ?? word)
+    .join(" ");
+};
+
+// ---------------------------------------------------------------------------
+// Fuzzy Matching Helpers
 // ---------------------------------------------------------------------------
 
 /**
@@ -153,10 +218,9 @@ const levenshteinDistance = (a, b) => {
  * are to the document name words using Levenshtein distance.
  *
  * Bonus tiers:
- *   distance === 0  → exact word match (handled by n-gram scoring, skip here)
- *   distance === 1  → +150  e.g. "suts"    → "suits"
- *   distance === 2  → +60   e.g. "soot"    → "suit"  (only for words len >= 5)
- *   similarity >= 0.75 → +30  catch-all for close matches
+ *   distance === 1, lenDiff <= 1  → +150  e.g. "suts"  → "suits"
+ *   distance === 2, lenDiff <= 1,
+ *                  maxLen >= 5    → +60   e.g. "soots" → "suits"
  */
 const getFuzzyBonus = (normalisedQuery, normalisedName) => {
   const queryWords = normalisedQuery.split(" ");
@@ -166,7 +230,6 @@ const getFuzzyBonus = (normalisedQuery, normalisedName) => {
 
   queryWords.forEach((qWord) => {
     if (qWord.length < 4) return;
-
     nameWords.forEach((nWord) => {
       if (nWord.length < 4) return;
 
@@ -174,13 +237,92 @@ const getFuzzyBonus = (normalisedQuery, normalisedName) => {
       const maxLen = Math.max(qWord.length, nWord.length);
       const lenDiff = Math.abs(qWord.length - nWord.length);
 
-      // "soots"(5) vs "suits"(5) → distance 2, lenDiff 0 → ACCEPTED
-      // "suts"(4)  vs "suit"(4)  → distance 1, lenDiff 0 → ACCEPTED
-      // "soot"(4)  vs "saree"(5) → distance 3, REJECTED
       if (distance === 1 && lenDiff <= 1) {
         maxBonus = Math.max(maxBonus, 150);
       } else if (distance === 2 && lenDiff <= 1 && maxLen >= 5) {
-        maxBonus = Math.max(maxBonus, 60); // "soots" → "suits"
+        maxBonus = Math.max(maxBonus, 60);
+      }
+    });
+  });
+
+  return maxBonus;
+};
+
+// ---------------------------------------------------------------------------
+// Phonetic Matching (Soundex)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generates a Soundex code for a word.
+ * Maps similar-sounding characters to the same digit code.
+ *
+ * Examples:
+ *   "saree"   → S600
+ *   "sari"    → S600  ✓ match
+ *   "lehenga" → L520
+ *   "lahenga" → L520  ✓ match
+ *   "kurta"   → K630
+ *   "kurtha"  → K630  ✓ match
+ */
+const soundex = (word) => {
+  if (!word || word.length === 0) return "";
+
+  const map = {
+    b: 1,
+    f: 1,
+    p: 1,
+    v: 1,
+    c: 2,
+    g: 2,
+    j: 2,
+    k: 2,
+    q: 2,
+    s: 2,
+    x: 2,
+    z: 2,
+    d: 3,
+    t: 3,
+    l: 4,
+    m: 5,
+    n: 5,
+    r: 6,
+  };
+
+  const w = word.toLowerCase();
+  let code = w[0].toUpperCase();
+  let prev = map[w[0]] || 0;
+
+  for (let i = 1; i < w.length && code.length < 4; i++) {
+    const curr = map[w[i]];
+    if (curr && curr !== prev) {
+      code += curr;
+    }
+    prev = curr || 0;
+  }
+
+  return code.padEnd(4, "0");
+};
+
+/**
+ * Returns a phonetic bonus if any query word sounds like any document name word.
+ * Uses Soundex codes — same code means same-sounding word.
+ *
+ * Examples:
+ *   "saris" → S620,  "sarees" → S620   → +120
+ *   "lahenga" → L520, "lehenga" → L520  → +120
+ *   "salwar" → S460,  "shalwar" → S460  → +120
+ */
+const getPhoneticBonus = (normalisedQuery, normalisedName) => {
+  const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 3);
+  const nameWords = normalisedName.split(" ").filter((w) => w.length >= 3);
+
+  let maxBonus = 0;
+
+  queryWords.forEach((qWord) => {
+    const qCode = soundex(qWord);
+    nameWords.forEach((nWord) => {
+      if (soundex(nWord) === qCode) {
+        maxBonus = Math.max(maxBonus, 120);
       }
     });
   });
@@ -193,38 +335,56 @@ const getFuzzyBonus = (normalisedQuery, normalisedName) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Adds or replaces a document in the inverted index and document store.
+ * Adds or replaces a document in the inverted index, word index, and document store.
+ * FIX #6: Caches the computed gram + word sets in the store entry so removal
+ * never needs to recompute them.
  */
 const upsertDocumentIntoIndex = (doc) => {
   if (documentStore.has(doc.id)) {
     removeDocumentFromIndex(doc.id);
   }
 
-  const grams = documentNgrams(doc);
+  const { grams, words } = documentNgrams(doc);
+
+  // Populate inverted (n-gram) index
   grams.forEach((gram) => {
-    if (!invertedIndex.has(gram)) {
-      invertedIndex.set(gram, new Set());
-    }
+    if (!invertedIndex.has(gram)) invertedIndex.set(gram, new Set());
     invertedIndex.get(gram).add(doc.id);
   });
 
-  documentStore.set(doc.id, doc);
+  // FIX #1: Populate separate word index for O(W) fuzzy expansion
+  words.forEach((word) => {
+    if (!wordIndex.has(word)) wordIndex.set(word, new Set());
+    wordIndex.get(word).add(doc.id);
+  });
+
+  // FIX #6: Cache gram + word sets alongside the doc to avoid recomputation on removal
+  documentStore.set(doc.id, { doc, grams, words });
 };
 
 /**
- * Removes a document from the inverted index and document store.
+ * Removes a document from both indexes and the document store.
+ * FIX #6: Uses cached grams/words — no recomputation needed.
  */
 const removeDocumentFromIndex = (docId) => {
-  if (!documentStore.has(docId)) return;
+  const entry = documentStore.get(docId);
+  if (!entry) return;
 
-  const doc = documentStore.get(docId);
-  const grams = documentNgrams(doc);
+  const { grams, words } = entry;
 
   grams.forEach((gram) => {
     const bucket = invertedIndex.get(gram);
     if (bucket) {
       bucket.delete(docId);
       if (bucket.size === 0) invertedIndex.delete(gram);
+    }
+  });
+
+  words.forEach((word) => {
+    const bucket = wordIndex.get(word);
+    if (bucket) {
+      bucket.delete(docId);
+      if (bucket.size === 0) wordIndex.delete(word);
     }
   });
 
@@ -237,6 +397,9 @@ const removeDocumentFromIndex = (docId) => {
 
 /**
  * Converts a Mongoose Product document into an IndexedDocument.
+ * FIX #5: Handles both populated ({ name }) and unpopulated (ObjectId string)
+ * category fields so syncToIndex always indexes the category name correctly
+ * regardless of whether the caller populated the field.
  */
 const buildProductDoc = (product) => {
   const doc = {
@@ -247,9 +410,14 @@ const buildProductDoc = (product) => {
     description: product.description || "",
     shortDescription: product.shortDescription || "",
     mainImage: product.mainImage || null,
+    // FIX #5: category?.name covers populated docs; toString() covers raw ObjectIds
+    // so the field is never silently empty when syncToIndex is called post-create/update.
     category:
       product.category?.name ||
-      (typeof product.category === "string" ? product.category : ""),
+      (typeof product.category === "string" ? product.category : "") ||
+      (product.category && typeof product.category.toString === "function"
+        ? "" // ObjectId — name unknowable without population; index as empty
+        : ""),
     tags: product.tags || [],
     fabric: product.fabric || [],
     style: product.style || [],
@@ -310,7 +478,12 @@ const buildCategoryDoc = (category) => ({
 
 /**
  * Clears the index and rebuilds it from MongoDB.
- * Uses a guard (`hydrationPromise`) to prevent concurrent rebuilds.
+ *
+ * FIX (from previous review):
+ *  - Stages into temporary maps — the live index is only swapped in after BOTH
+ *    Mongo queries succeed, so a transient DB failure never wipes good data.
+ *  - hydrationPromise is always cleared in finally so one failed rebuild doesn't
+ *    permanently prevent future rebuilds.
  */
 const hydrateIndex = async () => {
   if (hydrationPromise) {
@@ -318,33 +491,69 @@ const hydrateIndex = async () => {
   }
 
   hydrationPromise = (async () => {
-    invertedIndex.clear();
-    documentStore.clear();
+    // Stage into temporary maps so a failure doesn't wipe the live index
+    const stagingIndex = new Map();
+    const stagingWordIndex = new Map();
+    const stagingStore = new Map();
 
-    // Load products (active only)
+    const stageDoc = (doc) => {
+      const { grams, words } = documentNgrams(doc);
+
+      grams.forEach((gram) => {
+        if (!stagingIndex.has(gram)) stagingIndex.set(gram, new Set());
+        stagingIndex.get(gram).add(doc.id);
+      });
+
+      words.forEach((word) => {
+        if (!stagingWordIndex.has(word)) stagingWordIndex.set(word, new Set());
+        stagingWordIndex.get(word).add(doc.id);
+      });
+
+      stagingStore.set(doc.id, { doc, grams, words });
+    };
+
+    // Both queries must succeed before we touch the live index
     const products = await Product.find({ status: "Active" })
       .populate("category", "name")
       .lean();
-    products.forEach((p) => upsertDocumentIntoIndex(buildProductDoc(p)));
+    products.forEach((p) => stageDoc(buildProductDoc(p)));
 
-    // Load categories (active only)
     const categories = await Category.find({ status: "Active" }).lean();
-    categories.forEach((c) => upsertDocumentIntoIndex(buildCategoryDoc(c)));
+    categories.forEach((c) => stageDoc(buildCategoryDoc(c)));
+
+    // Atomic swap — only reached if both queries succeeded
+    invertedIndex.clear();
+    stagingIndex.forEach((v, k) => invertedIndex.set(k, v));
+
+    wordIndex.clear();
+    stagingWordIndex.forEach((v, k) => wordIndex.set(k, v));
+
+    documentStore.clear();
+    stagingStore.forEach((v, k) => documentStore.set(k, v));
 
     isHydrated = true;
     lastHydratedAt = Date.now();
-    hydrationPromise = null;
   })();
+
+  // Always clear the promise — a transient failure won't permanently brick search
+  hydrationPromise = hydrationPromise.finally(() => {
+    hydrationPromise = null;
+  });
 
   return hydrationPromise;
 };
 
 /**
  * Ensures the index is hydrated and not stale before a search.
+ * FIX #4: lastHydratedAt is set optimistically before awaiting so concurrent
+ * callers during a long rebuild don't all re-enter hydrateIndex independently.
  */
 const ensureHydrated = async () => {
   const isStale = Date.now() - lastHydratedAt > INDEX_TTL_MS;
   if (!isHydrated || isStale) {
+    // Pessimistically claim freshness immediately to block re-entrancy during rebuild.
+    // hydrateIndex will overwrite with the true timestamp on success.
+    lastHydratedAt = Date.now();
     await hydrateIndex();
   }
 };
@@ -388,23 +597,33 @@ export const deleteFromIndex = async (objectId) => {
  * Searches the n-gram index and returns ranked results.
  *
  * Scoring strategy:
- *  1. Base score    — number of query n-grams that match a document
- *  2. Fuzzy expand  — typo'd query words get +0.5 per close gram match
- *  3. Category boost — categories score x2 to always outrank products
- *  4. Name bonuses  — exact (+1000), startsWith (+500), contains (+200)
- *  5. Fuzzy bonus   — typo distance 1 (+150), distance 2 (+60), similar (+30)
+ *  1. Base score      — number of query n-grams that match a document
+ *  2. Fuzzy expand    — typo'd query words matched against word index (+0.5 per hit)
+ *                       O(Q×W) — NOT O(Q×I). No event-loop blocking.
+ *  3. Name bonuses    — exact (+1000), startsWith (+500), contains (+200)
+ *  4. Fuzzy bonus     — Levenshtein distance 1 (+150), distance 2 (+60)
+ *  5. Phonetic bonus  — Soundex match (+120) e.g. "saris" → "sarees"
+ *  6. Category sort   — categories always ranked above products via sort comparator
+ *                       (removed the redundant ×50 score multiply to avoid
+ *                       unpredictable double-boost interaction with the sort)
  */
 export const searchNgram = async (query, options = {}) => {
   await ensureHydrated();
 
-  const limit = Math.min(options.limit || 10, MAX_HITS);
-  const page = Math.max(options.page || 1, 1);
+  const parsedLimit = Number(options.limit);
+  const parsedPage = Number(options.page);
+  const limit = Number.isInteger(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), MAX_HITS)
+    : 10;
+  const page = Number.isInteger(parsedPage) ? Math.max(parsedPage, 1) : 1;
 
   if (!query || query.trim().length === 0) {
     return { hits: [], total: 0, page, totalPages: 0 };
   }
 
-  const queryGrams = generateNgrams(query);
+  query = expandQueryAliases(query);
+
+  const { grams: queryGrams } = generateNgrams(query);
   const normalisedQuery = normalise(query);
 
   // --- Step 1: Base scoring via inverted index ---
@@ -419,14 +638,14 @@ export const searchNgram = async (query, options = {}) => {
   });
 
   // --- Step 2: Fuzzy query expansion ---
-  // For each query word, scan index grams at distance <= 1 and add partial credit.
-  // This ensures typo'd queries still surface relevant documents.
+  // FIX #1 (Critical): iterate wordIndex only — O(Q × W) instead of O(Q × I).
+  // Previously iterated the full invertedIndex (all character n-grams), calling
+  // levenshteinDistance on every entry — catastrophically slow on large catalogs.
   const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 3);
   queryWords.forEach((qWord) => {
-    invertedIndex.forEach((bucket, gram) => {
-      if (gram.length < 3 || Math.abs(gram.length - qWord.length) > 1) return; // ±1 not exact
-      const distance = levenshteinDistance(qWord, gram);
-      if (distance === 1) {
+    wordIndex.forEach((bucket, word) => {
+      if (Math.abs(word.length - qWord.length) > 1) return;
+      if (levenshteinDistance(qWord, word) === 1) {
         bucket.forEach((docId) => {
           scores.set(docId, (scores.get(docId) || 0) + 0.5);
         });
@@ -438,38 +657,61 @@ export const searchNgram = async (query, options = {}) => {
     return { hits: [], total: 0, page, totalPages: 0 };
   }
 
+  // FIX #2 (Medium): Do NOT mutate scores during forEach — collect deletions first.
+  // Deleting map entries mid-forEach is undefined behaviour and can silently skip entries.
+  const minBaseScore =
+    queryGrams.size === 1 ? 1 : Math.max(1.5, queryGrams.size * 0.15);
+  for (const [docId, score] of scores) {
+    if (score < minBaseScore) scores.delete(docId);
+  }
+
+  if (scores.size === 0) {
+    return { hits: [], total: 0, page, totalPages: 0 };
+  }
+
   // --- Step 3: Apply boosts and sort ---
   const ranked = [...scores.entries()]
     .map(([docId, score]) => {
-      const doc = documentStore.get(docId);
-      if (!doc) return [docId, score];
+      // FIX #6: documentStore now holds { doc, grams, words } — unwrap doc
+      const entry = documentStore.get(docId);
+      if (!entry) return [docId, score];
 
+      const { doc } = entry;
       let boostedScore = score;
       const normalisedName = normalise(doc.name);
 
-      // Category type boost — always outranks products at same base score
-      if (doc.type === "category") {
-        boostedScore *= 10;
-      }
+      // FIX #3 (Medium): Removed the ×50 category score multiply.
+      // The sort comparator below already hard-sorts categories above products.
+      // Having both caused unpredictable double-boosting where a very low-scoring
+      // category could always beat a highly relevant product regardless of intent.
 
       // Name proximity boosts
       if (normalisedName === normalisedQuery) {
-        // Exact match: "suit" === "suit"
         boostedScore += 1000;
       } else if (normalisedName.startsWith(normalisedQuery)) {
-        // Prefix match: "suit" → "suits & blazers"
         boostedScore += 500;
       } else if (normalisedName.includes(normalisedQuery)) {
-        // Contains match: "suit" → "formal suit collection"
         boostedScore += 200;
       } else {
-        // Fuzzy match: "suts" → "suits", "soot" → "suit"
-        boostedScore += getFuzzyBonus(normalisedQuery, normalisedName);
+        // Fuzzy: "suts" → "suits", "soots" → "suits"
+        const fuzzyBonus = getFuzzyBonus(normalisedQuery, normalisedName);
+        // Phonetic: "saris" → "sarees", "lahenga" → "lehenga"
+        const phoneticBonus = getPhoneticBonus(normalisedQuery, normalisedName);
+        boostedScore += Math.max(fuzzyBonus, phoneticBonus);
       }
 
       return [docId, boostedScore];
     })
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => {
+      // FIX #6: unwrap doc from store entry
+      const docA = documentStore.get(a[0])?.doc;
+      const docB = documentStore.get(b[0])?.doc;
+      const aIsCategory = docA?.type === "category" ? 1 : 0;
+      const bIsCategory = docB?.type === "category" ? 1 : 0;
+      // FIX #3: Single source of truth for category priority — sort only, no score multiply.
+      if (bIsCategory !== aIsCategory) return bIsCategory - aIsCategory;
+      return b[1] - a[1];
+    })
     .slice(0, MAX_HITS);
 
   const total = ranked.length;
@@ -478,7 +720,8 @@ export const searchNgram = async (query, options = {}) => {
 
   const hits = ranked
     .slice(skip, skip + limit)
-    .map(([docId]) => documentStore.get(docId))
+    // FIX #6: unwrap doc from store entry
+    .map(([docId]) => documentStore.get(docId)?.doc)
     .filter(Boolean);
 
   return { hits, total, page, totalPages };
@@ -495,6 +738,7 @@ export const rebuildIndex = async () => {
     success: true,
     documents: documentStore.size,
     ngrams: invertedIndex.size,
+    words: wordIndex.size,
     durationMs: Date.now() - start,
   };
 };

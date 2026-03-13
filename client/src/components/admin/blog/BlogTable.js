@@ -143,7 +143,7 @@ export default function BlogTable({ refreshStats }) {
           <button
             onClick={() => fetchBlogs(true)}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+            className="p-2 text-slate-500 cursor-pointer hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -154,7 +154,7 @@ export default function BlogTable({ refreshStats }) {
             setEditData(null);
             setShowModal(true);
           }}
-          className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
+          className="bg-slate-900 hover:bg-black cursor-pointer text-white px-5 py-2 rounded text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center gap-2"
         >
           <Newspaper size={16} /> + New Post
         </button>
@@ -251,7 +251,7 @@ export default function BlogTable({ refreshStats }) {
                     <div className="flex justify-end gap-4 text-slate-400">
                       <button
                         title="Preview"
-                        className="hover:text-slate-900 transition-colors"
+                        className="hover:text-slate-900 transition-colors cursor-pointer"
                         onClick={() => {
                           setViewBlog(b);
                           setShowDrawer(true);
@@ -261,7 +261,7 @@ export default function BlogTable({ refreshStats }) {
                       </button>
                       <button
                         title="Edit"
-                        className="hover:text-blue-600 transition-colors"
+                        className="hover:text-blue-600 transition-colors cursor-pointer"
                         onClick={() => {
                           setEditData(b);
                           setShowModal(true);
@@ -271,7 +271,7 @@ export default function BlogTable({ refreshStats }) {
                       </button>
                       <button
                         title="Delete"
-                        className="hover:text-rose-600 transition-colors"
+                        className="hover:text-rose-600 transition-colors cursor-pointer"
                         onClick={() => {
                           setDeleteInfo({ id: b._id, title: b.title });
                           setShowDeleteModal(true);
@@ -336,7 +336,7 @@ export default function BlogTable({ refreshStats }) {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors"
+              className="p-2 border border-slate-200 rounded-lg cursor-pointer bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
@@ -346,7 +346,7 @@ export default function BlogTable({ refreshStats }) {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all ${currentPage === page ? "bg-slate-900 text-white shadow-md" : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300"}`}
+                    className={`h-8 min-w-[32px] px-2 rounded-lg cursor-pointer text-xs font-bold transition-all ${currentPage === page ? "bg-slate-900 text-white shadow-md" : "bg-white border border-slate-100 text-slate-500 hover:border-slate-300"}`}
                   >
                     {page}
                   </button>
@@ -356,7 +356,7 @@ export default function BlogTable({ refreshStats }) {
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="p-2 border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors"
+              className="p-2 border border-slate-200 rounded-lg cursor-pointer bg-white disabled:opacity-30 hover:bg-slate-50 transition-colors"
             >
               <ChevronRight size={16} />
             </button>

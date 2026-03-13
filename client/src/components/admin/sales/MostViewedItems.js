@@ -1,11 +1,17 @@
-import { Eye } from "lucide-react";
+"use client";
+
+import { Eye, Loader2 } from "lucide-react";
 
 function formatViews(views) {
   if (views >= 1000) return `${(views / 1000).toFixed(1)}k`;
   return views.toString();
 }
 
-export default function MostViewedItems({ items = [] }) {
+export default function MostViewedItems({
+  items = [],
+  loading = false,
+  error = null,
+}) {
   const maxViews = items.length ? Math.max(...items.map((i) => i.views)) : 1;
 
   return (
@@ -55,103 +61,129 @@ export default function MostViewedItems({ items = [] }) {
             letterSpacing: "0.05em",
           }}
         >
-          {items.length} items
+          {loading ? "—" : `${items.length} items`}
         </span>
       </div>
 
-      <div className="space-y-2">
-        {items.map((item, i) => {
-          const barWidth = Math.round((item.views / maxViews) * 100);
-          const isTop = i === 0;
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-12 text-slate-400">
+          <Loader2 size={20} className="animate-spin mr-2" />
+          <span style={{ fontSize: 13, fontWeight: 500 }}>Loading...</span>
+        </div>
+      )}
 
-          return (
-            <div
-              key={item.rank}
-              style={{
-                background: isTop
-                  ? "linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)"
-                  : "#fff",
-                border: isTop ? "1px solid #e0e7ff" : "1px solid #f1f5f9",
-                borderRadius: 14,
-                padding: "12px 14px",
-                transition: "box-shadow 0.15s ease",
-              }}
-              className="hover:shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Rank */}
-                  <span
+      {/* Error */}
+      {!loading && error && (
+        <div className="flex items-center justify-center py-12">
+          <p style={{ fontSize: 13, color: "#ef4444", fontWeight: 500 }}>
+            Failed to load: {error}
+          </p>
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && !error && items.length === 0 && (
+        <div className="flex items-center justify-center py-12 text-slate-400">
+          <p style={{ fontSize: 13, fontWeight: 500 }}>No data available yet.</p>
+        </div>
+      )}
+
+      {/* List */}
+      {!loading && !error && items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((item, i) => {
+            const barWidth = Math.round((item.views / maxViews) * 100);
+            const isTop = i === 0;
+
+            return (
+              <div
+                key={item.rank}
+                style={{
+                  background: isTop
+                    ? "linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)"
+                    : "#fff",
+                  border: isTop ? "1px solid #e0e7ff" : "1px solid #f1f5f9",
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  transition: "box-shadow 0.15s ease",
+                }}
+                className="hover:shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Rank */}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: i < 3 ? "#6366f1" : "#cbd5e1",
+                        fontFamily: "'DM Mono', monospace",
+                        flexShrink: 0,
+                        width: 20,
+                      }}
+                    >
+                      {String(item.rank).padStart(2, "0")}
+                    </span>
+
+                    {/* Name + category */}
+                    <div className="min-w-0">
+                      <p
+                        className="font-bold text-slate-800 truncate"
+                        style={{ fontSize: 13 }}
+                      >
+                        {item.name}
+                      </p>
+                      <p
+                        className="text-slate-400 truncate"
+                        style={{ fontSize: 11, fontWeight: 500 }}
+                      >
+                        {item.category}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Views */}
+                  <div
+                    className="flex items-center gap-1.5 flex-shrink-0"
                     style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      color: i < 3 ? "#6366f1" : "#cbd5e1",
+                      color: isTop ? "#4f46e5" : "#94a3b8",
                       fontFamily: "'DM Mono', monospace",
-                      flexShrink: 0,
-                      width: 20,
+                      fontSize: 13,
+                      fontWeight: 700,
                     }}
                   >
-                    {String(item.rank).padStart(2, "0")}
-                  </span>
-
-                  {/* Name + category */}
-                  <div className="min-w-0">
-                    <p
-                      className="font-bold text-slate-800 truncate"
-                      style={{ fontSize: 13 }}
-                    >
-                      {item.name}
-                    </p>
-                    <p
-                      className="text-slate-400 truncate"
-                      style={{ fontSize: 11, fontWeight: 500 }}
-                    >
-                      {item.category}
-                    </p>
+                    <Eye size={13} />
+                    {formatViews(item.views)}
                   </div>
                 </div>
 
-                {/* Views */}
+                {/* Progress bar */}
                 <div
-                  className="flex items-center gap-1.5 flex-shrink-0"
                   style={{
-                    color: isTop ? "#4f46e5" : "#94a3b8",
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: 13,
-                    fontWeight: 700,
+                    marginTop: 10,
+                    height: 3,
+                    borderRadius: 99,
+                    background: "#f1f5f9",
+                    overflow: "hidden",
                   }}
                 >
-                  <Eye size={13} />
-                  {formatViews(item.views)}
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div
-                style={{
-                  marginTop: 10,
-                  height: 3,
-                  borderRadius: 99,
-                  background: "#f1f5f9",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${barWidth}%`,
-                    height: "100%",
-                    borderRadius: 99,
-                    background:
-                      isTop
+                  <div
+                    style={{
+                      width: `${barWidth}%`,
+                      height: "100%",
+                      borderRadius: 99,
+                      background: isTop
                         ? "linear-gradient(90deg,#818cf8,#4f46e5)"
                         : "linear-gradient(90deg,#c7d2fe,#a5b4fc)",
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

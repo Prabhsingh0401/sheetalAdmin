@@ -103,3 +103,22 @@ export const deleteReviewAdmin = async (id) => {
   });
   return handleResponse(res);
 };
+
+export const incrementProductView = async (slug) => {
+  try {
+    await fetch(`${API_BASE_URL}/products/view/${slug}`, { method: "PATCH" });
+  } catch (err) {
+    // Silent fail — don't block UX for a view count
+    console.error("View increment failed:", err);
+  }
+};
+
+// Admin dashboard
+export const getMostViewedProducts = async (limit = 5 ) => {
+  const res = await fetch(`${API_BASE_URL}/products/admin/most-viewed?limit=${limit}`, {
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message);
+  return data.items;
+};

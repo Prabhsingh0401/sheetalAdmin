@@ -93,7 +93,7 @@ function ReviewRow({ review, expanded, onToggle, onEdit, onStatus, onDelete }) {
           <button
             title="Edit"
             onClick={() => onEdit(review)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+            className="w-7 h-7 flex items-center cursor-pointer justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
           >
             <Edit size={14} />
           </button>
@@ -102,7 +102,7 @@ function ReviewRow({ review, expanded, onToggle, onEdit, onStatus, onDelete }) {
             <button
               title="Reject"
               onClick={() => onStatus(review._id, false)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
+              className="w-7 h-7 flex items-center cursor-pointer justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
             >
               <XCircle size={14} />
             </button>
@@ -110,7 +110,7 @@ function ReviewRow({ review, expanded, onToggle, onEdit, onStatus, onDelete }) {
             <button
               title="Approve"
               onClick={() => onStatus(review._id, true)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+              className="w-7 h-7 flex items-center cursor-pointer justify-center rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all"
             >
               <CheckCircle2 size={14} />
             </button>
@@ -119,7 +119,7 @@ function ReviewRow({ review, expanded, onToggle, onEdit, onStatus, onDelete }) {
           <button
             title="Delete"
             onClick={() => onDelete(review._id)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
+            className="w-7 h-7 flex items-center cursor-pointer justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
           >
             <Trash2 size={14} />
           </button>

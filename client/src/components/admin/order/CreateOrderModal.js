@@ -211,7 +211,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
 
       const res = await createOrder(orderData);
       if (res.success) {
-        toast.success("Order सफलतापूर्वक बन गया!");
+        toast.success("Order Placed");
         onSuccess();
         onClose();
         resetForm();
@@ -283,7 +283,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+            className="p-2 hover:bg-slate-50 cursor-pointer rounded-full transition-colors text-slate-400"
           >
             <X size={20} />
           </button>
@@ -339,7 +339,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                           <span className="text-sm font-black text-slate-900">
                             {getProductPrice(p)}
                           </span>
-                          <button className="p-2 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-slate-900 group-hover:text-white transition-all">
+                          <button className="p-2 cursor-pointer bg-slate-50 text-slate-400 rounded-lg group-hover:bg-slate-900 group-hover:text-white transition-all">
                             <Check size={16} />
                           </button>
                         </div>
@@ -352,7 +352,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
               <div className="space-y-6 animate-in slide-in-from-right duration-300">
                 <button
                   onClick={() => setStep("products")}
-                  className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors"
+                  className="flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors"
                 >
                   <ArrowLeft size={16} /> Back to Products
                 </button>
@@ -411,7 +411,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                               key={idx}
                               onClick={() => setSelectedSize(size)}
                               disabled={size.stock <= 0}
-                              className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedSize?.name === size.name
+                              className={`px-4 py-2 cursor-pointer rounded-lg text-xs font-bold border transition-all ${selectedSize?.name === size.name
                                 ? 'bg-slate-900 text-white border-slate-900'
                                 : size.stock > 0
                                   ? 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
@@ -427,7 +427,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                     <button
                       onClick={addItemToOrder}
                       disabled={!selectedSize || selectedSize.stock <= 0}
-                      className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
+                      className="w-full py-4 cursor-pointer bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
                     >
                       <Plus size={18} /> Add to Selection
                     </button>
@@ -564,7 +564,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                 <div className="max-h-[150px] overflow-y-auto space-y-3 pr-1 custom-scrollbar">
                   {selectedItems.map((item) => (
                     <div
-                      key={item.product}
+                      key={item.uniqueId}
                       className="flex justify-between items-center text-xs"
                     >
                       <span className="text-slate-600 font-medium">
@@ -584,7 +584,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                         <button
                           type="button"
                           onClick={() => removeItem(item.uniqueId)}
-                          className="text-slate-300 hover:text-rose-500"
+                          className="text-slate-300 cursor-pointer hover:text-rose-500"
                         >
                           <X size={14} />
                         </button>

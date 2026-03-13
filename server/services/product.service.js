@@ -7,7 +7,11 @@ import { deleteFile, deleteS3File, uploadS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 import xlsx from "xlsx";
 import mongoose from "mongoose";
-import { syncToIndex, deleteFromIndex, rebuildIndex } from "./ngram.search.service.js";
+import {
+  syncToIndex,
+  deleteFromIndex,
+  rebuildIndex,
+} from "./ngram.search.service.js";
 
 export const getAllProductsService = async (queryStr) => {
   const {
@@ -34,7 +38,6 @@ export const getAllProductsService = async (queryStr) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   let filter = {};
-
 
   if (search) {
     filter.$or = [
@@ -93,9 +96,6 @@ export const getAllProductsService = async (queryStr) => {
   }
 
   if (minPrice != null || maxPrice != null) {
-    // variants is an array-of-objects; sizes inside it is also an array.
-    // Dot-notation range queries on double-nested arrays don't work in MongoDB —
-    // we need explicit $elemMatch at each level.
     const sizeCondition = {};
     if (minPrice != null) sizeCondition.$gte = Number(minPrice);
     if (maxPrice != null) sizeCondition.$lte = Number(maxPrice);
@@ -103,15 +103,28 @@ export const getAllProductsService = async (queryStr) => {
     filter.variants = {
       $elemMatch: {
         sizes: {
-          $elemMatch: { price: sizeCondition },
+          $elemMatch: {
+            $or: [
+              // Has a discount price — filter on that
+              {
+                discountPrice: { $gt: 0, ...sizeCondition },
+              },
+              // No discount price — fall back to regular price
+              {
+                discountPrice: 0,
+                price: sizeCondition,
+              },
+            ],
+          },
         },
       },
     };
   }
 
-
   if (productType) {
-    filter.productType = { $in: Array.isArray(productType) ? productType : [productType] };
+    filter.productType = {
+      $in: Array.isArray(productType) ? productType : [productType],
+    };
   }
 
   const pipeline = [
@@ -206,18 +219,28 @@ export const getAllProductsService = async (queryStr) => {
 };
 
 export const getNewArrivalsService = async () => {
-  const products = await Product.find({
-    isActive: true,
-  })
+  const flagged = await Product.find({ isNewArrival: true, status: "Active" })
     .sort({ createdAt: -1 })
-    .limit(10)
     .populate("category", "name slug")
     .lean();
 
-  return {
-    success: true,
-    products,
-  };
+  let products = flagged;
+
+  if (flagged.length < 10) {
+    const excludeIds = flagged.map((p) => p._id);
+    const backfill = await Product.find({
+      _id: { $nin: excludeIds },
+      status: "Active",
+    })
+      .sort({ createdAt: -1 })
+      .limit(10 - flagged.length)
+      .populate("category", "name slug")
+      .lean();
+
+    products = [...flagged, ...backfill];
+  }
+
+  return { success: true, products };
 };
 
 export const getProductDetailsService = async (id) => {
@@ -234,6 +257,8 @@ export const getProductDetailsService = async (id) => {
 export const createProductService = async (data, files, userId) => {
   const parsedData = {
     ...data,
+    isTrending: data.isTrending === "true" || data.isTrending === true,
+    isNewArrival: data.isNewArrival === "true" || data.isNewArrival === true,
     variants:
       typeof data.variants === "string"
         ? JSON.parse(data.variants)
@@ -262,22 +287,11 @@ export const createProductService = async (data, files, userId) => {
       typeof data.occasion === "string"
         ? JSON.parse(data.occasion)
         : data.occasion,
-    tags:
-      typeof data.tags === "string"
-        ? JSON.parse(data.tags)
-        : data.tags,
-    style:
-      typeof data.style === "string"
-        ? JSON.parse(data.style)
-        : data.style,
-    work:
-      typeof data.work === "string"
-        ? JSON.parse(data.work)
-        : data.work,
+    tags: typeof data.tags === "string" ? JSON.parse(data.tags) : data.tags,
+    style: typeof data.style === "string" ? JSON.parse(data.style) : data.style,
+    work: typeof data.work === "string" ? JSON.parse(data.work) : data.work,
     fabric:
-      typeof data.fabric === "string"
-        ? JSON.parse(data.fabric)
-        : data.fabric,
+      typeof data.fabric === "string" ? JSON.parse(data.fabric) : data.fabric,
     productType:
       typeof data.productType === "string"
         ? JSON.parse(data.productType)
@@ -293,19 +307,27 @@ export const createProductService = async (data, files, userId) => {
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
 
   const mainImage = {
-    url: files?.mainImage ? (files.mainImage[0].location || files.mainImage[0].path) : "",
-    public_id: files?.mainImage ? (files.mainImage[0].key || files.mainImage[0].filename) : "",
+    url: files?.mainImage
+      ? files.mainImage[0].location || files.mainImage[0].path
+      : "",
+    public_id: files?.mainImage
+      ? files.mainImage[0].key || files.mainImage[0].filename
+      : "",
     alt: data.mainImageAlt || `${parsedData.name} main image`,
   };
 
   const hoverImage = {
-    url: files?.hoverImage ? (files.hoverImage[0].location || files.hoverImage[0].path) : "",
-    public_id: files?.hoverImage ? (files.hoverImage[0].key || files.hoverImage[0].filename) : "",
+    url: files?.hoverImage
+      ? files.hoverImage[0].location || files.hoverImage[0].path
+      : "",
+    public_id: files?.hoverImage
+      ? files.hoverImage[0].key || files.hoverImage[0].filename
+      : "",
     alt: data.hoverImageAlt || `${parsedData.name} hover image`,
   };
 
   const ogImage = files?.ogImage
-    ? (files.ogImage[0].location || files.ogImage[0].path)
+    ? files.ogImage[0].location || files.ogImage[0].path
     : "";
 
   let galleryImages = [];
@@ -362,10 +384,12 @@ export const createProductService = async (data, files, userId) => {
     hoverImage,
     ogImage,
     images: galleryImages,
-    video: files?.video ? {
-      url: files.video[0].location || files.video[0].path,
-      public_id: files.video[0].key || files.video[0].filename
-    } : null,
+    video: files?.video
+      ? {
+          url: files.video[0].location || files.video[0].path,
+          public_id: files.video[0].key || files.video[0].filename,
+        }
+      : null,
     stock: totalStock, // Set master stock
     createdBy: userId,
   });
@@ -383,6 +407,8 @@ export const updateProductService = async (id, data, files) => {
 
   const parsedData = {
     ...data,
+    isTrending: data.isTrending === "true" || data.isTrending === true,
+    isNewArrival: data.isNewArrival === "true" || data.isNewArrival === true,
     variants:
       typeof data.variants === "string"
         ? JSON.parse(data.variants)
@@ -411,22 +437,11 @@ export const updateProductService = async (id, data, files) => {
       typeof data.occasion === "string"
         ? JSON.parse(data.occasion)
         : data.occasion,
-    tags:
-      typeof data.tags === "string"
-        ? JSON.parse(data.tags)
-        : data.tags,
-    style:
-      typeof data.style === "string"
-        ? JSON.parse(data.style)
-        : data.style,
-    work:
-      typeof data.work === "string"
-        ? JSON.parse(data.work)
-        : data.work,
+    tags: typeof data.tags === "string" ? JSON.parse(data.tags) : data.tags,
+    style: typeof data.style === "string" ? JSON.parse(data.style) : data.style,
+    work: typeof data.work === "string" ? JSON.parse(data.work) : data.work,
     fabric:
-      typeof data.fabric === "string"
-        ? JSON.parse(data.fabric)
-        : data.fabric,
+      typeof data.fabric === "string" ? JSON.parse(data.fabric) : data.fabric,
     productType:
       typeof data.productType === "string"
         ? JSON.parse(data.productType)
@@ -447,8 +462,13 @@ export const updateProductService = async (id, data, files) => {
 
   if (files && files["mainImage"]?.[0]) {
     // Delete old
-    if (product.mainImage?.public_id) await deleteS3File(product.mainImage.public_id);
-    else if (product.mainImage?.url && !product.mainImage.url.startsWith("http")) await deleteFile(product.mainImage.url);
+    if (product.mainImage?.public_id)
+      await deleteS3File(product.mainImage.public_id);
+    else if (
+      product.mainImage?.url &&
+      !product.mainImage.url.startsWith("http")
+    )
+      await deleteFile(product.mainImage.url);
 
     parsedData.mainImage = {
       url: files["mainImage"][0].location || files["mainImage"][0].path,
@@ -461,8 +481,13 @@ export const updateProductService = async (id, data, files) => {
 
   if (files && files["hoverImage"]?.[0]) {
     // Delete old
-    if (product.hoverImage?.public_id) await deleteS3File(product.hoverImage.public_id);
-    else if (product.hoverImage?.url && !product.hoverImage.url.startsWith("http")) await deleteFile(product.hoverImage.url);
+    if (product.hoverImage?.public_id)
+      await deleteS3File(product.hoverImage.public_id);
+    else if (
+      product.hoverImage?.url &&
+      !product.hoverImage.url.startsWith("http")
+    )
+      await deleteFile(product.hoverImage.url);
 
     parsedData.hoverImage = {
       url: files["hoverImage"][0].location || files["hoverImage"][0].path,
@@ -475,18 +500,20 @@ export const updateProductService = async (id, data, files) => {
 
   if (files && files["video"]?.[0]) {
     if (product.video?.public_id) await deleteS3File(product.video.public_id);
-    else if (product.video?.url && !product.video.url.startsWith("http")) await deleteFile(product.video.url);
+    else if (product.video?.url && !product.video.url.startsWith("http"))
+      await deleteFile(product.video.url);
 
     parsedData.video = {
       url: files["video"][0].location || files["video"][0].path,
-      public_id: files["video"][0].key || files["video"][0].filename
+      public_id: files["video"][0].key || files["video"][0].filename,
     };
   } else if (data.existingVideo) {
     // Keep existing
   }
 
   if (files && files["ogImage"]?.[0]) {
-    parsedData.ogImage = files["ogImage"][0].location || files["ogImage"][0].path;
+    parsedData.ogImage =
+      files["ogImage"][0].location || files["ogImage"][0].path;
   } else if (data.existingOgImage) {
     parsedData.ogImage = data.existingOgImage;
   }
@@ -563,21 +590,30 @@ export const deleteProductService = async (id) => {
   const product = await Product.findById(id);
   if (!product) return { success: false, statusCode: 404 };
 
-  if (product.mainImage?.public_id) await deleteS3File(product.mainImage.public_id);
-  else if (product.mainImage?.url && !product.mainImage.url.startsWith("http")) await deleteFile(product.mainImage.url);
+  if (product.mainImage?.public_id)
+    await deleteS3File(product.mainImage.public_id);
+  else if (product.mainImage?.url && !product.mainImage.url.startsWith("http"))
+    await deleteFile(product.mainImage.url);
 
-  if (product.hoverImage?.public_id) await deleteS3File(product.hoverImage.public_id);
-  else if (product.hoverImage?.url && !product.hoverImage.url.startsWith("http")) await deleteFile(product.hoverImage.url);
+  if (product.hoverImage?.public_id)
+    await deleteS3File(product.hoverImage.public_id);
+  else if (
+    product.hoverImage?.url &&
+    !product.hoverImage.url.startsWith("http")
+  )
+    await deleteFile(product.hoverImage.url);
 
   if (product.images) {
     for (const img of product.images) {
       if (img.public_id) await deleteS3File(img.public_id);
-      else if (img.url && !img.url.startsWith("http")) await deleteFile(img.url);
+      else if (img.url && !img.url.startsWith("http"))
+        await deleteFile(img.url);
     }
   }
 
   if (product.video?.public_id) await deleteS3File(product.video.public_id);
-  else if (product.video?.url && !product.video.url.startsWith("http")) await deleteFile(product.video.url);
+  else if (product.video?.url && !product.video.url.startsWith("http"))
+    await deleteFile(product.video.url);
 
   await product.deleteOne();
 
@@ -655,7 +691,6 @@ export const getLowStockProductsService = async () => {
   return { success: true, data: lowStockProducts };
 };
 
-
 export const getProductReviewsService = async (productId) => {
   const reviews = await Review.find({ product: productId, isApproved: true })
     .sort("-createdAt")
@@ -682,122 +717,177 @@ export const bulkImportService = async (files, userId) => {
   const productsToInsert = [];
   const errors = [];
 
-  // Create a map of uploaded images for quick lookup
   // Filename -> File Object
   const imageMap = new Map();
-  imageFiles.forEach(file => {
+  imageFiles.forEach((file) => {
     imageMap.set(file.originalname.trim().toLowerCase(), file);
   });
 
   // Pre-fetch all categories to avoid N+1 queries
   const allCategories = await Category.find({}).lean();
-  const categoryMap = new Map(); // Name -> _id
-  allCategories.forEach(c => {
+  const categoryMap = new Map();
+  allCategories.forEach((c) => {
     categoryMap.set(c.name.toLowerCase().trim(), c._id);
   });
 
+  // Pre-fetch existing slugs and SKUs to handle uniqueness without DB round-trips per row
+  const existingSlugs = new Set(
+    (await Product.find({}, { slug: 1 }).lean()).map((p) => p.slug),
+  );
+  const existingSkus = new Set(
+    (await Product.find({}, { sku: 1 }).lean()).map((p) => p.sku),
+  );
+  // Also track slugs/SKUs added in this batch to catch intra-batch duplicates
+  const batchSlugs = new Set();
+  const batchSkus = new Set();
+
   for (let i = 0; i < rawData.length; i++) {
     const item = rawData[i];
-    const rowIndex = i + 2; // Excel row index (1-based, plus header)
+    const rowIndex = i + 2;
 
     try {
-      // 1. Data Cleaning
+      // ── 0. Skip completely empty rows (xlsx trailing row artefacts) ─────────
+      const hasAnyValue = Object.values(item).some(
+        (v) => v !== null && v !== undefined && v.toString().trim() !== "",
+      );
+      if (!hasAnyValue) continue;
+      // ── 1. Required field validation ──────────────────────────────────────
       const name = item.Name?.trim();
       const sku = item.SKU?.toString().trim().toUpperCase();
+
       if (!name || !sku) {
-        errors.push(`Row ${rowIndex}: Name or SKU missing`);
+        errors.push(`Row ${rowIndex}: Name or SKU missing — row skipped`);
         continue;
       }
 
-      // 2. Category Lookup
+      if (!item.Description) {
+        errors.push(
+          `Row ${rowIndex} (${name}): Description is required — row skipped`,
+        );
+        continue;
+      }
+
+      if (!item.MaterialCare) {
+        errors.push(
+          `Row ${rowIndex} (${name}): MaterialCare is required — row skipped`,
+        );
+        continue;
+      }
+
+      // ── 2. SKU uniqueness ─────────────────────────────────────────────────
+      if (existingSkus.has(sku) || batchSkus.has(sku)) {
+        errors.push(
+          `Row ${rowIndex} (${name}): SKU "${sku}" already exists — row skipped`,
+        );
+        continue;
+      }
+
+      // ── 3. Category lookup ────────────────────────────────────────────────
       let categoryId = null;
       if (item.Category) {
         const catName = item.Category.trim().toLowerCase();
         categoryId = categoryMap.get(catName);
-        // If not found, create new? For now, leave null or maybe implement creation later.
+        if (!categoryId) {
+          errors.push(
+            `Row ${rowIndex} (${name}): Category "${item.Category}" not found — row skipped`,
+          );
+          continue;
+        }
+      } else {
+        errors.push(
+          `Row ${rowIndex} (${name}): Category is required — row skipped`,
+        );
+        continue;
       }
 
-      // 3. Image Processing Helper
+      // ── 4. Image processing ───────────────────────────────────────────────
       const processImage = async (filename, folder = "products") => {
         if (!filename) return null;
         const file = imageMap.get(filename.trim().toLowerCase());
-        if (file) {
-          // Upload to S3
-          const s3Result = await uploadS3File(file.path, folder);
-          return {
-            url: s3Result.url,
-            public_id: s3Result.public_id
-          };
-        }
-        return null;
+        if (!file) return null;
+        const s3Result = await uploadS3File(file.path, folder);
+        return { url: s3Result.url, public_id: s3Result.public_id };
       };
 
-      // 4. Process Main Images
       const mainImage = await processImage(item.MainImage);
+
+      // ── 5. mainImage is required — skip row if missing ────────────────────
+      if (!mainImage || !mainImage.url) {
+        errors.push(
+          `Row ${rowIndex} (${name}): mainImage is required but "${item.MainImage || "no filename provided"}" was not found in uploaded images — row skipped`,
+        );
+        continue;
+      }
+
       const hoverImage = await processImage(item.HoverImage);
 
-      // 5. Process Gallery Images
-      let galleryImages = [];
+      // ── 6. Gallery images ─────────────────────────────────────────────────
       const safeSplit = (val) => {
         if (val == null) return [];
-        return val.toString().split(',').map(s => s.trim()).filter(Boolean);
+        return val
+          .toString()
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
       };
 
+      const galleryImages = [];
       if (item.Images) {
-        const imageNames = safeSplit(item.Images);
-        for (const imgName of imageNames) {
+        for (const imgName of safeSplit(item.Images)) {
           const img = await processImage(imgName);
           if (img) galleryImages.push(img);
         }
       }
 
-      // 6. Process Variants
-      let variants = [];
+      // ── 7. Variants ───────────────────────────────────────────────────────
+      const variants = [];
       if (item.Variants) {
         try {
-          let vStr = item.Variants.toString().trim();
-          // Relax parsing: replace typographer/smart quotes with normal double quotes
-          vStr = vStr.replace(/[“”]/g, '"');
-          
-          // Naive fix if user exclusively used single quotes for the JSON keys/values
+          let vStr = item.Variants.toString().trim().replace(/[""]/g, '"');
           if (vStr.includes("'") && !vStr.includes('"')) {
             vStr = vStr.replace(/'/g, '"');
           }
-
           const parsedVariants = JSON.parse(vStr);
           for (const v of parsedVariants) {
             let v_image = null;
             if (v.imageFilename) {
               v_image = await processImage(v.imageFilename);
-              delete v.imageFilename; // Remove temp field
+              delete v.imageFilename;
             }
-            // Ensure variant matches schema structure
-            variants.push({
-              ...v,
-              v_image: v_image || undefined
-            });
+            variants.push({ ...v, ...(v_image && { v_image }) });
           }
         } catch (e) {
-          errors.push(`Row ${rowIndex}: Invalid Variants JSON - ${e.message}`);
+          errors.push(
+            `Row ${rowIndex} (${name}): Invalid Variants JSON — ${e.message}`,
+          );
+          // Don't skip the row — import without variants
         }
       }
 
-      // 7. slug generation
+      // ── 8. Slug generation with uniqueness suffix ─────────────────────────
       let slug = slugify(name, { lower: true, strict: true });
-      // Check uniqueness simplistic way (better to handle with retry or suffix)
-      // For bulk, let's append SKU if needed or just trust slugify for now.
+      if (existingSlugs.has(slug) || batchSlugs.has(slug)) {
+        const base = slug;
+        let suffix = 1;
+        while (
+          existingSlugs.has(`${base}-${suffix}`) ||
+          batchSlugs.has(`${base}-${suffix}`)
+        ) {
+          suffix++;
+        }
+        slug = `${base}-${suffix}`;
+      }
 
-      // 8. Construct Product Object
+      // ── 9. Build product object ───────────────────────────────────────────
       const product = {
-        name: name,
-        sku: sku,
-        slug: slug,
+        name,
+        sku,
+        slug,
         description: item.Description,
-        shortDescription: item.ShortDescription,
+        shortDescription: item.ShortDescription || "",
         materialCare: item.MaterialCare,
         category: categoryId,
-        subCategory: item.SubCategory,
-        price: Number(item.Price) || 0,
+        subCategory: item.SubCategory || null,
         stock: Number(item.Stock) || 0,
         status: item.Status || "Active",
         wearType: safeSplit(item.WearType),
@@ -807,70 +897,75 @@ export const bulkImportService = async (files, userId) => {
         work: safeSplit(item.Work),
         fabric: safeSplit(item.Fabric),
         productType: safeSplit(item.Type),
-        mainImage: mainImage || { url: "", public_id: "" }, // Schema might require url
-        hoverImage: hoverImage || { url: "", public_id: "" },
+        mainImage,
+        ...(hoverImage && { hoverImage }),
         images: galleryImages,
-        variants: variants,
-        createdBy: userId
+        variants,
+        createdBy: userId,
       };
 
       productsToInsert.push(product);
-
+      batchSlugs.add(slug);
+      batchSkus.add(sku);
     } catch (err) {
-      errors.push(`Row ${rowIndex}: Error processing - ${err.message}`);
+      errors.push(`Row ${rowIndex}: Unexpected error — ${err.message}`);
     }
   }
 
-  // Insert valid products
+  // ── Insert valid products ─────────────────────────────────────────────────
   let inserted = [];
   if (productsToInsert.length > 0) {
     try {
-      // Use ordered: false to continue inserting even if some fail (e.g. dup key)
       inserted = await Product.insertMany(productsToInsert, { ordered: false });
     } catch (err) {
-      // If some failed, err.insertedDocs contains the successful ones
       if (err.insertedDocs) {
         inserted = err.insertedDocs;
       }
-      // Log errors for duplicates etc
-      errors.push(`Database Insert Error: Some products might be duplicates.`);
+      // Extract per-document write errors and surface them
+      if (err.writeErrors?.length) {
+        err.writeErrors.forEach((we) => {
+          const failed = productsToInsert[we.index];
+          errors.push(
+            `DB insert failed for "${failed?.name || `index ${we.index}`}": ${we.errmsg || we.err?.errmsg || "unknown error"}`,
+          );
+        });
+      } else {
+        errors.push(`Database insert error: ${err.message}`);
+      }
     }
   }
 
-  // Rebuild the n-gram search index in the background after bulk import.
-  // insertMany bypasses syncToIndex, so we trigger a full rebuild here.
-  // Fire-and-forget: we do NOT await so the HTTP response is not delayed.
+  // Rebuild search index in background — insertMany bypasses syncToIndex
   if (inserted.length > 0) {
-    rebuildIndex()
-      .catch((err) =>
-        console.error("[NGramSearch] Auto-rebuild failed after bulk import:", err)
-      );
+    rebuildIndex().catch((err) =>
+      console.error(
+        "[NGramSearch] Auto-rebuild failed after bulk import:",
+        err,
+      ),
+    );
   }
 
-  // Cleanup Temp Files
-  // Delete the excel file
+  // ── Cleanup temp files ────────────────────────────────────────────────────
   try {
-    if (excelFile && excelFile.path) await deleteFile(excelFile.path);
-    // We don't delete separate images here because multer logic put them in temp/bulk
-    // We should probably clean up the whole folder or specific files.
-    // Since we map generic files, let's delete all files uploaded in this request.
     const allFiles = [excelFile, ...imageFiles];
     for (const f of allFiles) {
-      if (f.path) await deleteFile(f.path);
+      if (f?.path) await deleteFile(f.path);
     }
   } catch (e) {
-    console.error("Cleanup error", e);
+    console.error("Cleanup error:", e);
   }
 
   return {
     success: true,
     data: inserted,
-    errors: errors
+    errors,
   };
 };
 
 export const addReviewService = async (productId, user, rating, comment) => {
-  console.log(`[addReviewService] User ${user._id} attempting review for Product ${productId}`);
+  console.log(
+    `[addReviewService] User ${user._id} attempting review for Product ${productId}`,
+  );
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     return { success: false, statusCode: 400, message: "Invalid product ID" };
   }
@@ -924,7 +1019,9 @@ export const addReviewService = async (productId, user, rating, comment) => {
  * Eligible only if they have a 'Delivered' order containing this product.
  */
 export const canReviewService = async (productId, userId) => {
-  console.log(`[canReviewService] Checking eligibility for User: ${userId}, Product: ${productId}`);
+  console.log(
+    `[canReviewService] Checking eligibility for User: ${userId}, Product: ${productId}`,
+  );
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     return { success: false, canReview: false, reason: "Invalid product ID" };
   }
@@ -954,7 +1051,11 @@ export const canReviewService = async (productId, userId) => {
   };
 };
 
-export const getAllReviewsService = async (page = 1, limit = 10, status = "all") => {
+export const getAllReviewsService = async (
+  page = 1,
+  limit = 10,
+  status = "all",
+) => {
   const query = {};
   if (status === "approved") query.isApproved = true;
   if (status === "pending") query.isApproved = false;
@@ -968,12 +1069,25 @@ export const getAllReviewsService = async (page = 1, limit = 10, status = "all")
     .skip(skip)
     .limit(limit);
 
-  return { success: true, reviews, total, page: Number(page), limit: Number(limit) };
+  return {
+    success: true,
+    reviews,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+  };
 };
 
-export const updateReviewStatusService = async (reviewId, isApproved, comment, rating, userName) => {
+export const updateReviewStatusService = async (
+  reviewId,
+  isApproved,
+  comment,
+  rating,
+  userName,
+) => {
   const review = await Review.findById(reviewId);
-  if (!review) return { success: false, statusCode: 404, message: "Review not found" };
+  if (!review)
+    return { success: false, statusCode: 404, message: "Review not found" };
 
   if (isApproved !== undefined) review.isApproved = isApproved;
   if (comment !== undefined) review.comment = comment;
@@ -985,9 +1099,14 @@ export const updateReviewStatusService = async (reviewId, isApproved, comment, r
   // Recalculate product rating
   const product = await Product.findById(review.product);
   if (product) {
-    const reviews = await Review.find({ product: review.product, isApproved: true });
+    const reviews = await Review.find({
+      product: review.product,
+      isApproved: true,
+    });
     product.totalReviews = reviews.length;
-    product.averageRating = reviews.length ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length : 0;
+    product.averageRating = reviews.length
+      ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length
+      : 0;
     await product.save();
   }
 
@@ -996,23 +1115,27 @@ export const updateReviewStatusService = async (reviewId, isApproved, comment, r
 
 export const deleteReviewService = async (reviewId) => {
   const review = await Review.findById(reviewId);
-  if (!review) return { success: false, statusCode: 404, message: "Review not found" };
+  if (!review)
+    return { success: false, statusCode: 404, message: "Review not found" };
 
   await review.deleteOne();
 
   // Recalculate product rating
   const product = await Product.findById(review.product);
   if (product) {
-    const reviews = await Review.find({ product: review.product, isApproved: true });
+    const reviews = await Review.find({
+      product: review.product,
+      isApproved: true,
+    });
     product.totalReviews = reviews.length;
-    product.averageRating = reviews.length ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length : 0;
+    product.averageRating = reviews.length
+      ? reviews.reduce((acc, item) => item.rating + acc, 0) / reviews.length
+      : 0;
     await product.save();
   }
 
   return { success: true, message: "Review deleted" };
 };
-
-
 
 export const getProductStatsService = async () => {
   const stats = await Product.aggregate([
@@ -1053,7 +1176,7 @@ export const incrementViewCountService = async (id) => {
   const product = await Product.findOneAndUpdate(
     query,
     { $inc: { viewCount: 1 } },
-    { new: true }
+    { new: true },
   );
 
   if (!product) {
@@ -1063,11 +1186,60 @@ export const incrementViewCountService = async (id) => {
 };
 
 export const getTrendingProductsService = async () => {
-  const products = await Product.find({ isActive: true })
-    .sort({ viewCount: -1 })
-    .limit(10)
+  const products = await Product.find({
+    isTrending: true,
+    status: "Active",
+  })
+    .sort({ createdAt: -1 })
     .populate("category", "name slug")
     .lean();
 
   return { success: true, products };
+};
+
+export const fetchCollectionProducts = async () => {
+  const products = await Product.find(
+    { isCollection: true, status: "Active" },
+    {
+      name: 1,
+      slug: 1,
+      mainImage: 1,
+      hoverImage: 1,
+      variants: 1,
+      status: 1,
+    },
+  )
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  return products.map((p) => {
+    // Derive price/MRP/discount from the first available variant + size
+    const firstVariant = p.variants?.[0];
+    const firstSize = firstVariant?.sizes?.[0];
+
+    const mrp = firstSize?.price ?? 0;
+    const price = firstSize?.discountPrice ?? mrp;
+    const discountPct =
+      mrp > 0 && price < mrp ? Math.round(((mrp - price) / mrp) * 100) : 0;
+
+    // A product is sold-out when every size of every variant has stock === 0
+    const soldOut =
+      p.variants?.every((v) => v.sizes?.every((s) => (s.stock ?? 0) === 0)) ??
+      false;
+
+    return {
+      _id: p._id,
+      name: p.name,
+      slug: p.slug,
+      image: p.mainImage?.url || "",
+      imageAlt: p.mainImage?.alt || p.name,
+      hoverImage: p.hoverImage?.url || p.mainImage?.url || "",
+      hoverImageAlt: p.hoverImage?.alt || p.name,
+      price: price > 0 ? `₹ ${price.toFixed(2)}` : null,
+      mrp: mrp > 0 ? `₹ ${mrp.toFixed(2)}` : null,
+      discount: discountPct > 0 ? `${discountPct}% OFF` : null,
+      soldOut,
+    };
+  });
 };

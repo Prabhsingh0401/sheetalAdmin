@@ -85,7 +85,7 @@ export default function ViewOrderDrawer({ isOpen, onClose, order }) {
             </div>
             <button
               onClick={onClose}
-              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all group"
+              className="p-2.5 cursor-pointer bg-white/10 hover:bg-white/20 rounded-xl transition-all group"
             >
               <X
                 size={20}

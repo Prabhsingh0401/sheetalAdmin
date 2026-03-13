@@ -2,7 +2,9 @@ import express from "express";
 import {
   createCoupon,
   getAllCoupons,
+  getAllCouponsAdmin,
   getCouponStats,
+  getHomepageCoupon,
   deleteCoupon,
   applyCoupon,
   updateCoupon,
@@ -11,10 +13,15 @@ import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", getAllCoupons);
+// ── Public routes ──────────────────────────────────────────────
+// IMPORTANT: specific string routes must come before /:id wildcard
+router.get("/homepage", getHomepageCoupon);              // public — storefront banner
+router.get("/", getAllCoupons);                           // public — active+valid only
 router.post("/apply", isAuthenticated, applyCoupon);
-router.get("/all", isAuthenticated, getAllCoupons);
-router.get("/admin/all", isAuthenticated, isAdmin, getAllCoupons);
+
+// ── Admin routes ───────────────────────────────────────────────
+// /admin/all and /admin/stats must be before /admin/:id
+router.get("/admin/all", isAuthenticated, isAdmin, getAllCouponsAdmin);   // all coupons, no filter
 router.get("/admin/stats", isAuthenticated, isAdmin, getCouponStats);
 router.post("/admin", isAuthenticated, isAdmin, createCoupon);
 router

@@ -25,7 +25,7 @@ export default function ReviewModal({ isOpen, editForm, onChange, onSubmit, onCl
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="w-8 h-8 cursor-pointer flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
             <X size={16} />
           </button>
@@ -82,13 +82,13 @@ export default function ReviewModal({ isOpen, editForm, onChange, onSubmit, onCl
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all"
+              className="flex-1 cursor-pointer py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all"
+              className="flex-1 cursor-pointer py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all"
             >
               Save Changes
             </button>
