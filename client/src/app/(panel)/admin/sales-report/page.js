@@ -18,6 +18,7 @@ import {
 } from "@/services/salesService";
 import { getOrderStats } from "@/services/orderService";
 import { useMostViewed } from "@/hooks/useMostViewed";
+import SalesTrendsChart from "@/components/admin/sales/SalesPageHeader";
 
 const MOCK_TRAFFIC_SOURCES = [
   { label: "Direct", percentage: 45, color: "bg-primary" },
@@ -40,7 +41,7 @@ export default function SalesPage() {
   const [period, setPeriod] = useState("weekly");
   const [fetchError, setFetchError] = useState(null);
   const { items, loading: mostViewedLoading } = useMostViewed(10);
-  const [filters, setFilters] = useState([])
+  const [filters, setFilters] = useState([]);
 
   // ── Best-selling products ──────────────────────────────────────
   useEffect(() => {
@@ -48,7 +49,6 @@ export default function SalesPage() {
       .then((data) => setBestSellingProducts(data))
       .catch((err) => setFetchError(err.message));
   }, []);
-
 
   // ── Order stats → StatsRow ─────────────────────────────────────
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function SalesPage() {
         },
         {
           label: "Average Order Value",
-          value: formatCurrency(totalRevenue / totalOrders),
+          value: formatCurrency(totalRevenue > 0 ? totalRevenue / totalOrders : 0),
           change: "10%",
           trend: "up",
           icon: BarChart2,
@@ -110,10 +110,10 @@ export default function SalesPage() {
     }
   };
 
-  const handleFiltersChange = (filter)=>{
-    console.log(filter)
-    setFilters(filter)
-  }
+  const handleFiltersChange = (filter) => {
+    console.log(filter);
+    setFilters(filter);
+  };
 
   return (
     <main className="flex-1 px-4 lg:px-10 max-w-350 mx-auto w-full">
@@ -122,7 +122,8 @@ export default function SalesPage() {
       {/* <FiltersBar period={period} onApply={handleFiltersChange} onPeriodChange={setPeriod} /> */}
 
       <SalesRevenueChart period={period} />
-      <br/>
+
+      <br />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <BestSellingProducts

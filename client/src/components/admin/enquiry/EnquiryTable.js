@@ -47,7 +47,10 @@ export default function EnquiryTable({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {enquiries.map((e) => (
-            <tr key={e._id} className="hover:bg-slate-50 transition-colors group">
+            <tr
+              key={e._id}
+              className="hover:bg-slate-50 transition-colors group"
+            >
               <td className="px-5 py-3.5">
                 <button
                   onClick={() => onSelect(e)}
@@ -59,7 +62,9 @@ export default function EnquiryTable({
                   {e.name}
                 </button>
               </td>
-              <td className="px-5 py-3.5 text-slate-600 font-medium">{e.productName}</td>
+              <td className="px-5 py-3.5 text-slate-600 font-medium">
+                {e.productName}
+              </td>
               <td className="px-5 py-3.5">
                 <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
                   {e.size}
@@ -72,7 +77,7 @@ export default function EnquiryTable({
                 <StatusBadge status={e.status} />
               </td>
               <td className="px-5 py-3.5">
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
                   <button
                     onClick={() => onSelect(e)}
                     className="text-[10px] cursor-pointer font-bold text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1 hover:border-slate-400 transition"
@@ -80,6 +85,7 @@ export default function EnquiryTable({
                     View
                   </button>
                   <button
+                    aria-label={`Delete enquiry from ${e.name}`}
                     onClick={() => onDelete(e._id)}
                     disabled={deletingId === e._id}
                     className="p-1.5 rounded-lg cursor-pointer text-rose-400 hover:bg-rose-500 hover:text-white border border-slate-200 hover:border-rose-500 transition disabled:opacity-50"

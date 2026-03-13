@@ -76,6 +76,8 @@ export default function ProductModal({
     mainImageFile: null,
     hoverImageFile: null,
     videoFile: null,
+    isTrending: false,
+    isNewArrival: false,
   });
 
   useEffect(() => {
@@ -84,14 +86,16 @@ export default function ProductModal({
       if (initialData) {
         const variants = Array.isArray(initialData.variants)
           ? initialData.variants.map((v) => ({
-            ...v,
-            sizes: Array.isArray(v.sizes) ? v.sizes : [],
-          }))
+              ...v,
+              sizes: Array.isArray(v.sizes) ? v.sizes : [],
+            }))
           : [];
         setFormData({
           ...initialData,
           category: initialData.category?._id || initialData.category || "",
           subCategory: initialData.subCategory || "",
+          isTrending: initialData.isTrending ?? false,
+          isNewArrival: initialData.isNewArrival ?? false,
           displayCollections: Array.isArray(initialData.displayCollections)
             ? initialData.displayCollections
             : [],
@@ -137,7 +141,7 @@ export default function ProductModal({
         const currentDiscountPrice = Number(s.discountPrice);
         if (currentDiscountPrice > 0 && currentPrice <= currentDiscountPrice) {
           toast.error(
-            `For size '${s.name}' (Variant: ${v.color?.name || "N/A"}), MRP Price (${currentPrice}) must be greater than Selling Price (${currentDiscountPrice}).`
+            `For size '${s.name}' (Variant: ${v.color?.name || "N/A"}), MRP Price (${currentPrice}) must be greater than Selling Price (${currentDiscountPrice}).`,
           );
         }
       });
@@ -181,6 +185,8 @@ export default function ProductModal({
       productType: [],
       brandInfo: "",
       returnPolicy: "7 Days Easy Return",
+      isTrending: false,
+      isNewArrival: false,
     });
     setImageFiles([]);
     setExistingImages([]);
@@ -267,6 +273,12 @@ export default function ProductModal({
           if (formData[key] !== null && formData[key] !== undefined) {
             data.append(key, formData[key]);
           }
+        } else if (key === "isTrending" || key === "isNewArrival") {
+          data.append(key, formData[key] === true ? "true" : "false");
+        } else if (!excludedKeys.includes(key)) {
+          if (formData[key] !== null && formData[key] !== undefined) {
+            data.append(key, formData[key]);
+          }
         }
       });
 
@@ -334,7 +346,7 @@ export default function ProductModal({
       if (result.success) {
         toast.success(
           result.message ||
-          (initialData ? "Product updated 🎉" : "Product created 🚀")
+            (initialData ? "Product updated 🎉" : "Product created 🚀"),
         );
         if (onSuccess) onSuccess();
         onClose();

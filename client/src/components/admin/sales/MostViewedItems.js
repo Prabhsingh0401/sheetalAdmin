@@ -1,8 +1,6 @@
 "use client";
 
 import { Eye, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getMostViewedProducts } from "@/services/productService";
 
 function formatViews(views) {
   if (views >= 1000) return `${(views / 1000).toFixed(1)}k`;
@@ -87,9 +85,7 @@ export default function MostViewedItems({
       {/* Empty */}
       {!loading && !error && items.length === 0 && (
         <div className="flex items-center justify-center py-12 text-slate-400">
-          <p style={{ fontSize: 13, fontWeight: 500 }}>
-            No data available yet.
-          </p>
+          <p style={{ fontSize: 13, fontWeight: 500 }}>No data available yet.</p>
         </div>
       )}
 

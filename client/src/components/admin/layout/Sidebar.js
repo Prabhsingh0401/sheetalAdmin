@@ -171,8 +171,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
 }
 
 function NavItem({ item, pathname, setIsOpen }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const Icon = item.icon;
 
   const isActive =
@@ -207,6 +206,12 @@ function NavItem({ item, pathname, setIsOpen }) {
     (child) => pathname === child.href || pathname.startsWith(child.href),
   );
 
+  const handleChevronClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsExpanded((prev) => !prev);
+  };
+
   return (
     <div>
       <Link
@@ -228,12 +233,12 @@ function NavItem({ item, pathname, setIsOpen }) {
         />
         <span className="flex-1">{item.label}</span>
         <span
-          onClick={() => setIsHovered(!isHovered)}
+          onClick={handleChevronClick}
           className="hover:bg-white/30 rounded w-4 h-4 flex items-center justify-center"
         >
           <ChevronDown
             size={14}
-            className={`transition-transform duration-300 ${isHovered ? "rotate-180" : "rotate-0"} ${
+            className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : "rotate-0"} ${
               isParentActive ? "text-white/70" : "text-slate-400"
             }`}
           />
@@ -242,7 +247,7 @@ function NavItem({ item, pathname, setIsOpen }) {
 
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isHovered ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="mt-0.5 ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5 py-1">

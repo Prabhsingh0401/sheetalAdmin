@@ -11,18 +11,25 @@ export default function EnquiryFilters({
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
       <div className="mb-5">
-        <h3 className="text-sm font-black text-slate-900 uppercase">Enquiries</h3>
+        <h3 className="text-sm font-black text-slate-900 uppercase">
+          Enquiries
+        </h3>
         <p className="text-[10px] text-slate-500 mt-0.5">
           {count} enquir{count !== 1 ? "ies" : "y"} found
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
+          <label htmlFor="enquiry-search" className="sr-only">
+            Search enquiries
+          </label>
           <Search
             size={13}
+            aria-hidden="true"
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
           <input
+            id="enquiry-search"
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -31,7 +38,11 @@ export default function EnquiryFilters({
           />
         </div>
         <div className="relative">
+          <label htmlFor="enquiry-status" className="sr-only">
+            Filter enquiries by status
+          </label>
           <select
+            id="enquiry-status"
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value)}
             className="appearance-none text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-slate-400 transition cursor-pointer font-medium capitalize"

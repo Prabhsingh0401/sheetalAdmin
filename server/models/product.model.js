@@ -109,6 +109,9 @@ const productSchema = new mongoose.Schema(
     ogImage: { type: String },
     canonicalUrl: { type: String },
 
+    isTrending: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
+
     mainImage: {
       url: { type: String, required: true },
       public_id: { type: String },

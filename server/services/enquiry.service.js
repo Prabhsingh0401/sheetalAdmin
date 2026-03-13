@@ -8,7 +8,19 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function buildAvailabilityEmailHtml({ name, productName, size }) {
+  const safeName = escapeHtml(name);
+  const safeProductName = escapeHtml(productName);
+  const safeSize = escapeHtml(size);
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -28,7 +40,7 @@ function buildAvailabilityEmailHtml({ name, productName, size }) {
           <tr>
             <td style="background:#111827;padding:32px 40px;text-align:center;">
               <p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
-                Great news, ${name}! 🎉
+                Great news, ${safeName}! 🎉
               </p>
             </td>
           </tr>
@@ -49,10 +61,10 @@ function buildAvailabilityEmailHtml({ name, productName, size }) {
                       Product
                     </p>
                     <p style="margin:0;font-size:17px;font-weight:800;color:#111827;">
-                      ${productName}
+                      ${safeProductName}
                     </p>
                     <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">
-                      Size: <strong style="color:#111827;">${size}</strong>
+                      Size: <strong style="color:#111827;">${safeSize}</strong>
                     </p>
                   </td>
                 </tr>
@@ -104,7 +116,6 @@ export async function sendAvailabilityEmail({
   productName,
   size,
 }) {
-
   await transporter.sendMail({
     from: `"${process.env.STORE_NAME || "Our Store"}" <${process.env.SMTP_MAIL}>`,
     to: email,

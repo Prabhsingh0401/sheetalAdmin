@@ -610,8 +610,12 @@ export const deleteFromIndex = async (objectId) => {
 export const searchNgram = async (query, options = {}) => {
   await ensureHydrated();
 
-  const limit = Math.min(options.limit || 10, MAX_HITS);
-  const page = Math.max(options.page || 1, 1);
+  const parsedLimit = Number(options.limit);
+  const parsedPage = Number(options.page);
+  const limit = Number.isInteger(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), MAX_HITS)
+    : 10;
+  const page = Number.isInteger(parsedPage) ? Math.max(parsedPage, 1) : 1;
 
   if (!query || query.trim().length === 0) {
     return { hits: [], total: 0, page, totalPages: 0 };
@@ -655,7 +659,8 @@ export const searchNgram = async (query, options = {}) => {
 
   // FIX #2 (Medium): Do NOT mutate scores during forEach — collect deletions first.
   // Deleting map entries mid-forEach is undefined behaviour and can silently skip entries.
-  const minBaseScore = Math.max(1.5, queryGrams.size * 0.15);
+  const minBaseScore =
+    queryGrams.size === 1 ? 1 : Math.max(1.5, queryGrams.size * 0.15);
   for (const [docId, score] of scores) {
     if (score < minBaseScore) scores.delete(docId);
   }

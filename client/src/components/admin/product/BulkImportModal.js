@@ -14,7 +14,7 @@ import toast from "react-hot-toast";
 import { bulkImportProducts } from "@/services/productService";
 
 export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
-  const [step, setStep] = useState(1); // 1: Upload, 2: Review/Processing, 3: Success
+  const [step, setStep] = useState(1);
   const [excelFile, setExcelFile] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -44,12 +44,9 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
     });
 
     if (validImages.length !== files.length) {
-      toast.error(
-        "Some files were skipped because they are not recognized as images.",
-      );
+      toast.error("Some files were skipped because they are not recognized as images.");
     }
 
-    // Create URLs once — not on every render
     const newEntries = validImages.map((file) => ({
       file,
       url: URL.createObjectURL(file),
@@ -76,19 +73,11 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
     try {
       const formData = new FormData();
       formData.append("file", excelFile);
+      imageFiles.forEach(({ file }) => formData.append("images", file));
 
-      // Append all images
-      imageFiles.forEach((file) => {
-        formData.append("images", file);
-      });
-
-      // Simulation of progress for better UX
       const interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
+          if (prev >= 90) { clearInterval(interval); return 90; }
           return prev + 10;
         });
       }, 500);
@@ -122,7 +111,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
   };
 
   const resetForm = () => {
-    imageFiles.forEach(({ url }) => URL.revokeObjectURL(url)); // clean up all
+    imageFiles.forEach(({ url }) => URL.revokeObjectURL(url));
     setExcelFile(null);
     setImageFiles([]);
     setStep(1);
@@ -144,17 +133,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Bulk Import Products
-            </h2>
-            <p className="text-sm text-slate-500">
-              Upload Excel sheet and associated images
-            </p>
+            <h2 className="text-xl font-bold text-slate-900">Bulk Import Products</h2>
+            <p className="text-sm text-slate-500">Upload Excel sheet and associated images</p>
           </div>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-slate-100 cursor-pointer rounded-full text-slate-400 hover:text-slate-600 transition-colors"
             disabled={uploading}
+            aria-label="Close modal"
           >
             <X size={20} />
           </button>
@@ -162,70 +148,69 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
+
           {/* Step 1: Upload */}
           {step === 1 && (
             <div className="space-y-8">
-              {/* Excel Upload Section */}
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
-                    1
-                  </span>
-                  Upload Product Sheet
-                </label>
 
-                <div
-                  onClick={() => excelInputRef.current?.click()}
-                  className={`
-                        border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all
-                        ${excelFile ? "border-emerald-500 bg-emerald-50/30" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"}
-                    `}
+              {/* Excel Upload */}
+              <div className="space-y-3">
+                <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">1</span>
+                  Upload Product Sheet
+                </p>
+
+                {/* Hidden input — triggered by the label below */}
+                <input
+                  type="file"
+                  id="excel-upload"
+                  ref={excelInputRef}
+                  className="sr-only"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleExcelChange}
+                />
+
+                {/* <label> makes the whole drop zone keyboard-accessible and
+                    screen-reader friendly without any JS click forwarding */}
+                <label
+                  htmlFor="excel-upload"
+                  className={`block border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all
+                    focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2
+                    ${excelFile
+                      ? "border-emerald-500 bg-emerald-50/30"
+                      : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
+                    }`}
                 >
                   {excelFile ? (
                     <div className="text-center">
                       <FileSpreadsheet className="w-12 h-12 text-emerald-600 mb-2 mx-auto" />
-                      <p className="font-medium text-slate-900">
-                        {excelFile.name}
-                      </p>
-                      <p className="text-xs cursor-pointer text-slate-500 mt-1">
+                      <p className="font-medium text-slate-900">{excelFile.name}</p>
+                      <p className="text-xs text-slate-500 mt-1">
                         {(excelFile.size / 1024).toFixed(1)} KB
                       </p>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExcelFile(null);
-                        }}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); setExcelFile(null); }}
                         className="mt-3 text-xs text-red-600 hover:underline"
                       >
                         Remove file
                       </button>
                     </div>
                   ) : (
-                    <div className="text-center group">
-                      <UploadCloud className="w-12 h-12 text-slate-300 group-hover:text-blue-500 transition-colors mb-2 mx-auto" />
-                      <p className="font-medium text-slate-700">
-                        Click to upload Excel file
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Supported: .xlsx, .xls, .csv
-                      </p>
+                    <div className="text-center">
+                      <UploadCloud className="w-12 h-12 text-slate-300 mb-2 mx-auto" />
+                      <p className="font-medium text-slate-700">Click or press Space to upload Excel file</p>
+                      <p className="text-xs text-slate-400 mt-1">Supported: .xlsx, .xls, .csv</p>
                     </div>
                   )}
-                  <input
-                    type="file"
-                    ref={excelInputRef}
-                    className="hidden"
-                    accept=".xlsx, .xls, .csv"
-                    onChange={handleExcelChange}
-                  />
-                </div>
+                </label>
+
                 <div className="flex justify-between items-center text-xs px-1">
                   <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
+                    type="button"
+                    onClick={async () => {
                       try {
-                        const { downloadSampleExcel } =
-                          await import("@/services/productService");
+                        const { downloadSampleExcel } = await import("@/services/productService");
                         const blob = await downloadSampleExcel();
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement("a");
@@ -235,11 +220,11 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                         a.click();
                         a.remove();
                         window.URL.revokeObjectURL(url);
-                      } catch (err) {
+                      } catch {
                         toast.error("Failed to download sample file");
                       }
                     }}
-                    className="text-blue-600 cursor-pointer hover:underline flex items-center gap-1"
+                    className="text-blue-600 cursor-pointer hover:underline"
                   >
                     Download Sample Template
                   </button>
@@ -247,72 +232,79 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 </div>
               </div>
 
-              {/* Images Upload Section */}
+              {/* Images Upload */}
               <div className="space-y-3">
-                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
-                    2
-                  </span>
+                <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">2</span>
                   Upload Product Images
-                </label>
+                </p>
+
+                <input
+                  type="file"
+                  id="images-upload"
+                  ref={imagesInputRef}
+                  className="sr-only"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImagesChange}
+                />
 
                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-                    <div
-                      onClick={() => imagesInputRef.current?.click()}
-                      className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-white transition-all bg-white"
+
+                    {/* Add images button — <label> ties directly to the hidden input */}
+                    <label
+                      htmlFor="images-upload"
+                      className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-white transition-all bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1"
                     >
                       <ImageIcon className="w-8 h-8 text-slate-300 mb-1" />
-                      <span className="text-xs font-medium text-slate-500">
-                        Add Images
-                      </span>
-                    </div>
+                      <span className="text-xs font-medium text-slate-500">Add Images</span>
+                    </label>
 
-                    {imageFiles.map((file, idx) => (
+                    {imageFiles.map((entry, idx) => (
                       <div
                         key={idx}
                         className="aspect-square relative rounded-lg overflow-hidden border border-slate-200 bg-white group"
                       >
+                        {/* Fixed: was `entry.url` on wrong variable name */}
                         <img
                           src={entry.url}
                           className="w-full h-full object-cover"
-                          alt="preview"
+                          alt={entry.file.name}
                         />
                         <button
+                          type="button"
                           onClick={() => removeImage(idx)}
-                          className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                          aria-label={`Remove ${entry.file.name}`}
+                          className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shadow-sm hover:bg-white"
                         >
                           <X size={12} />
                         </button>
+                        {/* Fixed: was `file.name`, should be `entry.file.name` */}
                         <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate">
-                          {file.name}
+                          {entry.file.name}
                         </span>
                       </div>
                     ))}
                   </div>
+
                   <div className="flex justify-between items-center">
-                    <p className="text-xs text-slate-500">
-                      {imageFiles.length} images selected
-                    </p>
+                    <p className="text-xs text-slate-500">{imageFiles.length} images selected</p>
                     <button
-                      onClick={() => setImageFiles([])}
+                      type="button"
+                      onClick={() => {
+                        imageFiles.forEach(({ url }) => URL.revokeObjectURL(url));
+                        setImageFiles([]);
+                      }}
                       className={`text-xs text-red-600 hover:underline ${imageFiles.length === 0 ? "invisible" : ""}`}
                     >
                       Clear all
                     </button>
                   </div>
-                  <input
-                    type="file"
-                    ref={imagesInputRef}
-                    className="hidden"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImagesChange}
-                  />
                 </div>
+
                 <p className="text-xs text-slate-400 italic">
-                  Note: Image filenames must match exactly with the names
-                  provided in the Excel sheet.
+                  Note: Image filenames must match exactly with the names provided in the Excel sheet.
                 </p>
               </div>
             </div>
@@ -325,42 +317,25 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                   <circle
                     className="text-slate-100 stroke-current"
-                    strokeWidth="8"
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="transparent"
-                  ></circle>
+                    strokeWidth="8" cx="50" cy="50" r="40" fill="transparent"
+                  />
                   <circle
-                    className="text-blue-600 progress-ring__circle stroke-current transition-all duration-300"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    cx="50"
-                    cy="50"
-                    r="40"
+                    className="text-blue-600 stroke-current transition-all duration-300"
+                    strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40"
                     fill="transparent"
                     strokeDasharray="251.2"
                     strokeDashoffset={251.2 - (251.2 * progress) / 100}
-                    style={{
-                      transform: "rotate(-90deg)",
-                      transformOrigin: "50% 50%",
-                    }}
-                  ></circle>
+                    style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
+                  />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl font-bold text-slate-700">
-                    {progress}%
-                  </span>
+                  <span className="text-xl font-bold text-slate-700">{progress}%</span>
                 </div>
               </div>
-
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Importing Products...
-                </h3>
+                <h3 className="text-lg font-bold text-slate-900">Importing Products...</h3>
                 <p className="text-slate-500 text-sm max-w-xs mx-auto">
-                  Please wait while we parse the Excel file and upload your
-                  images securely.
+                  Please wait while we parse the Excel file and upload your images securely.
                 </p>
               </div>
             </div>
@@ -369,26 +344,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
           {/* Step 3: Result */}
           {step === 3 && result && (
             <div className="flex flex-col items-center justify-center py-8 text-center space-y-6">
-              <div
-                className={`
-                    w-20 h-20 rounded-full flex items-center justify-center mb-4
-                    ${result.success ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}
-                `}
-              >
-                {result.success ? (
-                  <CheckCircle size={40} />
-                ) : (
-                  <AlertCircle size={40} />
-                )}
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${result.success ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}>
+                {result.success ? <CheckCircle size={40} /> : <AlertCircle size={40} />}
               </div>
-
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-slate-900">
                   {result.success ? "Import Complete!" : "Import Failed"}
                 </h3>
-                <p
-                  className={`text-sm max-w-sm mx-auto ${result.success ? "text-slate-600" : "text-red-600"}`}
-                >
+                <p className={`text-sm max-w-sm mx-auto ${result.success ? "text-slate-600" : "text-red-600"}`}>
                   {result.message}
                 </p>
                 {result.success && (
@@ -397,24 +360,21 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   </p>
                 )}
               </div>
-
-              {result.errors && result.errors.length > 0 && (
+              {result.errors?.length > 0 && (
                 <div className="w-full max-w-md bg-red-50/50 border border-red-100 rounded-lg p-3 text-left max-h-40 overflow-y-auto">
                   <p className="text-xs font-bold text-red-800 mb-2">
                     Warnings/Errors ({result.errors.length}):
                   </p>
                   <ul className="list-disc list-inside text-xs text-red-600 space-y-1">
                     {result.errors.map((err, i) => (
-                      <li key={i}>
-                        {typeof err === "string" ? err : JSON.stringify(err)}
-                      </li>
+                      <li key={i}>{typeof err === "string" ? err : JSON.stringify(err)}</li>
                     ))}
                   </ul>
                 </div>
               )}
-
               <div className="pt-6">
                 <button
+                  type="button"
                   onClick={handleClose}
                   className="bg-slate-900 text-white cursor-pointer px-8 py-3 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all"
                 >
@@ -429,12 +389,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
         {step === 1 && (
           <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
             <button
+              type="button"
               onClick={handleClose}
               className="px-5 py-2.5 cursor-pointer text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-colors text-sm"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={!excelFile}
               className="bg-blue-600 cursor-pointer text-white px-8 py-2.5 rounded-xl font-bold hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all text-sm flex items-center gap-2"

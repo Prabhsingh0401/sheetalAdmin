@@ -245,7 +245,6 @@ export const getAllReviews = async (req, res, next) => {
 
 export const updateReviewStatus = async (req, res, next) => {
   try {
-    console.log("UPDATE REVIEW BODY:", req.body);
     const { isApproved, comment, rating, userName } = req.body;
     const reviewId = req.params.id || req.query.id;
     const result = await productService.updateReviewStatusService(
@@ -280,12 +279,7 @@ export const getLowStockProducts = async (req, res, next) => {
 export const getTrendingProducts = async (req, res, next) => {
   try {
     const result = await productService.getTrendingProductsService();
-    return successResponse(
-      res,
-      200,
-      result.products,
-      "Trending products fetched",
-    );
+    return res.status(200).json({ success: true, products: result.products });
   } catch (error) {
     next(error);
   }
@@ -300,11 +294,8 @@ export const incrementViewCount = async (req, res, next) => {
       { $inc: { viewCount: 1 } },
       { new: true, select: "viewCount" },
     );
-    if (!product)
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
-    res.json({ success: true, viewCount: product.viewCount });
+    if (!product) return next(ErrorResponse("Product not found", 404));
+    return res.json({ success: true, viewCount: product.viewCount });
   } catch (err) {
     next(err);
   }

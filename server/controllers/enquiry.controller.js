@@ -116,7 +116,7 @@ export const deleteEnquiry = async (req, res, next) => {
 // @desc    Send Enquiry email
 // @route   DELETE /api/v1/enquiries/:id/send-availability
 // @access  Private/Admin
-export const sendAvailability = async (req, res) => {
+export const sendAvailability = async (req, res, next) => {
   try {
     const enquiry = await Enquiry.findById(req.params.id);
 
@@ -142,6 +142,6 @@ export const sendAvailability = async (req, res) => {
       enquiry,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error)
   }
 };

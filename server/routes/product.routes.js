@@ -18,7 +18,7 @@ import {
   checkCanReview,
   getAllReviews,
   updateReviewStatus,
-  getMostViewedProducts
+  getMostViewedProducts,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";

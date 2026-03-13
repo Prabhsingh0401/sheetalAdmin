@@ -19,10 +19,11 @@ export default function EnquiryModal({
   onStatusChange,
   onDelete,
   onSendAvailability,
-  updatingId,
-  deletingId,
-  sendingId,
+  pendingAction,
 }) {
+  const isThisEnquiry = pendingAction?.id === enquiry._id;
+  const isAreaLocked = isThisEnquiry;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
@@ -71,33 +72,41 @@ export default function EnquiryModal({
             Update Status
           </p>
           <div className="flex gap-2 flex-wrap">
-            {["new", "read", "replied"].map((s) => (
-              <button
-                key={s}
-                onClick={() => onStatusChange(enquiry._id, s)}
-                disabled={enquiry.status === s || updatingId === enquiry._id}
-                className={`px-4 cursor-pointer py-2 rounded-xl text-xs font-bold capitalize transition-all border disabled:cursor-not-allowed
-                  ${
-                    enquiry.status === s
-                      ? STATUS_STYLES[s] + " opacity-100"
-                      : "bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-400"
-                  }`}
-              >
-                {updatingId === enquiry._id && enquiry.status !== s ? (
-                  <Loader2 size={12} className="animate-spin inline" />
-                ) : (
-                  s
-                )}
-              </button>
-            ))}
+            {["new", "read", "replied"].map((s) => {
+              const isCurrentStatus = enquiry.status === s;
+              const isThisButtonSpinning =
+                isThisEnquiry &&
+                pendingAction.action === "status" &&
+                pendingAction.targetStatus === s;
+
+              return (
+                <button
+                  key={s}
+                  onClick={() => onStatusChange(enquiry._id, s)}
+                  disabled={isCurrentStatus || isAreaLocked}
+                  className={`px-4 cursor-pointer py-2 rounded-xl text-xs font-bold capitalize transition-all border disabled:cursor-not-allowed
+                    ${
+                      isCurrentStatus
+                        ? STATUS_STYLES[s] + " opacity-100"
+                        : "bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-400"
+                    }`}
+                >
+                  {isThisButtonSpinning ? (
+                    <Loader2 size={12} className="animate-spin inline" />
+                  ) : (
+                    s
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <button
             onClick={() => onSendAvailability(enquiry)}
-            disabled={sendingId === enquiry._id}
+            disabled={isAreaLocked}
             className="w-full cursor-pointer flex items-center justify-center gap-2 border border-emerald-200 text-emerald-600 hover:bg-emerald-500 hover:text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
           >
-            {sendingId === enquiry._id ? (
+            {isThisEnquiry && pendingAction.action === "send" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
               <Mail size={13} />
@@ -107,10 +116,10 @@ export default function EnquiryModal({
 
           <button
             onClick={() => onDelete(enquiry._id)}
-            disabled={deletingId === enquiry._id}
+            disabled={isAreaLocked}
             className="w-full cursor-pointer flex items-center justify-center gap-2 border border-rose-200 text-rose-500 hover:bg-rose-500 hover:text-white py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
           >
-            {deletingId === enquiry._id ? (
+            {isThisEnquiry && pendingAction.action === "delete" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
               <Trash2 size={13} />

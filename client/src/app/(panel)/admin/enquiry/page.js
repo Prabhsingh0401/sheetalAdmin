@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 
 import EnquiryStatsCards from "@/components/admin/enquiry/EnquiryStatsCards";
@@ -27,27 +27,50 @@ export default function EnquiriesPage() {
   const [sendingId, setSendingId] = useState(null);
   const [counts, setCounts] = useState({ total: 0, new: 0, read: 0, replied: 0 });
 
+  // Ref holds the AbortController for the in-flight fetch pair so we can
+  // cancel it the moment a newer search/filter change comes in.
+  const abortRef = useRef(null);
+
   // ── Data fetching ──────────────────────────────────────────────────────────
 
   const loadEnquiries = useCallback(async () => {
+    // Cancel any previous in-flight request before starting a new one.
+    // This prevents an older slow response from overwriting newer state.
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
+
     setIsLoading(true);
     try {
       const [filtered, all] = await Promise.all([
-        fetchEnquiries({ status: statusFilter, search }),
-        fetchEnquiries({ status: "all" }),
+        fetchEnquiries({ status: statusFilter, search }, signal),
+        fetchEnquiries({ status: "all" }, signal),
       ]);
+
+      // If this request was aborted (a newer one started), do not commit.
+      if (signal.aborted) return;
+
       setEnquiries(filtered);
       setCounts(deriveEnquiryCounts(all));
-    } catch {
+    } catch (err) {
+      // AbortError is expected when we cancel — don't surface it as a toast.
+      if (err.name === "AbortError") return;
       toast.error("Failed to load enquiries");
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   }, [statusFilter, search]);
 
   useEffect(() => {
     const timer = setTimeout(() => loadEnquiries(), 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Also abort if the component unmounts mid-flight.
+      if (abortRef.current) abortRef.current.abort();
+    };
   }, [loadEnquiries]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -63,7 +86,7 @@ export default function EnquiriesPage() {
     setUpdatingId(id);
     try {
       const updated = await updateEnquiryStatus(id, status);
-      setEnquiries((prev) => prev.map((e) => (e._id === id ? updated : e)));
+      await loadEnquiries()
       if (selected?._id === id) setSelected(updated);
       if (!silent) toast.success("Status updated");
     } catch {
@@ -77,7 +100,7 @@ export default function EnquiriesPage() {
     setDeletingId(id);
     try {
       await deleteEnquiry(id);
-      setEnquiries((prev) => prev.filter((e) => e._id !== id));
+      await loadEnquiries()
       if (selected?._id === id) setSelected(null);
       toast.success("Enquiry deleted");
     } catch {

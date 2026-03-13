@@ -564,7 +564,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                 <div className="max-h-[150px] overflow-y-auto space-y-3 pr-1 custom-scrollbar">
                   {selectedItems.map((item) => (
                     <div
-                      key={item.product}
+                      key={item.uniqueId}
                       className="flex justify-between items-center text-xs"
                     >
                       <span className="text-slate-600 font-medium">

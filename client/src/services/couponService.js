@@ -1,5 +1,7 @@
 import { API_BASE_URL } from "./api";
 
+// ── Admin ──────────────────────────────────────────────────────
+
 export const getCoupons = async (page = 1, limit = 10, search = "") => {
   const res = await fetch(
     `${API_BASE_URL}/coupons/admin/all?page=${page}&limit=${limit}&search=${search}`,
@@ -7,6 +9,15 @@ export const getCoupons = async (page = 1, limit = 10, search = "") => {
   );
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || "Failed to fetch coupons");
+  return data;
+};
+
+export const getCouponStats = async () => {
+  const res = await fetch(`${API_BASE_URL}/coupons/admin/stats`, {
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to fetch stats");
   return data;
 };
 
@@ -46,14 +57,7 @@ export const deleteCoupon = async (id) => {
   return true;
 };
 
-export const getCouponStats = async () => {
-  const res = await fetch(`${API_BASE_URL}/coupons/admin/stats`, {
-    credentials: "include",
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to fetch stats");
-  return data;
-};
+// ── Public ─────────────────────────────────────────────────────
 
 export const applyCoupon = async (code, cartTotal, cartItems = []) => {
   const res = await fetch(`${API_BASE_URL}/coupons/apply`, {
@@ -64,5 +68,16 @@ export const applyCoupon = async (code, cartTotal, cartItems = []) => {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || "Invalid or Expired Coupon");
+  return data;
+};
+
+// Returns the single coupon with showOnHomepage: true, or null.
+// Dedicated endpoint — never limited by local pagination.
+export const getHomepageCoupon = async () => {
+  const res = await fetch(`${API_BASE_URL}/coupons/homepage`, {
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to fetch homepage coupon");
   return data;
 };

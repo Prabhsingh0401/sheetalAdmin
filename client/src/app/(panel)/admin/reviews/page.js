@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Star, ThumbsUp, AlertCircle } from "lucide-react";
+import { Star, ThumbsUp, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import PageHeader from "@/components/admin/layout/PageHeader.js";
 import {
   getAdminReviews,
@@ -16,11 +16,15 @@ import {
   StarRow,
 } from "@/components/admin/reviews/ReviewShared";
 
+const PAGE_SIZE = 20;
+
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ average: 0, approved: 0, pending: 0 });
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -29,37 +33,51 @@ export default function ReviewsPage() {
     userName: "",
   });
 
+  // Stats fetched once independently — not derived from current page slice
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  // Reviews refetch whenever filter or page changes
   useEffect(() => {
     fetchReviews();
-  }, []);
+  }, [filter, page]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await getAdminReviews(1, 1, "all");
+      if (res.success) {
+        const meta = res.meta || {};
+        setStats({
+          average: meta.averageRating ?? 0,
+          approved: meta.approvedCount ?? 0,
+          pending: meta.pendingCount ?? 0,
+        });
+      }
+    } catch {
+      toast.error("Failed to fetch review stats");
+    }
+  };
 
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      const res = await getAdminReviews(1, 100, "all");
+      const res = await getAdminReviews(page, PAGE_SIZE, filter);
       if (res.success) {
-        const fetched = res.data || [];
-        setReviews(fetched);
-        let approved = 0,
-          pending = 0,
-          totalRating = 0;
-        fetched.forEach((r) => {
-          if (r.isApproved) {
-            approved++;
-            totalRating += r.rating;
-          } else pending++;
-        });
-        setStats({
-          average: approved > 0 ? (totalRating / approved).toFixed(1) : 0,
-          approved,
-          pending,
-        });
+        setReviews(res.data || []);
+        setTotalCount(res.meta?.total ?? 0);
       }
     } catch {
       toast.error("Failed to fetch reviews");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter change — reset to page 1
+  const handleFilterChange = (val) => {
+    setFilter(val);
+    setPage(1);
   };
 
   // Modal handlers
@@ -71,10 +89,12 @@ export default function ReviewsPage() {
       userName: review.userName,
     });
   };
+
   const closeEdit = () => {
     setEditingId(null);
     setEditForm({ comment: "", rating: 5, userName: "" });
   };
+
   const handleFormChange = (field, value) =>
     setEditForm((p) => ({ ...p, [field]: value }));
 
@@ -85,6 +105,7 @@ export default function ReviewsPage() {
       if (res.success) {
         toast.success("Review updated");
         fetchReviews();
+        fetchStats();
         closeEdit();
       } else toast.error(res.message || "Failed to update");
     } catch {
@@ -98,6 +119,7 @@ export default function ReviewsPage() {
       if (res.success) {
         toast.success(`Review ${isApproved ? "approved" : "rejected"}`);
         fetchReviews();
+        fetchStats(); // keep stat cards in sync after status change
       } else toast.error(res.message || "Failed to update status");
     } catch {
       toast.error("Error updating status");
@@ -111,17 +133,14 @@ export default function ReviewsPage() {
       if (res.success) {
         toast.success("Review deleted");
         fetchReviews();
+        fetchStats(); // keep stat cards in sync after delete
       } else toast.error(res.message || "Failed to delete");
     } catch {
       toast.error("Error deleting review");
     }
   };
 
-  const filtered = reviews.filter((r) => {
-    if (filter === "approved") return r.isApproved;
-    if (filter === "pending") return !r.isApproved;
-    return true;
-  });
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div className="w-full animate-in fade-in duration-500 pb-10">
@@ -146,8 +165,8 @@ export default function ReviewsPage() {
           color="#10b981"
           subtext={
             <p className="text-xs text-slate-400">
-              {reviews.length > 0
-                ? Math.round((stats.approved / reviews.length) * 100)
+              {(stats.approved + stats.pending) > 0
+                ? Math.round((stats.approved / (stats.approved + stats.pending)) * 100)
                 : 0}
               % of total
             </p>
@@ -171,32 +190,94 @@ export default function ReviewsPage() {
         <FilterTab
           label="All"
           active={filter === "all"}
-          count={reviews.length}
-          onClick={() => setFilter("all")}
+          count={stats.approved + stats.pending}
+          onClick={() => handleFilterChange("all")}
         />
         <FilterTab
           label="Approved"
           active={filter === "approved"}
           count={stats.approved}
-          onClick={() => setFilter("approved")}
+          onClick={() => handleFilterChange("approved")}
         />
         <FilterTab
           label="Pending"
           active={filter === "pending"}
           count={stats.pending}
-          onClick={() => setFilter("pending")}
+          onClick={() => handleFilterChange("pending")}
         />
       </div>
 
-      {/* Table */}
+      {/* Table — reviews already filtered server-side, no client-side .filter() */}
       <ReviewTable
-        reviews={filtered}
+        reviews={reviews}
         loading={loading}
-        total={reviews.length}
+        total={totalCount}
+        page={page}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
         onEdit={openEdit}
         onStatus={handleStatus}
         onDelete={handleDelete}
       />
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-5 px-1">
+          <p className="text-xs text-slate-400 font-medium">
+            Showing{" "}
+            <span className="text-slate-700 font-bold">
+              {(page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, totalCount)}
+            </span>{" "}
+            of <span className="text-slate-700 font-bold">{totalCount}</span> reviews
+          </p>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronLeft size={15} />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce((acc, p, idx, arr) => {
+                if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((item, idx) =>
+                item === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-slate-300 text-xs">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => setPage(item)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                      page === item
+                        ? "bg-slate-900 text-white"
+                        : "border border-slate-200 text-slate-500 hover:bg-slate-50"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       <ReviewModal
