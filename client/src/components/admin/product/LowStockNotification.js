@@ -10,7 +10,6 @@ const LowStockNotification = () => {
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const buttonRef = useRef < HTMLButtonElement > null;
 
   const { openModal } = useProductModal();
   const router = useRouter();
@@ -44,7 +43,6 @@ const LowStockNotification = () => {
   return (
     <div>
       <button
-        ref={buttonRef}
         onClick={() => setIsOpen((p) => !p)}
         className="relative cursor-pointer bg-amber-500 text-white p-3 rounded-full shadow-lg hover:bg-amber-600"
       >
