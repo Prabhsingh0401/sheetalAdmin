@@ -6,41 +6,17 @@ import { AlertTriangle, X } from "lucide-react";
 import { useProductModal } from "@/hooks/useProductModal";
 import { useRouter, usePathname } from "next/navigation";
 
-interface LowStockSize {
-  name: string;
-  stock: number;
-}
-
-interface LowStockVariant {
-  color: string;
-  v_sku: string;
-  sizes: LowStockSize[];
-}
-
-interface LowStockProduct {
-  _id: string;
-  name: string;
-  lowStockThreshold: number;
-  mainImage: {
-    url: string;
-    alt: string;
-  };
-  lowStockVariants: LowStockVariant[];
-}
-
-const LowStockNotification: React.FC = () => {
-  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>(
-    [],
-  );
+const LowStockNotification = () => {
+  const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef < HTMLButtonElement > null;
 
   const { openModal } = useProductModal();
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleProductClick = (productId: string) => {
+  const handleProductClick = (productId) => {
     openModal(productId);
     setIsOpen(false);
     // Navigate to products page if not already there

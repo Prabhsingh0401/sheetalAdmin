@@ -256,9 +256,7 @@ export default function ProductModal({
       ];
 
       Object.keys(formData).forEach((key) => {
-        if (key === "isTrending" || key === "isNewArrival") {
-          data.append(key, formData[key] === true ? "true" : "false");
-        } else if (
+        if (
           [
             "specifications",
             "keyBenefits",
@@ -274,6 +272,12 @@ export default function ProductModal({
           ].includes(key)
         ) {
           data.append(key, JSON.stringify(formData[key] || []));
+        } else if (key === "isTrending" || key === "isNewArrival" || key === "isCollection") {
+          data.append(key, formData[key] === true ? "true" : "false");
+        } else if (!excludedKeys.includes(key)) {
+          if (formData[key] !== null && formData[key] !== undefined) {
+            data.append(key, formData[key]);
+          }
         }
       });
 

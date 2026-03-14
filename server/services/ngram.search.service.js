@@ -162,6 +162,22 @@ const QUERY_ALIASES = {
   lenga: "lehenga",
   langa: "lehenga",
   lehenga: "lehenga",
+  kuta : "kurta set",
+  koota : "kurta set",
+  korta : "kurta set",
+  koorta : "kurta set",
+  dres : "dresses",
+  dress : "dresses",
+  druss : "dresses",
+  dris : "dresses",
+  driss : "dresses",
+  kftn : "kaftan",
+  kaftn : "kaftan",
+  kftan : "kaftan",
+  cftan : "kaftan",
+  caftn : "kaftan",
+  caftan : "kaftan",
+  kft : "kaftan",
 };
 
 /**
