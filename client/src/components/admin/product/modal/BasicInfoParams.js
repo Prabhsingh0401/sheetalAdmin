@@ -14,7 +14,7 @@ export default function BasicInfoParams({
   const selectedCategory = categories.find((c) => c._id === formData.category);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300">
+    <div className="space-y-5 animate-in fade-in duration-300 min-h-0">
       <InputField
         label="Product Title"
         name="name"

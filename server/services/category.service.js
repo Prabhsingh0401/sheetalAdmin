@@ -13,6 +13,8 @@ export const createCategoryService = async (data, files) => {
     isFeatured,
     metaTitle,
     metaDescription,
+    metaKeywords,
+    canonicalUrl,
     status,
     categoryBanner,
     subCategories,
@@ -76,6 +78,8 @@ export const createCategoryService = async (data, files) => {
     isActive: status === "Active",
     metaTitle,
     metaDescription,
+    metaKeywords,
+    canonicalUrl,
     categoryBanner,
     subCategories: parsedSubCategories,
     style: parsedStyle,
@@ -97,6 +101,10 @@ export const createCategoryService = async (data, files) => {
       url: files.bannerImage[0].location || files.bannerImage[0].path,
       public_id: files.bannerImage[0].key || files.bannerImage[0].filename,
     };
+    if (files && files.ogImage) {
+      newCategoryData.ogImage =
+        files.ogImage[0].location || files.ogImage[0].path;
+    }
   }
 
   const newCategory = await Category.create(newCategoryData);
@@ -113,16 +121,26 @@ export const createCategoryService = async (data, files) => {
 
 export const getAllCategoriesService = async () => {
   const categories = await Category.find({ isActive: true })
-    .select("name slug mainImage bannerImage parentCategory subCategories style work fabric productType wearType occasion")
+    .select(
+      "name slug mainImage bannerImage parentCategory subCategories style work fabric productType wearType occasion",
+    )
     .populate("parentCategory", "name")
     .sort({ order: 1 });
 
   const categoriesWithFullUrls = categories.map((category) => {
     const data = category.toObject();
-    if (data.mainImage && data.mainImage.url && !data.mainImage.url.startsWith("http")) {
+    if (
+      data.mainImage &&
+      data.mainImage.url &&
+      !data.mainImage.url.startsWith("http")
+    ) {
       data.mainImage.url = `${config.baseUrl}/${data.mainImage.url.replace(/\\/g, "/")}`;
     }
-    if (data.bannerImage && data.bannerImage.url && !data.bannerImage.url.startsWith("http")) {
+    if (
+      data.bannerImage &&
+      data.bannerImage.url &&
+      !data.bannerImage.url.startsWith("http")
+    ) {
       data.bannerImage.url = `${config.baseUrl}/${data.bannerImage.url.replace(/\\/g, "/")}`;
     }
     return data;
@@ -228,6 +246,8 @@ export const updateCategoryService = async (id, data, files) => {
     categoryBanner: data.categoryBanner,
     metaTitle: data.metaTitle,
     metaDescription: data.metaDescription,
+    metaKeywords: data.metaKeywords,
+    canonicalUrl: data.canonicalUrl,
   };
 
   const parseArrayField = (fieldData) => {
@@ -249,10 +269,14 @@ export const updateCategoryService = async (id, data, files) => {
 
   if (data.style !== undefined) updateData.style = parseArrayField(data.style);
   if (data.work !== undefined) updateData.work = parseArrayField(data.work);
-  if (data.fabric !== undefined) updateData.fabric = parseArrayField(data.fabric);
-  if (data.productType !== undefined) updateData.productType = parseArrayField(data.productType);
-  if (data.wearType !== undefined) updateData.wearType = parseArrayField(data.wearType);
-  if (data.occasion !== undefined) updateData.occasion = parseArrayField(data.occasion);
+  if (data.fabric !== undefined)
+    updateData.fabric = parseArrayField(data.fabric);
+  if (data.productType !== undefined)
+    updateData.productType = parseArrayField(data.productType);
+  if (data.wearType !== undefined)
+    updateData.wearType = parseArrayField(data.wearType);
+  if (data.occasion !== undefined)
+    updateData.occasion = parseArrayField(data.occasion);
 
   if (data.subCategories !== undefined) {
     let parsedSubCategories = [];
@@ -261,7 +285,9 @@ export const updateCategoryService = async (id, data, files) => {
     } else if (typeof data.subCategories === "string") {
       try {
         const parsed = JSON.parse(data.subCategories);
-        parsedSubCategories = Array.isArray(parsed) ? parsed : [data.subCategories];
+        parsedSubCategories = Array.isArray(parsed)
+          ? parsed
+          : [data.subCategories];
       } catch (e) {
         parsedSubCategories = [data.subCategories];
       }
@@ -279,7 +305,10 @@ export const updateCategoryService = async (id, data, files) => {
   }
 
   if (files && files.mainImage) {
-    if (category.mainImage?.public_id && !category.mainImage.url.startsWith("http")) {
+    if (
+      category.mainImage?.public_id &&
+      !category.mainImage.url.startsWith("http")
+    ) {
       // Old local file
       await deleteFile(category.mainImage.url);
     } else if (category.mainImage?.public_id) {
@@ -294,7 +323,10 @@ export const updateCategoryService = async (id, data, files) => {
   }
 
   if (files && files.bannerImage) {
-    if (category.bannerImage?.public_id && !category.bannerImage.url.startsWith("http")) {
+    if (
+      category.bannerImage?.public_id &&
+      !category.bannerImage.url.startsWith("http")
+    ) {
       await deleteFile(category.bannerImage.url);
     } else if (category.bannerImage?.public_id) {
       await deleteS3File(category.bannerImage.public_id);

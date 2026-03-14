@@ -272,7 +272,11 @@ export default function ProductModal({
           ].includes(key)
         ) {
           data.append(key, JSON.stringify(formData[key] || []));
-        } else if (key === "isTrending" || key === "isNewArrival" || key === "isCollection") {
+        } else if (
+          key === "isTrending" ||
+          key === "isNewArrival" ||
+          key === "isCollection"
+        ) {
           data.append(key, formData[key] === true ? "true" : "false");
         } else if (!excludedKeys.includes(key)) {
           if (formData[key] !== null && formData[key] !== undefined) {
@@ -362,7 +366,7 @@ export default function ProductModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[100] p-4 text-left">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-200 flex flex-col h-[92vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -391,8 +395,8 @@ export default function ProductModal({
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white px-4 sm:px-8 border-b border-slate-100">
-          <div className="flex gap-4 sm:gap-8 overflow-x-auto no-scrollbar scroll-smooth snap-x">
+        <div className="bg-white px-4 sm:px-8 border-b border-slate-100 overflow-x-auto no-scrollbar">
+          <div className="flex gap-4 sm:gap-8 min-w-max">
             {[
               {
                 id: "basic",
@@ -448,7 +452,7 @@ export default function ProductModal({
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-white scrollbar-thin">
+        <div className="flex-1 overflow-y-auto min-h-0 p-6 bg-white scrollbar-thin">
           <form id="productForm" onSubmit={handleSubmit} className="space-y-6">
             {activeTab === "basic" && (
               <BasicInfoParams

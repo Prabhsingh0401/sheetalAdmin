@@ -168,6 +168,7 @@ const QUERY_ALIASES = {
   koorta : "kurta set",
   dres : "dresses",
   dress : "dresses",
+  derss : "dresses",
   druss : "dresses",
   dris : "dresses",
   driss : "dresses",
