@@ -14,7 +14,7 @@ export default function BasicInfoParams({
   const selectedCategory = categories.find((c) => c._id === formData.category);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300">
+    <div className="space-y-5 animate-in fade-in duration-300 min-h-0">
       <InputField
         label="Product Title"
         name="name"
@@ -35,7 +35,7 @@ export default function BasicInfoParams({
           onChange={handleChange}
           placeholder="Write a brief summary for product cards..."
           className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 focus:border-slate-900 outline-none shadow-sm min-h-[80px]"
-          
+          required
         />
       </div>
 

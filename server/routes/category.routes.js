@@ -29,6 +29,7 @@ router.post(
   uploadTo("categories").fields([
     { name: "mainImage", maxCount: 1 },
     { name: "bannerImage", maxCount: 1 },
+    { name: "ogImage", maxCount: 1 },
   ]),
   createCategory,
 );
@@ -40,6 +41,7 @@ router
     uploadTo("categories").fields([
       { name: "mainImage", maxCount: 1 },
       { name: "bannerImage", maxCount: 1 },
+      { name: "ogImage", maxCount: 1 },
     ]),
     updateCategory,
   )
