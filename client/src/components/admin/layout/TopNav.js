@@ -58,7 +58,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
             <Menu size={22} />
           </button>
 
-          <div className="relative hidden md:block w-full max-w-md">
+          {/* <div className="relative hidden md:block w-full max-w-md">
             <div className="flex items-center bg-slate-100 px-4 py-2 rounded-xl border border-transparent focus-within:border-emerald-500 focus-within:bg-white transition-all group">
               <Search
                 size={18}
@@ -106,7 +106,7 @@ export default function TopNav({ storeName = "Admin", setIsOpen }) {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         <div className="flex items-center gap-4">

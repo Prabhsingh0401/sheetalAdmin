@@ -172,6 +172,7 @@ const QUERY_ALIASES = {
   dris : "dresses",
   driss : "dresses",
   kftn : "kaftan",
+  cftn : "kaftan",
   kaftn : "kaftan",
   kftan : "kaftan",
   cftan : "kaftan",

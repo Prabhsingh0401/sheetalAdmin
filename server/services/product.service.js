@@ -259,6 +259,7 @@ export const createProductService = async (data, files, userId) => {
     ...data,
     isTrending: data.isTrending === "true" || data.isTrending === true,
     isNewArrival: data.isNewArrival === "true" || data.isNewArrival === true,
+    isCollection: data.isCollection === "true" || data.isCollection === true,
     variants:
       typeof data.variants === "string"
         ? JSON.parse(data.variants)
