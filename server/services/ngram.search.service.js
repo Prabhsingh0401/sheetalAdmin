@@ -92,9 +92,13 @@ const normalise = (text) => {
 };
 
 /**
- * Generates all overlapping n-grams from a string.
+ * Generates all overlapping n-grams from a string (unigrams, bigrams, trigrams).
  * Also adds individual words for whole-word matching.
  * Returns { grams, words } so callers can populate both indexes separately.
+ *
+ * IMPORTANT: For efficient prefix matching on short queries ("s", "sa", "sar"),
+ * we generate n=1 (unigrams), n=2 (bigrams), and n=3 (trigrams).
+ * This enables instant matching as user types from the first character.
  */
 const generateNgrams = (text, n = N) => {
   const normalised = normalise(text);
@@ -112,6 +116,18 @@ const generateNgrams = (text, n = N) => {
 
   // Character-level n-grams over the full normalised string (no spaces)
   const compact = normalised.replace(/\s/g, "");
+
+  // Generate unigrams (1-char) for single-character prefix matching
+  for (let i = 0; i < compact.length; i++) {
+    grams.add(compact[i]);
+  }
+
+  // Generate bigrams (2-char) for 2-character prefix matching
+  for (let i = 0; i <= compact.length - 2; i++) {
+    grams.add(compact.slice(i, i + 2));
+  }
+
+  // Generate trigrams (3-char) for complete word matching
   for (let i = 0; i <= compact.length - n; i++) {
     grams.add(compact.slice(i, i + n));
   }
@@ -158,56 +174,12 @@ const documentNgrams = (doc) => {
 };
 
 // ---------------------------------------------------------------------------
-// Query Aliases — maps known misspellings/truncations to canonical terms
+// Fuzzy + Phonetic Matching Strategy (replaces hardcoded aliases)
 // ---------------------------------------------------------------------------
-
-const QUERY_ALIASES = {
-  // suits
-  sut: "suits",
-  suts: "suits",
-  soot: "suits",
-  soots: "suits",
-  sari: "sarees",
-  saris: "sarees",
-  seris: "sarees",
-  sere: "sarees",
-  sare: "sarees",
-  seere: "sarees",
-  lahange: "lehenga",
-  lenga: "lehenga",
-  langa: "lehenga",
-  lehenga: "lehenga",
-  kuta : "kurta set",
-  koota : "kurta set",
-  korta : "kurta set",
-  koorta : "kurta set",
-  dres : "dresses",
-  dress : "dresses",
-  derss : "dresses",
-  druss : "dresses",
-  dris : "dresses",
-  driss : "dresses",
-  kftn : "kaftan",
-  cftn : "kaftan",
-  kaftn : "kaftan",
-  kftan : "kaftan",
-  cftan : "kaftan",
-  caftn : "kaftan",
-  caftan : "kaftan",
-  kft : "kaftan",
-};
-
-/**
- * Expands a query by replacing known aliases with canonical terms.
- * Operates word-by-word so aliases work inside multi-word queries too.
- */
-const expandQueryAliases = (query) => {
-  return query
-    .trim()
-    .split(/\s+/)
-    .map((word) => QUERY_ALIASES[word.toLowerCase()] ?? word)
-    .join(" ");
-};
+// Instead of maintaining hardcoded typo mappings (sut→suits, sari→sareees),
+// we use dynamic Levenshtein distance + Soundex matching to handle ALL spelling
+// variations automatically. This scales better and handles edge cases we didn't
+// anticipate in the aliases dictionary.
 
 // ---------------------------------------------------------------------------
 // Fuzzy Matching Helpers
@@ -237,8 +209,8 @@ const levenshteinDistance = (a, b) => {
           ? matrix[i - 1][j - 1]
           : Math.min(
               matrix[i - 1][j - 1] + 1, // substitution
-              matrix[i][j - 1] + 1, // insertion
-              matrix[i - 1][j] + 1, // deletion
+              matrix[i][j - 1] + 1,      // insertion
+              matrix[i - 1][j] + 1,      // deletion
             );
     }
   }
@@ -250,10 +222,9 @@ const levenshteinDistance = (a, b) => {
  * Returns a fuzzy match bonus score based on how close the query words
  * are to the document name words using Levenshtein distance.
  *
- * Bonus tiers:
- *   distance === 1, lenDiff <= 1  → +150  e.g. "suts"  → "suits"
- *   distance === 2, lenDiff <= 1,
- *                  maxLen >= 5    → +60   e.g. "soots" → "suits"
+ * AGGRESSIVE BONUS TIERS:
+ *   distance === 1, lenDiff <= 2  → +200  e.g. "suts"  → "suits"
+ *   distance === 2, lenDiff <= 2  → +100  e.g. "soots" → "suits", "saarees" → "sarees"
  */
 const getFuzzyBonus = (normalisedQuery, normalisedName) => {
   const queryWords = normalisedQuery.split(" ");
@@ -262,18 +233,17 @@ const getFuzzyBonus = (normalisedQuery, normalisedName) => {
   let maxBonus = 0;
 
   queryWords.forEach((qWord) => {
-    if (qWord.length < 4) return;
+    if (qWord.length < 3) return;
     nameWords.forEach((nWord) => {
-      if (nWord.length < 4) return;
+      if (nWord.length < 3) return;
 
       const distance = levenshteinDistance(qWord, nWord);
-      const maxLen = Math.max(qWord.length, nWord.length);
       const lenDiff = Math.abs(qWord.length - nWord.length);
 
-      if (distance === 1 && lenDiff <= 1) {
-        maxBonus = Math.max(maxBonus, 150);
-      } else if (distance === 2 && lenDiff <= 1 && maxLen >= 5) {
-        maxBonus = Math.max(maxBonus, 60);
+      if (distance === 1 && lenDiff <= 2) {
+        maxBonus = Math.max(maxBonus, 200);
+      } else if (distance === 2 && lenDiff <= 2) {
+        maxBonus = Math.max(maxBonus, 100);
       }
     });
   });
@@ -301,23 +271,11 @@ const soundex = (word) => {
   if (!word || word.length === 0) return "";
 
   const map = {
-    b: 1,
-    f: 1,
-    p: 1,
-    v: 1,
-    c: 2,
-    g: 2,
-    j: 2,
-    k: 2,
-    q: 2,
-    s: 2,
-    x: 2,
-    z: 2,
-    d: 3,
-    t: 3,
+    b: 1, f: 1, p: 1, v: 1,
+    c: 2, g: 2, j: 2, k: 2, q: 2, s: 2, x: 2, z: 2,
+    d: 3, t: 3,
     l: 4,
-    m: 5,
-    n: 5,
+    m: 5, n: 5,
     r: 6,
   };
 
@@ -658,10 +616,14 @@ export const deleteFromIndex = async (objectId) => {
  *
  * Scoring strategy:
  *  1. Base score      — number of query n-grams that match a document
- *  2. Fuzzy expand    — typo'd query words matched against word index (+0.5 per hit)
+ *  2. Fuzzy expand    — typo'd query words matched against word index (+1.5 / +0.75 per hit)
  *                       O(Q×W) — NOT O(Q×I). No event-loop blocking.
+ *                       FIX #7: fuzzy-boosted docs are tracked in fuzzyBoostedDocs
+ *                       and exempted from minBaseScore pruning so pure-typo queries
+ *                       like "saarees" (distance=1 from "sarees") are never silently
+ *                       dropped even when their n-gram overlap is below the threshold.
  *  3. Name bonuses    — exact (+1000), startsWith (+500), contains (+200)
- *  4. Fuzzy bonus     — Levenshtein distance 1 (+150), distance 2 (+60)
+ *  4. Fuzzy bonus     — Levenshtein distance 1 (+200), distance 2 (+100)
  *  5. Phonetic bonus  — Soundex match (+120) e.g. "saris" → "sarees"
  *  6. Category sort   — categories always ranked above products via sort comparator
  *                       (removed the redundant ×50 score multiply to avoid
@@ -681,8 +643,6 @@ export const searchNgram = async (query, options = {}) => {
     return { hits: [], total: 0, page, totalPages: 0 };
   }
 
-  query = expandQueryAliases(query);
-
   const { grams: queryGrams } = generateNgrams(query);
   const normalisedQuery = normalise(query);
 
@@ -701,13 +661,35 @@ export const searchNgram = async (query, options = {}) => {
   // FIX #1 (Critical): iterate wordIndex only — O(Q × W) instead of O(Q × I).
   // Previously iterated the full invertedIndex (all character n-grams), calling
   // levenshteinDistance on every entry — catastrophically slow on large catalogs.
-  const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 3);
+  //
+  // FIX #7: Track every docId that receives a fuzzy boost in fuzzyBoostedDocs.
+  // These docs are exempted from the minBaseScore pruning below.
+  //
+  // Root cause of the "saarees" → no results bug:
+  //   "saarees" generates ~16 query n-grams. Most don't exist in the index
+  //   (the index only contains "sarees" n-grams), so the base score stays near 0.
+  //   Fuzzy expansion correctly identifies levenshteinDistance("saarees","sarees")=1
+  //   and adds +1.5 — but minBaseScore = max(1, 16*0.1) = 1.6, so 1.5 < 1.6
+  //   and the doc was silently pruned before ranking.
+  //   Exempting fuzzy-boosted docs fixes this without loosening the threshold
+  //   for genuinely low-signal n-gram matches.
+  const fuzzyBoostedDocs = new Set();
+
+  const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 1);
   queryWords.forEach((qWord) => {
     wordIndex.forEach((bucket, word) => {
-      if (Math.abs(word.length - qWord.length) > 1) return;
-      if (levenshteinDistance(qWord, word) === 1) {
+      if (Math.abs(word.length - qWord.length) > 2) return; // Allow up to 2-char length diff
+      const distance = levenshteinDistance(qWord, word);
+      // Aggressive: distance 1 gets +1.5, distance 2 gets +0.75
+      if (distance === 1) {
         bucket.forEach((docId) => {
-          scores.set(docId, (scores.get(docId) || 0) + 0.5);
+          scores.set(docId, (scores.get(docId) || 0) + 1.5);
+          fuzzyBoostedDocs.add(docId); // FIX #7: mark for pruning exemption
+        });
+      } else if (distance === 2 && (qWord.length >= 4 || word.length >= 4)) {
+        bucket.forEach((docId) => {
+          scores.set(docId, (scores.get(docId) || 0) + 0.75);
+          fuzzyBoostedDocs.add(docId); // FIX #7: mark for pruning exemption
         });
       }
     });
@@ -719,10 +701,16 @@ export const searchNgram = async (query, options = {}) => {
 
   // FIX #2 (Medium): Do NOT mutate scores during forEach — collect deletions first.
   // Deleting map entries mid-forEach is undefined behaviour and can silently skip entries.
-  const minBaseScore =
-    queryGrams.size === 1 ? 1 : Math.max(1.5, queryGrams.size * 0.15);
+  //
+  // FIX #7: Exempt fuzzy-boosted docs from the threshold so typo-only queries
+  // (e.g. "saarees") are never pruned just because their n-gram overlap is low.
+  // The ranking step still applies name/fuzzy/phonetic boosts, so irrelevant
+  // fuzzy-expanded docs won't bubble to the top.
+  const minBaseScore = Math.max(1, queryGrams.size * 0.1);
   for (const [docId, score] of scores) {
-    if (score < minBaseScore) scores.delete(docId);
+    if (score < minBaseScore && !fuzzyBoostedDocs.has(docId)) {
+      scores.delete(docId);
+    }
   }
 
   if (scores.size === 0) {
@@ -753,7 +741,7 @@ export const searchNgram = async (query, options = {}) => {
       } else if (normalisedName.includes(normalisedQuery)) {
         boostedScore += 200;
       } else {
-        // Fuzzy: "suts" → "suits", "soots" → "suits"
+        // Fuzzy: "suts" → "suits", "soots" → "suits", "saarees" → "sarees"
         const fuzzyBonus = getFuzzyBonus(normalisedQuery, normalisedName);
         // Phonetic: "saris" → "sarees", "lahenga" → "lehenga"
         const phoneticBonus = getPhoneticBonus(normalisedQuery, normalisedName);

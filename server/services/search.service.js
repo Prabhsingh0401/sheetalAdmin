@@ -10,6 +10,19 @@ import Category from "../models/category.model.js";
  *  - Category scoping is only applied when the query itself clearly targets the
  *    matched category name.
  *
+ * FIX #8: Added a final fallback — if all post-filters (category-targeted,
+ * field-matched, intent-matched) yield nothing but the n-gram engine DID return
+ * hits, we trust the ranker and return those hits as-is.
+ *
+ * Root cause of the "saaarees" / heavy-typo bug:
+ *   The n-gram engine correctly scores sarees products for the query "saaarees"
+ *   because unigrams (s,a,r,e), bigrams (sa,ar,re,ee,es) and trigrams (are,ree,ees)
+ *   all overlap. The score easily clears minBaseScore.
+ *   BUT searchService's post-filters all expect the literal query string to appear
+ *   in a field value (name, slug, subCategory, wearType, etc.), which "saaarees"
+ *   never does. So every filter returned 0 hits and searchService returned [].
+ *   The fallback short-circuits this: if the ranker found something, return it.
+ *
  * @param {{ query: string, limit: number, page: number }} params
  * @returns {Promise<Array<{ type: string, data: Object }>>}
  */
@@ -20,31 +33,10 @@ export const searchService = async ({ query, limit, page }) => {
   if (hits.length === 0) return hits;
 
   const normalisedQuery = normalise(query);
-  const expandedQuery = expandQueryAliases(query);
-  const normalisedExpandedQuery = normalise(expandedQuery);
   const targetedCategory = findTargetedCategoryHit(hits, normalisedQuery);
 
   if (targetedCategory) {
     return buildCategoryWithProductsResults(targetedCategory.data);
-  }
-
-  if (normalisedExpandedQuery && normalisedExpandedQuery !== normalisedQuery) {
-    const aliasTargetedCategory = findTargetedCategoryHit(
-      hits,
-      normalisedExpandedQuery,
-    );
-
-    if (aliasTargetedCategory) {
-      return buildCategoryWithProductsResults(aliasTargetedCategory.data);
-    }
-
-    const aliasMatchedHits = hits.filter((hit) =>
-      hitMatchesAliasIntent(hit, normalisedExpandedQuery),
-    );
-
-    if (aliasMatchedHits.length > 0) {
-      return aliasMatchedHits;
-    }
   }
 
   const fieldMatchedProducts = hits.filter(
@@ -61,51 +53,18 @@ export const searchService = async ({ query, limit, page }) => {
     hitMatchesPrimaryIntent(hit, normalisedQuery),
   );
 
-  return directMatchedHits;
+  // FIX #8: If strict text-matching yields nothing, trust the n-gram ranker.
+  // This handles typo / phonetic queries ("saaarees", "lahenga", "shurt") where
+  // no field literally contains the misspelled string but the scoring pipeline
+  // already found and ranked the correct documents via fuzzy + phonetic matching.
+  // Without this fallback, heavy typos always returned an empty result even when
+  // the n-gram engine had the right answers.
+  return directMatchedHits.length > 0 ? directMatchedHits : hits;
 };
 
-const QUERY_ALIASES = {
-  sut: "suits",
-  suts: "suits",
-  soot: "suits",
-  soots: "suits",
-  sari: "sarees",
-  saris: "sarees",
-  seris: "sarees",
-  sere: "sarees",
-  sare: "sarees",
-  seere: "sarees",
-  lahange: "lehenga",
-  lenga: "lehenga",
-  langa: "lehenga",
-  lehenga: "lehenga",
-  kuta: "kurta set",
-  koota: "kurta set",
-  korta: "kurta set",
-  koorta: "kurta set",
-  dres: "dresses",
-  dress: "dresses",
-  derss: "dresses",
-  druss: "dresses",
-  dris: "dresses",
-  driss: "dresses",
-  kftn: "kaftan",
-  cftn: "kaftan",
-  kaftn: "kaftan",
-  kftan: "kaftan",
-  cftan: "kaftan",
-  caftn: "kaftan",
-  caftan: "kaftan",
-  kft: "kaftan",
-};
-
-const expandQueryAliases = (query) => {
-  return query
-    .trim()
-    .split(/\s+/)
-    .map((word) => QUERY_ALIASES[word.toLowerCase()] ?? word)
-    .join(" ");
-};
+// Note: Hardcoded QUERY_ALIASES have been removed.
+// Typo tolerance is now handled by aggressive fuzzy matching (Levenshtein distance)
+// and phonetic matching (Soundex) in ngram.search.service.js
 
 const STRUCTURED_SEARCH_FIELDS = [
   "wearType",
@@ -132,10 +91,6 @@ const fieldValueMatchesQuery = (value, normalisedQuery) => {
   if (!normalisedValue) return false;
 
   return normalisedValue === normalisedQuery;
-};
-
-const hitMatchesAliasIntent = (hit, normalisedExpandedQuery) => {
-  return hitMatchesPrimaryIntent(hit, normalisedExpandedQuery);
 };
 
 const hitMatchesPrimaryIntent = (hit, normalisedQuery) => {
