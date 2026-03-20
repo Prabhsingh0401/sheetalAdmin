@@ -748,6 +748,41 @@ export const searchNgram = async (query, options = {}) => {
         boostedScore += Math.max(fuzzyBonus, phoneticBonus);
       }
 
+      // Attribute / Tags boost
+      const structuredFields = [
+        "tags", "productType", "fabric", "style", "work", "occasion", "wearType", "byPrice"
+      ];
+      let hasAttributeMatch = false;
+      let tagFuzzyBonus = 0;
+      let tagPhoneticBonus = 0;
+
+      for (const field of structuredFields) {
+        const values = Array.isArray(doc[field]) ? doc[field] : [];
+        for (const v of values) {
+          if (!v) continue;
+          const normV = normalise(v);
+          if (!normV) continue;
+
+          if (normV === normalisedQuery || normV.includes(normalisedQuery) || normalisedQuery.includes(normV)) {
+            hasAttributeMatch = true;
+            break;
+          } else {
+            tagFuzzyBonus = Math.max(tagFuzzyBonus, getFuzzyBonus(normalisedQuery, normV));
+            tagPhoneticBonus = Math.max(tagPhoneticBonus, getPhoneticBonus(normalisedQuery, normV));
+          }
+        }
+        if (hasAttributeMatch) break;
+      }
+      
+      if (hasAttributeMatch) {
+        boostedScore += 800; // Almost as good as a direct name match
+      } else {
+        const fuzzyTagScore = Math.max(tagFuzzyBonus, tagPhoneticBonus);
+        if (fuzzyTagScore > 0) {
+          boostedScore += fuzzyTagScore + 100; // Propel fuzzy tag matches
+        }
+      }
+
       return [docId, boostedScore];
     })
     .sort((a, b) => {

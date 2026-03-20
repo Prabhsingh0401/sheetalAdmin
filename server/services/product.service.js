@@ -12,6 +12,7 @@ import {
   deleteFromIndex,
   rebuildIndex,
 } from "./ngram.search.service.js";
+import { searchService } from "./search.service.js";
 
 export const getAllProductsService = async (queryStr) => {
   const {
@@ -41,10 +42,23 @@ export const getAllProductsService = async (queryStr) => {
   let filter = {};
 
   if (search) {
-    filter.$or = [
-      { name: { $regex: search, $options: "i" } },
-      { sku: { $regex: search, $options: "i" } },
-    ];
+    const searchResults = await searchService({ query: search, limit: 1000, page: 1 });
+    const productIds = searchResults
+      .filter((hit) => hit.type === "product" && hit.data && hit.data._id)
+      .map((hit) => new mongoose.Types.ObjectId(hit.data._id));
+
+    if (productIds.length === 0) {
+      return {
+        success: true,
+        products: [],
+        totalProducts: 0,
+        currentPage: Number(page),
+        totalPages: 0,
+        resultsPerPage: Number(limit),
+      };
+    }
+
+    filter._id = { $in: productIds };
   }
 
   if (category && category !== "All") {

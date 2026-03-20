@@ -28,19 +28,14 @@ export const searchService = async ({ query, limit, page }) => {
     return await buildCategoryWithProductsResults(targetedCategory.data);
   }
 
-  // --- Step 2: Structured / attribute queries ---
-  const fieldMatchedProducts = hits.filter(
+  // --- Step 2 & 3: Structured / attribute queries OR Primary intent ---
+  const intentOrFieldMatchedProducts = hits.filter(
     (hit) =>
       hit.type === "product" &&
-      productMatchesStructuredFields(hit.data, normalisedQuery),
+      (productMatchesStructuredFields(hit.data, normalisedQuery) ||
+       hitMatchesPrimaryIntent(hit, normalisedQuery))
   );
-  if (fieldMatchedProducts.length > 0) return fieldMatchedProducts;
-
-  // --- Step 3: Primary intent — name / slug / subCategory text ---
-  const directMatchedHits = hits.filter((hit) =>
-    hitMatchesPrimaryIntent(hit, normalisedQuery),
-  );
-  if (directMatchedHits.length > 0) return directMatchedHits;
+  if (intentOrFieldMatchedProducts.length > 0) return intentOrFieldMatchedProducts;
 
   // --- Step 4: Fallback — word-level fuzzy filter (FIX #8 + #11 + #12) ---
   //
@@ -156,7 +151,8 @@ const wordsMatch = (qWord, pWord) => {
     for (const pv of pVariants) {
       if (soundex(qv) === soundex(pv)) return true;
       const maxLen = Math.max(qv.length, pv.length);
-      if (maxLen > 0 && levenshteinDistance(qv, pv) / maxLen <= 0.35) return true;
+      // Require stricter match: max 1 typo per 4 letters instead of 1 per 3
+      if (maxLen > 0 && levenshteinDistance(qv, pv) / maxLen <= 0.25) return true;
     }
   }
 
@@ -271,9 +267,28 @@ const STRUCTURED_SEARCH_FIELDS = [
 
 const productMatchesStructuredFields = (product, normalisedQuery) => {
   if (!normalisedQuery) return false;
+  const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 2);
+
   return STRUCTURED_SEARCH_FIELDS.some((field) => {
     const values = Array.isArray(product[field]) ? product[field] : [];
-    return values.some((value) => normalise(value) === normalisedQuery);
+    return values.some((value) => {
+      if (!value) return false;
+      const normVal = normalise(value);
+      if (!normVal) return false;
+      
+      if (normVal === normalisedQuery || normVal.includes(normalisedQuery) || normalisedQuery.includes(normVal)) {
+          return true;
+      }
+      
+      const tagWords = normVal.split(" ").filter((w) => w.length >= 2);
+      for (const qWord of queryWords) {
+        for (const tWord of tagWords) {
+           if (wordsMatch(qWord, tWord)) return true;
+        }
+      }
+      
+      return false;
+    });
   });
 };
 
