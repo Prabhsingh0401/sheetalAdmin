@@ -125,6 +125,13 @@ const soundex = (word) => {
   return code.padEnd(4, "0");
 };
 
+const consonantKey = (word) =>
+  word
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/[aeiou]/g, "")
+    .replace(/[cqx]/g, "k");
+
 /**
  * Generates singular/plural morphological variants of a word.
  *   "suits"   → ["suits", "suit"]
@@ -156,6 +163,16 @@ const wordVariants = (word) => {
 const wordsMatch = (qWord, pWord) => {
   if (qWord === pWord) return true;
   if (qWord.includes(pWord) || pWord.includes(qWord)) return true;
+
+  const qKey = consonantKey(qWord);
+  const pKey = consonantKey(pWord);
+  if (
+    qKey.length >= 3 &&
+    pKey.length >= 3 &&
+    (qKey === pKey || qKey.startsWith(pKey) || pKey.startsWith(qKey))
+  ) {
+    return true;
+  }
 
   const qVariants = wordVariants(qWord);
   const pVariants = wordVariants(pWord);

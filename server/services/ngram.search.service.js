@@ -2,15 +2,15 @@
  * @fileoverview N-Gram Search Service
  *
  * A self-contained, in-process search engine that replaces Algolia.
- * Uses a trigram (n=3) inverted index for fast prefix + partial matching,
+ * Uses a prefix-oriented inverted index for fast prefix + initial matching,
  * suitable for large product datasets without any external dependency.
  *
  * Architecture:
  *  - In-memory index: Map<ngram, Set<docId>>
  *  - Word index:      Map<word,  Set<docId>>  — separate word-only index for O(W) fuzzy expansion
  *  - Document store:  Map<docId, { doc, grams }> — grams cached to avoid recomputation on removal
- *  - Scoring:        TF-style — ranked by how many unique n-grams of the
- *                    query match a document (intersection count / query ngrams).
+ *  - Scoring:        TF-style — ranked by how many unique prefix grams of the
+ *                    query match a document (intersection count / query prefix grams).
  *  - Hydration:      On first search or explicit rebuild, loads all active
  *                    products & categories from MongoDB.
  *                    Stages into temporary maps — a failed rebuild never wipes
@@ -37,7 +37,6 @@ import Category from "../models/category.model.js";
 // Types & Constants
 // ---------------------------------------------------------------------------
 
-const N = 3; // trigram
 const MAX_HITS = 100; // hard cap on returned hits before pagination
 const INDEX_TTL_MS = 15 * 60 * 1000; // 15 minutes — auto-rebuild stale index
 
@@ -51,7 +50,7 @@ const invertedIndex = new Map();
 /**
  * FIX #1 (Critical): Separate word-level index used exclusively for fuzzy
  * expansion. Fuzzy expansion previously iterated the full invertedIndex
- * (tens of thousands of character n-grams) and called levenshteinDistance on
+ * (tens of thousands of character substring grams) and called levenshteinDistance on
  * each — O(Q × I) per search, blocking the event loop on large catalogs.
  * Now fuzzy expansion only iterates whole words — O(Q × W), orders of magnitude
  * smaller.
@@ -62,11 +61,11 @@ const wordIndex = new Map();
 
 /**
  * FIX #6 (Minor): Store cached gram sets alongside each document so removal
- * never needs to recompute n-grams. Previously removeDocumentFromIndex
+ * never needs to recompute grams. Previously removeDocumentFromIndex
  * recomputed grams from the stored doc — if the doc and index ever drifted
  * out of sync the removal would silently no-op or clean wrong buckets.
  *
- * @type {Map<string, { doc: Object, grams: Set<string> }>}
+ * @type {Map<string, { doc: Object, grams: Set<string>, words: Set<string> }>}
  */
 const documentStore = new Map();
 
@@ -92,45 +91,32 @@ const normalise = (text) => {
 };
 
 /**
- * Generates all overlapping n-grams from a string (unigrams, bigrams, trigrams).
- * Also adds individual words for whole-word matching.
+ * Generates prefix-only grams from a string.
  * Returns { grams, words } so callers can populate both indexes separately.
  *
- * IMPORTANT: For efficient prefix matching on short queries ("s", "sa", "sar"),
- * we generate n=1 (unigrams), n=2 (bigrams), and n=3 (trigrams).
- * This enables instant matching as user types from the first character.
+ * IMPORTANT: We intentionally avoid infix grams here so searches only reward
+ * prefixes of each word, not arbitrary substring matches.
  */
-const generateNgrams = (text, n = N) => {
+const generateNgrams = (text) => {
   const normalised = normalise(text);
   const grams = new Set();
   const words = new Set();
   if (!normalised) return { grams, words };
 
+  const tokens = normalised.split(" ").filter(Boolean);
+
   // Word-level tokens (important for exact word hits + fuzzy expansion)
-  normalised.split(" ").forEach((w) => {
+  tokens.forEach((w) => {
     if (w.length > 0) {
       grams.add(w);
       words.add(w); // also tracked in separate word set
+
+      // Prefixes of each word: "kaftan" => k, ka, kaf, ...
+      for (let i = 1; i <= w.length; i++) {
+        grams.add(w.slice(0, i));
+      }
     }
   });
-
-  // Character-level n-grams over the full normalised string (no spaces)
-  const compact = normalised.replace(/\s/g, "");
-
-  // Generate unigrams (1-char) for single-character prefix matching
-  for (let i = 0; i < compact.length; i++) {
-    grams.add(compact[i]);
-  }
-
-  // Generate bigrams (2-char) for 2-character prefix matching
-  for (let i = 0; i <= compact.length - 2; i++) {
-    grams.add(compact.slice(i, i + 2));
-  }
-
-  // Generate trigrams (3-char) for complete word matching
-  for (let i = 0; i <= compact.length - n; i++) {
-    grams.add(compact.slice(i, i + n));
-  }
 
   return { grams, words };
 };
@@ -322,23 +308,71 @@ const getPhoneticBonus = (normalisedQuery, normalisedName) => {
 };
 
 /**
- * Extra ranking for token-level prefix / infix matches.
- * This makes short partial queries like "s" or "le" behave predictably:
- * direct token prefixes rank above incidental infix matches elsewhere.
+ * Generates a consonant key for abbreviation-style matching.
+ * Vowels are removed and a few visually similar consonants are folded together,
+ * so queries like "cftn", "caftn", "caftan", and "kft" can all match "kaftan".
  */
-const getPartialNameBonus = (normalisedQuery, normalisedName) => {
+const consonantKey = (word) =>
+  word
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/[aeiou]/g, "")
+    .replace(/[cqx]/g, "k");
+
+/**
+ * Returns a bonus when the consonant skeleton of a query word matches a
+ * document word. This is the fallback for short/abbreviated searches.
+ */
+const getConsonantBonus = (normalisedQuery, normalisedName) => {
+  const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 3);
+  const nameWords = normalisedName.split(" ").filter((w) => w.length >= 3);
+
+  let maxBonus = 0;
+
+  queryWords.forEach((qWord) => {
+    const qKey = consonantKey(qWord);
+    if (qKey.length < 3) return;
+
+    nameWords.forEach((nWord) => {
+      const nKey = consonantKey(nWord);
+      if (nKey.length < 3) return;
+
+      if (nKey === qKey) {
+        maxBonus = Math.max(maxBonus, 180);
+      } else if (nKey.startsWith(qKey) || qKey.startsWith(nKey)) {
+        maxBonus = Math.max(maxBonus, 140);
+      }
+    });
+  });
+
+  return maxBonus;
+};
+
+/**
+ * Extra ranking for token-level prefix matches.
+ * Earlier matching words rank above later ones, so "kaftan" beats
+ * "suit kaliri" for the query "ka".
+ */
+const getPrefixPositionBonus = (normalisedQuery, normalisedName) => {
   if (!normalisedQuery || !normalisedName) return 0;
 
   const nameWords = normalisedName.split(" ").filter(Boolean);
+  const queryLen = normalisedQuery.length;
   let maxBonus = 0;
 
-  nameWords.forEach((word) => {
+  nameWords.forEach((word, index) => {
     if (word === normalisedQuery) {
-      maxBonus = Math.max(maxBonus, 700);
+      maxBonus = Math.max(
+        maxBonus,
+        (queryLen === 1 ? 900 : 800) - index * (queryLen === 1 ? 200 : 50),
+      );
     } else if (word.startsWith(normalisedQuery)) {
-      maxBonus = Math.max(maxBonus, 350);
-    } else if (word.includes(normalisedQuery)) {
-      maxBonus = Math.max(maxBonus, 150);
+      const nextCharTieBreak =
+        queryLen === 1 && word.length > 1 ? word.charCodeAt(1) / 1000 : 0;
+      maxBonus = Math.max(
+        maxBonus,
+        (queryLen === 1 ? 700 : 500) - index * 100 + nextCharTieBreak,
+      );
     }
   });
 
@@ -361,7 +395,7 @@ const upsertDocumentIntoIndex = (doc) => {
 
   const { grams, words } = documentNgrams(doc);
 
-  // Populate inverted (n-gram) index
+  // Populate inverted prefix index
   grams.forEach((gram) => {
     if (!invertedIndex.has(gram)) invertedIndex.set(gram, new Set());
     invertedIndex.get(gram).add(doc.id);
@@ -639,14 +673,14 @@ export const deleteFromIndex = async (objectId) => {
  * Searches the n-gram index and returns ranked results.
  *
  * Scoring strategy:
- *  1. Base score      — number of query n-grams that match a document
+ *  1. Base score      — number of query prefix grams that match a document
  *  2. Fuzzy expand    — typo'd query words matched against word index (+1.5 / +0.75 per hit)
  *                       O(Q×W) — NOT O(Q×I). No event-loop blocking.
  *                       FIX #7: fuzzy-boosted docs are tracked in fuzzyBoostedDocs
  *                       and exempted from minBaseScore pruning so pure-typo queries
  *                       like "saarees" (distance=1 from "sarees") are never silently
  *                       dropped even when their n-gram overlap is below the threshold.
- *  3. Name bonuses    — exact (+1000), startsWith (+500), contains (+200)
+ *  3. Name bonuses    — exact (+1000), startsWith (+500), early-word prefix bonus
  *  4. Fuzzy bonus     — Levenshtein distance 1 (+200), distance 2 (+100)
  *  5. Phonetic bonus  — Soundex match (+120) e.g. "saris" → "sarees"
  *  6. Category sort   — categories always ranked above products via sort comparator
@@ -681,17 +715,17 @@ export const searchNgram = async (query, options = {}) => {
     });
   });
 
-  // --- Step 2: Fuzzy query expansion ---
+  // --- Step 2: Fuzzy + consonant query expansion ---
   // FIX #1 (Critical): iterate wordIndex only — O(Q × W) instead of O(Q × I).
-  // Previously iterated the full invertedIndex (all character n-grams), calling
+  // Previously iterated the full invertedIndex (all character substring grams), calling
   // levenshteinDistance on every entry — catastrophically slow on large catalogs.
   //
   // FIX #7: Track every docId that receives a fuzzy boost in fuzzyBoostedDocs.
   // These docs are exempted from the minBaseScore pruning below.
   //
   // Root cause of the "saarees" → no results bug:
-  //   "saarees" generates ~16 query n-grams. Most don't exist in the index
-  //   (the index only contains "sarees" n-grams), so the base score stays near 0.
+  //   "saarees" generates many query prefix grams. Most don't exist in the index
+  //   (the index only contains "sarees" prefixes), so the base score stays near 0.
   //   Fuzzy expansion correctly identifies levenshteinDistance("saarees","sarees")=1
   //   and adds +1.5 — but minBaseScore = max(1, 16*0.1) = 1.6, so 1.5 < 1.6
   //   and the doc was silently pruned before ranking.
@@ -701,27 +735,38 @@ export const searchNgram = async (query, options = {}) => {
 
   const queryWords = normalisedQuery.split(" ").filter((w) => w.length >= 1);
   queryWords.forEach((qWord) => {
+    const qConsonantKey = consonantKey(qWord);
     wordIndex.forEach((bucket, word) => {
-      if (Math.abs(word.length - qWord.length) > 2) return; // Allow up to 2-char length diff
+      const wordConsonantKey = consonantKey(word);
+      const consonantMatch =
+        qConsonantKey.length >= 3 &&
+        wordConsonantKey.length >= 3 &&
+        (wordConsonantKey === qConsonantKey ||
+          wordConsonantKey.startsWith(qConsonantKey) ||
+          qConsonantKey.startsWith(wordConsonantKey));
+
+      if (Math.abs(word.length - qWord.length) > 2 && !consonantMatch) return; // Allow up to 2-char length diff
+
       const distance = levenshteinDistance(qWord, word);
+      let bonus = 0;
+
       // Aggressive: distance 1 gets +1.5, distance 2 gets +0.75
       if (distance === 1) {
-        bucket.forEach((docId) => {
-          scores.set(docId, (scores.get(docId) || 0) + 1.5);
-          fuzzyBoostedDocs.add(docId); // FIX #7: mark for pruning exemption
-        });
+        bonus = 1.5;
       } else if (distance === 2 && (qWord.length >= 4 || word.length >= 4)) {
+        bonus = 0.75;
+      } else if (consonantMatch) {
+        bonus = wordConsonantKey === qConsonantKey ? 1.2 : 0.6;
+      }
+
+      if (bonus > 0) {
         bucket.forEach((docId) => {
-          scores.set(docId, (scores.get(docId) || 0) + 0.75);
+          scores.set(docId, (scores.get(docId) || 0) + bonus);
           fuzzyBoostedDocs.add(docId); // FIX #7: mark for pruning exemption
         });
       }
     });
   });
-
-  if (scores.size === 0) {
-    return { hits: [], total: 0, page, totalPages: 0 };
-  }
 
   // FIX #2 (Medium): Do NOT mutate scores during forEach — collect deletions first.
   // Deleting map entries mid-forEach is undefined behaviour and can silently skip entries.
@@ -751,7 +796,7 @@ export const searchNgram = async (query, options = {}) => {
       const { doc } = entry;
       let boostedScore = score;
       const normalisedName = normalise(doc.name);
-      const partialNameBonus = getPartialNameBonus(normalisedQuery, normalisedName);
+      const partialNameBonus = getPrefixPositionBonus(normalisedQuery, normalisedName);
 
       // FIX #3 (Medium): Removed the ×50 category score multiply.
       // The sort comparator below already hard-sorts categories above products.
@@ -763,14 +808,14 @@ export const searchNgram = async (query, options = {}) => {
         boostedScore += 1000;
       } else if (normalisedName.startsWith(normalisedQuery)) {
         boostedScore += 500;
-      } else if (normalisedName.includes(normalisedQuery)) {
-        boostedScore += 200;
       } else {
         // Fuzzy: "suts" → "suits", "soots" → "suits", "saarees" → "sarees"
         const fuzzyBonus = getFuzzyBonus(normalisedQuery, normalisedName);
         // Phonetic: "saris" → "sarees", "lahenga" → "lehenga"
         const phoneticBonus = getPhoneticBonus(normalisedQuery, normalisedName);
-        boostedScore += Math.max(fuzzyBonus, phoneticBonus);
+        // Consonant fallback: "cftn", "caftn", "caftan", "kft" → "kaftan"
+        const consonantBonus = getConsonantBonus(normalisedQuery, normalisedName);
+        boostedScore += Math.max(fuzzyBonus, phoneticBonus, consonantBonus);
       }
 
       boostedScore += partialNameBonus;
@@ -790,7 +835,7 @@ export const searchNgram = async (query, options = {}) => {
           const normV = normalise(v);
           if (!normV) continue;
 
-          if (normV === normalisedQuery || normV.includes(normalisedQuery) || normalisedQuery.includes(normV)) {
+          if (normV === normalisedQuery || normV.startsWith(normalisedQuery) || normalisedQuery.startsWith(normV)) {
             hasAttributeMatch = true;
             break;
           } else {
