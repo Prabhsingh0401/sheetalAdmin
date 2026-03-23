@@ -6,8 +6,9 @@ import Cart from '../models/cart.model.js';
 import User from '../models/user.model.js';
 import Settings from '../models/settings.model.js';
 import { createShiprocketOrder } from './shiprocket.service.js';
+import { sendOrderConfirmationEmail } from './order.email.service.js';
 
-export const createPaymentLinkService = async (userId, shippingAddress, frontendCallbackUrl) => {
+export const createPaymentLinkService = async (userId, shippingAddress, billingAddress, frontendCallbackUrl) => {
     // 1. Fetch Cart and User
     const cart = await Cart.findOne({ user: userId }).populate('items.product');
     const user = await User.findById(userId);
@@ -89,6 +90,7 @@ export const createPaymentLinkService = async (userId, shippingAddress, frontend
         user: userId,
         orderItems,
         shippingAddress,
+        billingAddress: billingAddress || shippingAddress,
         paymentInfo: {
             id: `pay_${Date.now()}`,
             status: "Pending",
@@ -260,10 +262,20 @@ export const verifyOnlinePaymentService = async (params) => {
         console.error('[PaymentVerify] Cart clear failed:', cartErr.message);
     }
 
+    const user = await User.findById(order.user).select('name email').lean();
+
+    try {
+        await sendOrderConfirmationEmail({ order, user });
+    } catch (emailErr) {
+        console.error(
+            `[PaymentVerify] Confirmation email failed for order ${order._id}:`,
+            emailErr.message
+        );
+    }
+
     // 9. Push to Shiprocket (skip if already synced)
     if (!order.shiprocketOrderId) {
         try {
-            const user = await User.findById(order.user).lean();
             const { shiprocketOrderId, shipmentId } = await createShiprocketOrder(order, user);
             await Order.findByIdAndUpdate(orderId, { shiprocketOrderId, shipmentId });
             order.shiprocketOrderId = shiprocketOrderId;

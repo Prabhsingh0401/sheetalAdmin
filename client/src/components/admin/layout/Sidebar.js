@@ -25,6 +25,8 @@ import {
   Headset,
   Eye,
   MessageSquare,
+  BadgeIndianRupee,
+  InfoIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -102,6 +104,11 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
           href: "/admin/cms/testimonials",
         },
       ],
+    },
+    {
+      icon: InfoIcon,
+      label: "Basic Info",
+      href: "/admin/basic-info",
     },
     { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
     { icon: ListTree, label: "Size Chart", href: "/admin/size-chart" },

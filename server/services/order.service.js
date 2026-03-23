@@ -4,10 +4,11 @@ import User from "../models/user.model.js";
 import Cart from "../models/cart.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { createShiprocketOrder } from "./shiprocket.service.js";
+import { sendOrderConfirmationEmail } from "./order.email.service.js";
 
 // --- CREATE NEW ORDER ---
 export const createOrderService = async (data, userId) => {
-  const { orderItems, shippingAddress, paymentInfo } = data;
+  const { orderItems, shippingAddress, billingAddress, paymentInfo } = data;
 
   // 1. Stock Check aur Update Logic
   // Hum har item par loop chalayenge taaki inventory update ho sake
@@ -49,6 +50,15 @@ export const createOrderService = async (data, userId) => {
       state: shippingAddress.state,
       postalCode: shippingAddress.postalCode,
       country: shippingAddress.country || "India",
+    },
+    billingAddress: {
+      fullName: billingAddress?.fullName || shippingAddress.fullName,
+      phoneNumber: billingAddress?.phoneNumber || shippingAddress.phoneNumber,
+      addressLine1: billingAddress?.addressLine1 || shippingAddress.addressLine1,
+      city: billingAddress?.city || shippingAddress.city,
+      state: billingAddress?.state || shippingAddress.state,
+      postalCode: billingAddress?.postalCode || shippingAddress.postalCode,
+      country: billingAddress?.country || shippingAddress.country || "India",
     },
     paymentInfo: {
       id: paymentInfo?.id || `manual_${Date.now()}`, // Admin order ke liye manual ID
@@ -108,6 +118,16 @@ export const createOrderService = async (data, userId) => {
         srError.message,
       );
     }
+  }
+
+  try {
+    const user = await User.findById(userId).select("name email").lean();
+    await sendOrderConfirmationEmail({ order, user });
+  } catch (emailErr) {
+    console.error(
+      `[OrderEmail] Failed to send confirmation email for order ${order._id}:`,
+      emailErr.message,
+    );
   }
 
   return order;

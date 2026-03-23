@@ -227,7 +227,12 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   <span className="text-slate-400">Max file size: 10MB</span>
                 </div>
                 <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
-                  Row format: first row of a product contains base fields plus the first variant. Following rows for that same product should leave base fields blank and fill only variant columns like `Color`, `Size`, `Price`, `DiscountPrice`, `Stock`, and `VariantImage`.
+                  Row format: the first row starts a product with the base
+                  fields and one variant. Following rows for the same product
+                  should leave base fields blank and fill only variant columns
+                  like `VariantSKU`, `Color`, `ColorCode`, `Size`, `Price`,
+                  `DiscountPrice`, `Stock`, and `VariantImage`. Optional spec
+                  rows can use `DetailKey` and `DetailValue`.
                 </div>
               </div>
 

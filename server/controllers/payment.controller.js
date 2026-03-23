@@ -4,7 +4,7 @@ import ErrorResponse from "../utils/ErrorResponse.js";
 
 export const createPaymentLink = async (req, res, next) => {
     try {
-        const { addressId, callbackUrl, items, shippingAddress } = req.body;
+        const { addressId, callbackUrl, items, shippingAddress, billingAddress } = req.body;
 
         // Validate inputs
         if (!shippingAddress) {
@@ -25,6 +25,7 @@ export const createPaymentLink = async (req, res, next) => {
         const paymentLink = await paymentService.createPaymentLinkService(
             req.user._id,
             formattedAddress,
+            billingAddress || formattedAddress,
             callbackUrl
         );
 

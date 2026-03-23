@@ -1,4 +1,5 @@
 "use client";
+import { useCallback, useEffect, useState } from "react";
 import {
   Store,
   Bell,
@@ -6,18 +7,78 @@ import {
   CreditCard,
   Save,
   Globe,
-  Mail,
   User,
   Camera,
   Plus,
+  Loader2,
+  RefreshCw,
+  BadgeIndianRupee,
+  Truck,
+  ReceiptText,
+  MapPin,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import PageHeader from "@/components/admin/layout/PageHeader.js";
+import { getBasicInfo } from "@/services/basicInfoService";
 
 export default function SettingsPage() {
   const inputStyle =
     "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all";
   const labelStyle =
     "text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block";
+  const [basicInfo, setBasicInfo] = useState({
+    gstNumber: "",
+    shippingAddress: {
+      addressLine: "",
+      pincode: "",
+      city: "",
+      state: "",
+      country: "",
+    },
+    billingAddress: {
+      addressLine: "",
+      pincode: "",
+      city: "",
+      state: "",
+      country: "",
+    },
+  });
+  const [isLoadingBasicInfo, setIsLoadingBasicInfo] = useState(true);
+  const [isRefreshingBasicInfo, setIsRefreshingBasicInfo] = useState(false);
+
+  const normalizeAddress = (value) => ({
+    addressLine: value?.addressLine || "",
+    pincode: value?.pincode || "",
+    city: value?.city || "",
+    state: value?.state || "",
+    country: value?.country || "",
+  });
+
+  const loadBasicInfo = useCallback(async (showToast = false) => {
+    setIsRefreshingBasicInfo(true);
+    try {
+      const response = await getBasicInfo();
+      if (response?.success && response?.data) {
+        setBasicInfo({
+          gstNumber: response.data.gstNumber || "",
+          shippingAddress: normalizeAddress(response.data.shippingAddress),
+          billingAddress: normalizeAddress(response.data.billingAddress),
+        });
+        if (showToast) toast.success("Basic info loaded");
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to load basic info",
+      );
+    } finally {
+      setIsLoadingBasicInfo(false);
+      setIsRefreshingBasicInfo(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBasicInfo();
+  }, [loadBasicInfo]);
 
   return (
     <div className="w-full animate-in fade-in duration-500 pb-10">
@@ -145,6 +206,71 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <BadgeIndianRupee size={18} className="text-emerald-500" />
+                GST & Address Snapshot
+              </h3>
+              <button
+                type="button"
+                onClick={() => loadBasicInfo(true)}
+                disabled={isRefreshingBasicInfo}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-600 transition-all hover:bg-white hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isRefreshingBasicInfo ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Refreshing
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={14} />
+                    Refresh
+                  </>
+                )}
+              </button>
+            </div>
+
+            {isLoadingBasicInfo ? (
+              <div className="flex h-48 items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50">
+                <div className="text-center">
+                  <Loader2 size={22} className="mx-auto animate-spin text-slate-400" />
+                  <p className="mt-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Loading saved business details
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    <BadgeIndianRupee size={14} className="text-emerald-500" />
+                    GST Number
+                  </p>
+                  <p className="text-base font-black text-slate-900">
+                    {basicInfo.gstNumber || "Not configured"}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <AddressSummaryCard
+                    title="Shipping Address"
+                    icon={<Truck size={16} />}
+                    iconClassName="bg-emerald-50 text-emerald-600"
+                    address={basicInfo.shippingAddress}
+                  />
+                  <AddressSummaryCard
+                    title="Billing Address"
+                    icon={<ReceiptText size={16} />}
+                    iconClassName="bg-amber-50 text-amber-600"
+                    address={basicInfo.billingAddress}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Footer Actions */}
           <div className="flex justify-end items-center gap-4">
             <button className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-all">
@@ -156,6 +282,47 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AddressSummaryCard({ title, icon, iconClassName, address }) {
+  const lines = [
+    address?.addressLine,
+    [address?.city, address?.state].filter(Boolean).join(", "),
+    [address?.pincode, address?.country].filter(Boolean).join(" "),
+  ].filter(Boolean);
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-3">
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-2xl ${iconClassName}`}
+        >
+          {icon}
+        </div>
+        <div>
+          <h4 className="text-sm font-black text-slate-900">{title}</h4>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Pulled from server
+          </p>
+        </div>
+      </div>
+
+      {lines.length > 0 ? (
+        <div className="space-y-1.5 text-sm font-medium text-slate-600">
+          {lines.map((line) => (
+            <p key={line} className="flex items-start gap-2">
+              <MapPin size={14} className="mt-0.5 shrink-0 text-slate-400" />
+              <span>{line}</span>
+            </p>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm font-medium text-slate-400">
+          No address has been saved yet.
+        </p>
+      )}
     </div>
   );
 }
