@@ -36,6 +36,8 @@ export default function ProductModal({
     color: { name: "", code: "#000000", swatchImage: "" },
     sizes: [{ name: "", stock: 0, price: 0, discountPrice: 0 }],
     v_image: "",
+    videoFile: null,
+    v_video: "",
     gallery: [],
   };
 
@@ -90,6 +92,7 @@ export default function ProductModal({
               ...v,
               sizes: Array.isArray(v.sizes) ? v.sizes : [],
               gallery: Array.isArray(v.gallery) ? v.gallery : [],
+              v_video: v.v_video || "",
             }))
           : [];
         setFormData({
@@ -297,9 +300,9 @@ export default function ProductModal({
         }
       });
 
-      const cleanedVariants = formData.variants.map((v) => {
+        const cleanedVariants = formData.variants.map((v) => {
         const cleanedGallery = Array.isArray(v.gallery)
-          ? v.gallery.map((item) => {
+          ? v.gallery.slice(0, 6).map((item) => {
               if (item instanceof File) {
                 data.append("variantGalleryImages", item);
                 return { __newFile: true };
@@ -317,11 +320,43 @@ export default function ProductModal({
             })
           : [];
 
+        if (Array.isArray(v.gallery) && v.gallery.length > 6) {
+          toast.error(
+            "Each variant can have at most 6 gallery images. Extra images were ignored.",
+          );
+        }
+
+        let cleanedVideo = "";
+        if (v.videoFile instanceof File) {
+          data.append("variantVideos", v.videoFile);
+        } else if (v.v_video?.url) {
+          cleanedVideo = {
+            url: v.v_video.url,
+            public_id: v.v_video.public_id || "",
+            mimeType: v.v_video.mimeType || "video/mp4",
+            size: v.v_video.size || 0,
+          };
+        }
+
+        const hasNewVideo = v.videoFile instanceof File;
+
         if (v.v_image instanceof File) {
           data.append("variantImages", v.v_image);
-          return { ...v, hasNewImage: true, gallery: cleanedGallery };
+          return {
+            ...v,
+            hasNewImage: true,
+            hasNewVideo,
+            v_video: cleanedVideo,
+            gallery: cleanedGallery,
+          };
         }
-        return { ...v, hasNewImage: false, gallery: cleanedGallery };
+        return {
+          ...v,
+          hasNewImage: false,
+          hasNewVideo,
+          v_video: cleanedVideo,
+          gallery: cleanedGallery,
+        };
       });
       data.append("variants", JSON.stringify(cleanedVariants));
 

@@ -3,7 +3,6 @@ import successResponse from "../utils/successResponse.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import Product from "../models/product.model.js";
-import fs from "fs";
 import xlsx from "xlsx";
 
 const clearFiles = async (files) => {
@@ -120,7 +119,7 @@ export const bulkImportProducts = async (req, res, next) => {
       result.errors?.length > 0 ? "Import completed with warnings" : "All products imported successfully",
     );
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    clearFiles(req.files);
     next(error);
   }
 };
@@ -157,7 +156,6 @@ export const getSampleExcel = async (req, res, next) => {
       "DiscountPrice",
       "Stock",
       "VariantImage",
-      "VariantImageName",
       "MetaTitle",
       "MetaDescription",
       "MetaKeywords",
@@ -184,8 +182,6 @@ export const getSampleExcel = async (req, res, next) => {
         MainImage: "example-main.jpg",
         HoverImage: "example-hover.jpg",
         Images: "example-1.jpg,example-2.jpg",
-        DetailKey: "Wash Care",
-        DetailValue: "Dry clean only",
         VariantSKU: "EXAMPLE-001-RED-M",
         Color: "Red",
         ColorCode: "#B91C1C",
@@ -194,7 +190,6 @@ export const getSampleExcel = async (req, res, next) => {
         DiscountPrice: 3999,
         Stock: 10,
         VariantImage: "example-variant.jpg",
-        VariantImageName: "example-variant.jpg",
         MetaTitle: "Example Product",
         MetaDescription: "Example meta description.",
         MetaKeywords: "example,product",
@@ -219,8 +214,8 @@ export const getSampleExcel = async (req, res, next) => {
         MainImage: "",
         HoverImage: "",
         Images: "",
-        DetailKey: "",
-        DetailValue: "",
+        DetailKey: "Wash Care",
+        DetailValue: "Dry clean only",
         VariantSKU: "EXAMPLE-001-BLK-L",
         Color: "Black",
         ColorCode: "#111827",
@@ -229,7 +224,6 @@ export const getSampleExcel = async (req, res, next) => {
         DiscountPrice: 0,
         Stock: 7,
         VariantImage: "example-variant-2.jpg",
-        VariantImageName: "example-variant-2.jpg",
         MetaTitle: "",
         MetaDescription: "",
         MetaKeywords: "",
@@ -353,7 +347,6 @@ export const getAllReviews = async (req, res, next) => {
 
 export const updateReviewStatus = async (req, res, next) => {
   try {
-    console.log("UPDATE REVIEW BODY:", req.body);
     const { isApproved, comment, rating, userName } = req.body;
     const reviewId = req.params.id || req.query.id;
     const result = await productService.updateReviewStatusService(reviewId, isApproved, comment, rating, userName);

@@ -30,6 +30,15 @@ const orderSchema = new mongoose.Schema(
       postalCode: { type: String, required: true },
       country: { type: String, default: "India" },
     },
+    billingAddress: {
+      fullName: { type: String },
+      phoneNumber: { type: String },
+      addressLine1: { type: String },
+      city: { type: String },
+      state: { type: String },
+      postalCode: { type: String },
+      country: { type: String, default: "India" },
+    },
     paymentInfo: {
       id: { type: String },
       status: { type: String, default: "Pending" },

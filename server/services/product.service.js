@@ -20,12 +20,21 @@ const buildUploadedImage = (file, alt) => ({
   alt,
 });
 
+const buildUploadedVideo = (file) => ({
+  url: file.location || file.path,
+  public_id: file.key || file.filename,
+  mimeType: file.mimetype || "video/mp4",
+  size: file.size,
+});
+
 const normaliseVariantGallery = (
   variant,
   uploadedVariantGalleryFiles,
   fallbackAlt,
 ) => {
-  const rawGallery = Array.isArray(variant.gallery) ? variant.gallery : [];
+  const rawGallery = Array.isArray(variant.gallery)
+    ? variant.gallery.slice(0, 6)
+    : [];
 
   return rawGallery
     .map((item, index) => {
@@ -72,6 +81,10 @@ const collectVariantMediaMap = (variants) => {
     if (variant.v_image) {
       const key = variantMediaKey(variant.v_image);
       if (key) map.set(key, variant.v_image);
+    }
+    if (variant.v_video) {
+      const key = variantMediaKey(variant.v_video);
+      if (key) map.set(key, variant.v_video);
     }
     if (Array.isArray(variant.gallery)) {
       variant.gallery.forEach((item) => {
@@ -454,10 +467,11 @@ export const createProductService = async (data, files, userId) => {
   if (parsedData.variants && Array.isArray(parsedData.variants)) {
     let variantFileIndex = 0;
     const uploadedVariantFiles = files?.["variantImages"] || [];
-    const uploadedVariantGalleryFiles = [
-      ...(files?.["variantGalleryImages"] || []),
-    ];
-    parsedData.variants = parsedData.variants.map((v) => {
+  const uploadedVariantGalleryFiles = [
+    ...(files?.["variantGalleryImages"] || []),
+  ];
+  const uploadedVariantVideoFiles = files?.["variantVideos"] || [];
+  parsedData.variants = parsedData.variants.map((v) => {
       // Process sizes to ensure numerical types for stock, price, and discountPrice
       const processedSizes = v.sizes.map((s) => ({
         ...s,
@@ -484,12 +498,29 @@ export const createProductService = async (data, files, userId) => {
         const file = uploadedVariantFiles[variantFileIndex];
         const v_image = buildUploadedImage(file);
         variantFileIndex++;
-        const { hasNewImage, ...rest } = v;
-        return { ...rest, sizes: processedSizes, v_image: v_image, gallery };
+        const { hasNewImage, hasNewVideo, ...rest } = v;
+        return {
+          ...rest,
+          sizes: processedSizes,
+          v_image,
+          v_video:
+            hasNewVideo === true && uploadedVariantVideoFiles.length > 0
+              ? buildUploadedVideo(uploadedVariantVideoFiles.shift())
+              : rest.v_video || null,
+          gallery,
+        };
       }
 
-      const { hasNewImage, ...rest } = v;
-      return { ...rest, sizes: processedSizes, gallery }; // Return variant with processed sizes
+      const { hasNewImage, hasNewVideo, ...rest } = v;
+      return {
+        ...rest,
+        sizes: processedSizes,
+        v_video:
+          hasNewVideo === true && uploadedVariantVideoFiles.length > 0
+            ? buildUploadedVideo(uploadedVariantVideoFiles.shift())
+            : rest.v_video || null,
+        gallery,
+      }; // Return variant with processed sizes
     });
   }
 
@@ -643,11 +674,12 @@ export const updateProductService = async (id, data, files) => {
   if (parsedData.variants && Array.isArray(parsedData.variants)) {
     let variantFileIndex = 0;
     const uploadedVariantFiles = files?.["variantImages"] || [];
-    const uploadedVariantGalleryFiles = [
-      ...(files?.["variantGalleryImages"] || []),
-    ];
+  const uploadedVariantGalleryFiles = [
+    ...(files?.["variantGalleryImages"] || []),
+  ];
+  const uploadedVariantVideoFiles = files?.["variantVideos"] || [];
 
-    parsedData.variants = parsedData.variants.map((v) => {
+  parsedData.variants = parsedData.variants.map((v) => {
       // Process sizes to ensure numerical types for stock, price, and discountPrice
       const processedSizes = v.sizes.map((s) => ({
         ...s,
@@ -674,12 +706,29 @@ export const updateProductService = async (id, data, files) => {
         const file = uploadedVariantFiles[variantFileIndex];
         const v_image = buildUploadedImage(file);
         variantFileIndex++;
-        const { hasNewImage, ...rest } = v;
-        return { ...rest, sizes: processedSizes, v_image: v_image, gallery };
+        const { hasNewImage, hasNewVideo, ...rest } = v;
+        return {
+          ...rest,
+          sizes: processedSizes,
+          v_image,
+          v_video:
+            hasNewVideo === true && uploadedVariantVideoFiles.length > 0
+              ? buildUploadedVideo(uploadedVariantVideoFiles.shift())
+              : rest.v_video || null,
+          gallery,
+        };
       }
 
-      const { hasNewImage, ...rest } = v;
-      return { ...rest, sizes: processedSizes, gallery }; // Return variant with processed sizes
+      const { hasNewImage, hasNewVideo, ...rest } = v;
+      return {
+        ...rest,
+        sizes: processedSizes,
+        v_video:
+          hasNewVideo === true && uploadedVariantVideoFiles.length > 0
+            ? buildUploadedVideo(uploadedVariantVideoFiles.shift())
+            : rest.v_video || null,
+        gallery,
+      }; // Return variant with processed sizes
     });
   }
 

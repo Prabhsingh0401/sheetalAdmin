@@ -5,11 +5,7 @@ import {
     MousePointer2,
     Trash2,
     ImageIcon,
-    Video,
-    CheckCircle2,
-    Film,
 } from "lucide-react";
-import toast from "react-hot-toast";
 
 export default function MediaParams({
     formData,
@@ -195,114 +191,6 @@ export default function MediaParams({
                             })
                         }
                     />
-                </div>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
-                        <Video size={18} />
-                    </div>
-                    <div>
-                        <h3 className="text-xs font-bold text-slate-900 uppercase">
-                            Product Video
-                        </h3>
-                        <p className="text-[10px] text-slate-500">
-                            Engage customers with a short demo clip
-                        </p>
-                    </div>
-                </div>
-
-                {(formData.videoFile || formData.video) && (
-                    <div className="mb-4 relative group">
-                        <video
-                            key={
-                                formData.videoFile ? formData.videoFile.name : formData.video
-                            }
-                            controls
-                            className="w-full h-48 rounded-2xl bg-black object-contain shadow-md"
-                        >
-                            <source
-                                src={
-                                    formData.videoFile
-                                        ? URL.createObjectURL(formData.videoFile)
-                                            : formData.video
-                                }
-                                type="video/mp4"
-                            />
-                            Your browser does not support the video tag.
-                        </video>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setFormData({
-                                    ...formData,
-                                    videoFile: null,
-                                    video: "",
-                                })
-                            }
-                            className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                )}
-
-                <div
-                    className={`relative border-2 border-dashed rounded-2xl p-6 transition-all ${formData.videoFile || formData.video ? "border-emerald-500 bg-emerald-50/10" : "border-slate-200 bg-slate-50"}`}
-                >
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                        <div
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center ${formData.videoFile || formData.video ? "bg-emerald-500 text-white" : "bg-white text-slate-400 shadow-sm"}`}
-                        >
-                            {formData.videoFile || formData.video ? (
-                                <CheckCircle2 size={24} />
-                            ) : (
-                                <Film size={24} />
-                            )}
-                        </div>
-
-                        <div className="flex-1 text-center md:text-left">
-                            <p className="text-sm font-bold text-slate-700">
-                                {formData.videoFile
-                                    ? formData.videoFile.name
-                                    : formData.video
-                                        ? "Current Video"
-                                        : "Upload Demo Video"}
-                            </p>
-                            <p className="text-[10px] text-slate-500 mt-1 uppercase">
-                                MP4, WEBM (MAX 5MB)
-                            </p>
-                        </div>
-
-                        <label className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-800 cursor-pointer transition-all active:scale-95">
-                            {formData.videoFile || formData.video
-                                ? "Change Video"
-                                : "Select Video"}
-                            <input
-                                type="file"
-                                accept="video/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (file) {
-                                        const MAX_VIDEO_SIZE_MB = 5;
-                                        const MAX_VIDEO_SIZE_BYTES =
-                                            MAX_VIDEO_SIZE_MB * 1024 * 1024;
-                                        if (file.size > MAX_VIDEO_SIZE_BYTES) {
-                                            toast.error(
-                                                `Video file size exceeds the ${MAX_VIDEO_SIZE_MB}MB limit.`,
-                                            );
-                                            e.target.value = ""; // Clear the input
-                                            setFormData({ ...formData, videoFile: null }); // Clear the video file from form data
-                                            return;
-                                        }
-                                        setFormData({ ...formData, videoFile: file });
-                                    }
-                                }}
-                            />
-                        </label>
-                    </div>
                 </div>
             </div>
         </div>
