@@ -9,6 +9,7 @@ import { sendOrderConfirmationEmail } from "./order.email.service.js";
 // --- CREATE NEW ORDER ---
 export const createOrderService = async (data, userId) => {
   const { orderItems, shippingAddress, billingAddress, paymentInfo } = data;
+  const user = await User.findById(userId).lean();
 
   // 1. Stock Check aur Update Logic
   // Hum har item par loop chalayenge taaki inventory update ho sake
@@ -101,7 +102,6 @@ export const createOrderService = async (data, userId) => {
 
     // Push to Shiprocket
     try {
-      const user = await User.findById(userId).lean();
       const { shiprocketOrderId, shipmentId } = await createShiprocketOrder(
         order,
         user,
@@ -121,7 +121,6 @@ export const createOrderService = async (data, userId) => {
   }
 
   try {
-    const user = await User.findById(userId).select("name email").lean();
     await sendOrderConfirmationEmail({ order, user });
   } catch (emailErr) {
     console.error(

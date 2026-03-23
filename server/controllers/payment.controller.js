@@ -21,11 +21,47 @@ export const createPaymentLink = async (req, res, next) => {
             fullName: shippingAddress.fullName || `${shippingAddress.firstName} ${shippingAddress.lastName}`,
         };
 
+        const validatedMergedBillingAddress = {
+            ...formattedAddress,
+            ...billingAddress,
+            fullName: billingAddress?.fullName || formattedAddress.fullName,
+            phoneNumber:
+                billingAddress?.phoneNumber ||
+                formattedAddress.phoneNumber ||
+                shippingAddress.phoneNumber ||
+                "",
+            addressLine1:
+                billingAddress?.addressLine1 ||
+                formattedAddress.addressLine1 ||
+                shippingAddress.addressLine1 ||
+                "",
+            city:
+                billingAddress?.city ||
+                formattedAddress.city ||
+                shippingAddress.city ||
+                "",
+            state:
+                billingAddress?.state ||
+                formattedAddress.state ||
+                shippingAddress.state ||
+                "",
+            postalCode:
+                billingAddress?.postalCode ||
+                formattedAddress.postalCode ||
+                shippingAddress.postalCode ||
+                "",
+            country:
+                billingAddress?.country ||
+                formattedAddress.country ||
+                shippingAddress.country ||
+                "India",
+        };
+
         // Call service to create payment link
         const paymentLink = await paymentService.createPaymentLinkService(
             req.user._id,
             formattedAddress,
-            billingAddress || formattedAddress,
+            validatedMergedBillingAddress,
             callbackUrl
         );
 

@@ -13,6 +13,13 @@ const addressSchema = new mongoose.Schema(
 
 const basicInfoSchema = new mongoose.Schema(
   {
+    singletonKey: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+      default: "singleton",
+    },
     gstNumber: {
       type: String,
       trim: true,

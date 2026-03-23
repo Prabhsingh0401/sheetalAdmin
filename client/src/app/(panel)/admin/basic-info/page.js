@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import PageHeader from "@/components/admin/layout/PageHeader";
 import { getBasicInfo, updateBasicInfo } from "@/services/basicInfoService";
+import { normalizeAddress } from "../utils/normalizeAddress";
 
 const fieldClass =
   "w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-indigo-500 focus:bg-white";
@@ -26,14 +27,6 @@ const emptyAddress = {
   state: "",
   country: "",
 };
-
-const normalizeAddress = (value) => ({
-  addressLine: value?.addressLine || "",
-  pincode: value?.pincode || "",
-  city: value?.city || "",
-  state: value?.state || "",
-  country: value?.country || "",
-});
 
 export default function BasicInfoPage() {
   const [form, setForm] = useState({
@@ -89,10 +82,26 @@ export default function BasicInfoPage() {
 
   const handleSave = async () => {
     if (!form.gstNumber.trim()) return toast.error("GST number is required");
-    if (!form.shippingAddress.addressLine.trim())
-      return toast.error("Shipping address is required");
-    if (!form.billingAddress.addressLine.trim())
-      return toast.error("Billing address is required");
+
+    const requiredAddressFields = [
+      ["addressLine", "address line"],
+      ["city", "city"],
+      ["state", "state"],
+      ["pincode", "pincode"],
+      ["country", "country"],
+    ];
+
+    for (const [field, label] of requiredAddressFields) {
+      if (!form.shippingAddress[field].trim()) {
+        return toast.error(`Shipping address ${label} is required`);
+      }
+    }
+
+    for (const [field, label] of requiredAddressFields) {
+      if (!form.billingAddress[field].trim()) {
+        return toast.error(`Billing address ${label} is required`);
+      }
+    }
 
     setIsSaving(true);
     try {

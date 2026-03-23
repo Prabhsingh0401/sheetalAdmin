@@ -3,7 +3,6 @@ import successResponse from "../utils/successResponse.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import Product from "../models/product.model.js";
-import fs from "fs";
 import xlsx from "xlsx";
 
 const clearFiles = async (files) => {
@@ -120,7 +119,7 @@ export const bulkImportProducts = async (req, res, next) => {
       result.errors?.length > 0 ? "Import completed with warnings" : "All products imported successfully",
     );
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    clearFiles(req.files);
     next(error);
   }
 };
@@ -348,7 +347,6 @@ export const getAllReviews = async (req, res, next) => {
 
 export const updateReviewStatus = async (req, res, next) => {
   try {
-    console.log("UPDATE REVIEW BODY:", req.body);
     const { isApproved, comment, rating, userName } = req.body;
     const reviewId = req.params.id || req.query.id;
     const result = await productService.updateReviewStatusService(reviewId, isApproved, comment, rating, userName);

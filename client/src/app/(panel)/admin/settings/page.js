@@ -20,6 +20,7 @@ import {
 import toast from "react-hot-toast";
 import PageHeader from "@/components/admin/layout/PageHeader.js";
 import { getBasicInfo } from "@/services/basicInfoService";
+import { normalizeAddress } from "../utils/normalizeAddress";
 
 export default function SettingsPage() {
   const inputStyle =
@@ -45,14 +46,6 @@ export default function SettingsPage() {
   });
   const [isLoadingBasicInfo, setIsLoadingBasicInfo] = useState(true);
   const [isRefreshingBasicInfo, setIsRefreshingBasicInfo] = useState(false);
-
-  const normalizeAddress = (value) => ({
-    addressLine: value?.addressLine || "",
-    pincode: value?.pincode || "",
-    city: value?.city || "",
-    state: value?.state || "",
-    country: value?.country || "",
-  });
 
   const loadBasicInfo = useCallback(async (showToast = false) => {
     setIsRefreshingBasicInfo(true);
@@ -235,7 +228,10 @@ export default function SettingsPage() {
             {isLoadingBasicInfo ? (
               <div className="flex h-48 items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50">
                 <div className="text-center">
-                  <Loader2 size={22} className="mx-auto animate-spin text-slate-400" />
+                  <Loader2
+                    size={22}
+                    className="mx-auto animate-spin text-slate-400"
+                  />
                   <p className="mt-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
                     Loading saved business details
                   </p>
@@ -311,8 +307,8 @@ function AddressSummaryCard({ title, icon, iconClassName, address }) {
 
       {lines.length > 0 ? (
         <div className="space-y-1.5 text-sm font-medium text-slate-600">
-          {lines.map((line) => (
-            <p key={line} className="flex items-start gap-2">
+          {lines.map((line, idx) => (
+            <p key={`${line}-${idx}`} className="flex items-start gap-2">
               <MapPin size={14} className="mt-0.5 shrink-0 text-slate-400" />
               <span>{line}</span>
             </p>

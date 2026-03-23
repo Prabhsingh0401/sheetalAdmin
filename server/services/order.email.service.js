@@ -12,16 +12,31 @@ const buildAddressLines = (address = {}) => {
   return [line1, line2, line3].filter(Boolean);
 };
 
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 const buildItemRows = (items = []) =>
   items
     .map(
-      (item) => `
+      (item) => {
+        const safeName = escapeHtml(item.name || "Product");
+        const safeQty = escapeHtml(item.qty ?? "");
+        const safePrice = escapeHtml(item.price ?? "");
+        const safeTotal = escapeHtml(item.total ?? "");
+
+        return `
         <tr>
-          <td style="border:1px solid #ddd;font-size:14px;">${item.name || "Product"}</td>
-          <td style="border:1px solid #ddd;font-size:14px;">${item.qty}</td>
-          <td style="border:1px solid #ddd;font-size:14px;">${item.price}</td>
-          <td style="border:1px solid #ddd;font-size:14px;">${item.total}</td>
-        </tr>`,
+          <td style="border:1px solid #ddd;font-size:14px;">${safeName}</td>
+          <td style="border:1px solid #ddd;font-size:14px;">${safeQty}</td>
+          <td style="border:1px solid #ddd;font-size:14px;">${safePrice}</td>
+          <td style="border:1px solid #ddd;font-size:14px;">${safeTotal}</td>
+        </tr>`;
+      },
     )
     .join("");
 

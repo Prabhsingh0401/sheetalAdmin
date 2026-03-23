@@ -99,6 +99,12 @@ const productSchema = new mongoose.Schema(
           url: { type: String },
           public_id: { type: String },
         },
+        v_video: {
+          url: { type: String },
+          public_id: { type: String },
+          mimeType: { type: String, default: "video/mp4" },
+          size: { type: Number },
+        },
         gallery: [
           {
             url: { type: String },

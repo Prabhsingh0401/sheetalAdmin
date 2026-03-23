@@ -43,7 +43,9 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
     });
 
     if (validImages.length !== files.length) {
-      toast.error("Some files were skipped. Only JPEG, PNG, and WebP images are allowed.");
+      toast.error(
+        "Some files were skipped. Only JPEG, PNG, and WebP images are allowed.",
+      );
     }
 
     const newEntries = validImages.map((file) => ({
@@ -76,7 +78,10 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
       const interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 90) { clearInterval(interval); return 90; }
+          if (prev >= 90) {
+            clearInterval(interval);
+            return 90;
+          }
           return prev + 10;
         });
       }, 500);
@@ -132,8 +137,12 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Bulk Import Products</h2>
-            <p className="text-sm text-slate-500">Upload Excel rows grouped by product, plus matching images</p>
+            <h2 className="text-xl font-bold text-slate-900">
+              Bulk Import Products
+            </h2>
+            <p className="text-sm text-slate-500">
+              Upload Excel rows grouped by product, plus matching images
+            </p>
           </div>
           <button
             onClick={handleClose}
@@ -147,15 +156,15 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
-
           {/* Step 1: Upload */}
           {step === 1 && (
             <div className="space-y-8">
-
               {/* Excel Upload */}
               <div className="space-y-3">
                 <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">1</span>
+                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                    1
+                  </span>
                   Upload Product Sheet
                 </p>
 
@@ -172,21 +181,27 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   htmlFor="excel-upload"
                   className={`block border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all
                     focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2
-                    ${excelFile
-                      ? "border-emerald-500 bg-emerald-50/30"
-                      : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
+                    ${
+                      excelFile
+                        ? "border-emerald-500 bg-emerald-50/30"
+                        : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
                     }`}
                 >
                   {excelFile ? (
                     <div className="text-center">
                       <FileSpreadsheet className="w-12 h-12 text-emerald-600 mb-2 mx-auto" />
-                      <p className="font-medium text-slate-900">{excelFile.name}</p>
+                      <p className="font-medium text-slate-900">
+                        {excelFile.name}
+                      </p>
                       <p className="text-xs text-slate-500 mt-1">
                         {(excelFile.size / 1024).toFixed(1)} KB
                       </p>
                       <button
                         type="button"
-                        onClick={(e) => { e.preventDefault(); setExcelFile(null); }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setExcelFile(null);
+                        }}
                         className="mt-3 text-xs text-red-600 hover:underline"
                       >
                         Remove file
@@ -195,8 +210,12 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   ) : (
                     <div className="text-center">
                       <UploadCloud className="w-12 h-12 text-slate-300 mb-2 mx-auto" />
-                      <p className="font-medium text-slate-700">Click or press Space to upload Excel file</p>
-                      <p className="text-xs text-slate-400 mt-1">Supported: .xlsx, .xls, .csv</p>
+                      <p className="font-medium text-slate-700">
+                        Click or press Space to upload Excel file
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Supported: .xlsx, .xls, .csv
+                      </p>
                     </div>
                   )}
                 </label>
@@ -206,7 +225,8 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                     type="button"
                     onClick={async () => {
                       try {
-                        const { downloadSampleExcel } = await import("@/services/productService");
+                        const { downloadSampleExcel } =
+                          await import("@/services/productService");
                         const blob = await downloadSampleExcel();
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement("a");
@@ -226,20 +246,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   </button>
                   <span className="text-slate-400">Max file size: 10MB</span>
                 </div>
-                <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
-                  Row format: the first row starts a product with the base
-                  fields and one variant. Following rows for the same product
-                  should leave base fields blank and fill only variant columns
-                  like `VariantSKU`, `Color`, `ColorCode`, `Size`, `Price`,
-                  `DiscountPrice`, `Stock`, and `VariantImage`. Optional spec
-                  rows can use `DetailKey` and `DetailValue`.
-                </div>
               </div>
 
               {/* Images Upload */}
               <div className="space-y-3">
                 <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">2</span>
+                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                    2
+                  </span>
                   Upload Product Images
                 </p>
 
@@ -255,13 +269,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-
                     <label
                       htmlFor="images-upload"
                       className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-white transition-all bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1"
                     >
                       <ImageIcon className="w-8 h-8 text-slate-300 mb-1" />
-                      <span className="text-xs font-medium text-slate-500">Add Images</span>
+                      <span className="text-xs font-medium text-slate-500">
+                        Add Images
+                      </span>
                     </label>
 
                     {imageFiles.map((entry, idx) => (
@@ -288,13 +303,17 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                       </div>
                     ))}
                   </div>
-
+                  
                   <div className="flex justify-between items-center">
-                    <p className="text-xs text-slate-500">{imageFiles.length} images selected</p>
+                    <p className="text-xs text-slate-500">
+                      {imageFiles.length} images selected
+                    </p>
                     <button
                       type="button"
                       onClick={() => {
-                        imageFiles.forEach(({ url }) => URL.revokeObjectURL(url));
+                        imageFiles.forEach(({ url }) =>
+                          URL.revokeObjectURL(url),
+                        );
                         setImageFiles([]);
                       }}
                       className={`text-xs text-red-600 hover:underline ${imageFiles.length === 0 ? "invisible" : ""}`}
@@ -305,7 +324,8 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <p className="text-xs text-slate-400 italic">
-                  Note: Only JPEG, PNG, and WebP images are accepted. Filenames must match exactly with the names in the Excel sheet.
+                  Note: Only JPEG, PNG, and WebP images are accepted. Filenames
+                  must match exactly with the names in the Excel sheet.
                 </p>
               </div>
             </div>
@@ -318,25 +338,41 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                   <circle
                     className="text-slate-100 stroke-current"
-                    strokeWidth="8" cx="50" cy="50" r="40" fill="transparent"
+                    strokeWidth="8"
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
                   />
                   <circle
                     className="text-blue-600 stroke-current transition-all duration-300"
-                    strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    cx="50"
+                    cy="50"
+                    r="40"
                     fill="transparent"
                     strokeDasharray="251.2"
                     strokeDashoffset={251.2 - (251.2 * progress) / 100}
-                    style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
+                    style={{
+                      transform: "rotate(-90deg)",
+                      transformOrigin: "50% 50%",
+                    }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl font-bold text-slate-700">{progress}%</span>
+                  <span className="text-xl font-bold text-slate-700">
+                    {progress}%
+                  </span>
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">Importing Products...</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Importing Products...
+                </h3>
                 <p className="text-slate-500 text-sm max-w-xs mx-auto">
-                  Please wait while we parse the Excel file and upload your images securely.
+                  Please wait while we parse the Excel file and upload your
+                  images securely.
                 </p>
               </div>
             </div>
@@ -345,14 +381,22 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
           {/* Step 3: Result */}
           {step === 3 && result && (
             <div className="flex flex-col items-center justify-center py-8 text-center space-y-6">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${result.success ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}>
-                {result.success ? <CheckCircle size={40} /> : <AlertCircle size={40} />}
+              <div
+                className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${result.success ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}
+              >
+                {result.success ? (
+                  <CheckCircle size={40} />
+                ) : (
+                  <AlertCircle size={40} />
+                )}
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-slate-900">
                   {result.success ? "Import Complete!" : "Import Failed"}
                 </h3>
-                <p className={`text-sm max-w-sm mx-auto ${result.success ? "text-slate-600" : "text-red-600"}`}>
+                <p
+                  className={`text-sm max-w-sm mx-auto ${result.success ? "text-slate-600" : "text-red-600"}`}
+                >
                   {result.message}
                 </p>
                 {result.success && (
@@ -368,7 +412,9 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                   </p>
                   <ul className="list-disc list-inside text-xs text-red-600 space-y-1">
                     {result.errors.map((err, i) => (
-                      <li key={i}>{typeof err === "string" ? err : JSON.stringify(err)}</li>
+                      <li key={i}>
+                        {typeof err === "string" ? err : JSON.stringify(err)}
+                      </li>
                     ))}
                   </ul>
                 </div>

@@ -1,11 +1,21 @@
 import BasicInfo from "../models/basicInfo.model.js";
 
+const SINGLETON_KEY = "singleton";
+
 const ensureBasicInfo = async () => {
-  const basicInfo = await BasicInfo.findOne();
-  if (!basicInfo) {
-    return BasicInfo.create({});
-  }
-  return basicInfo;
+  return BasicInfo.findOneAndUpdate(
+    { singletonKey: SINGLETON_KEY },
+    {
+      $setOnInsert: {
+        singletonKey: SINGLETON_KEY,
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+      runValidators: true,
+    },
+  );
 };
 
 const normalizeAddress = (value = {}) => {
@@ -57,11 +67,20 @@ export const updateBasicInfo = async (data, userId = null) => {
       payload.updatedBy = userId;
     }
 
-    const basicInfo = await BasicInfo.findOneAndUpdate({}, payload, {
-      new: true,
-      upsert: true,
-      runValidators: true,
-    });
+    const basicInfo = await BasicInfo.findOneAndUpdate(
+      { singletonKey: SINGLETON_KEY },
+      {
+        $setOnInsert: {
+          singletonKey: SINGLETON_KEY,
+        },
+        $set: payload,
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+      },
+    );
 
     return { success: true, data: basicInfo };
   } catch (error) {
