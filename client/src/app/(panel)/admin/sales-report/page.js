@@ -46,9 +46,15 @@ export default function SalesPage() {
   // ── Best-selling products ──────────────────────────────────────
   useEffect(() => {
     getBestSellingItems({ limit: 5 })
-      .then((data) => setBestSellingProducts(data))
+      .then((res) => setBestSellingProducts(res.data || []))
       .catch((err) => setFetchError(err.message));
   }, []);
+
+  const bestSellingByUnits = [...bestSellingProducts].sort(
+    (a, b) =>
+      (b.unitsSold || 0) - (a.unitsSold || 0) ||
+      (b.totalRevenue || 0) - (a.totalRevenue || 0),
+  );
 
   // ── Order stats → StatsRow ─────────────────────────────────────
   useEffect(() => {
@@ -127,7 +133,7 @@ export default function SalesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <BestSellingProducts
-          products={bestSellingProducts.data}
+          products={bestSellingByUnits}
           error={fetchError}
         />
         <MostViewedItems items={mostViewedLoading ? [] : items} />

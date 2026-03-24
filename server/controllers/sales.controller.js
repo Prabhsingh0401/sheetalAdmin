@@ -2,7 +2,8 @@ import Order from "../models/order.model.js";
 import Cart from "../models/cart.model.js";
 import User from "../models/user.model.js";
 import Product from "../models/product.model.js";
-import { sendAbandonedCartEmail } from "../services/sales.service.js";
+import AbandonedCartCycle from "../models/abandonedCartCycle.model.js";
+import { sendAbandonedCartEmail } from "../services/abandonedCart.service.js";
 
 /**
  * Helper — builds a $match stage from query params.
@@ -57,6 +58,23 @@ function getDateRange(period) {
 
   from.setHours(0, 0, 0, 0);
   return { $gte: from };
+}
+
+function buildDateMatch(query = {}, period = "weekly") {
+  const { startDate, endDate } = query;
+
+  if (startDate || endDate) {
+    const match = {};
+    if (startDate) match.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      match.$lte = end;
+    }
+    return match;
+  }
+
+  return getDateRange(period);
 }
 
 /* ---------------- GROUPING ---------------- */
@@ -306,11 +324,13 @@ export const getRevenueData = async (req, res) => {
 export const getChartData = async (req, res) => {
   try {
     const period = req.query.period || "weekly";
+    const hasCustomRange = Boolean(req.query.startDate || req.query.endDate);
+    const dateMatch = buildDateMatch(req.query, period);
 
     const results = await Order.aggregate([
       {
         $match: {
-          createdAt: getDateRange(period),
+          createdAt: dateMatch,
           orderStatus: { $nin: ["Cancelled", "Returned"] },
         },
       },
@@ -342,15 +362,15 @@ export const getChartData = async (req, res) => {
 
     let data = results;
 
-    if (period === "weekly") {
+    if (!hasCustomRange && period === "weekly") {
       data = fillWeeklyData(results);
     }
 
-    if (period === "monthly") {
+    if (!hasCustomRange && period === "monthly") {
       data = fillMonthlyData(results);
     }
 
-    if (period === "yearly") {
+    if (!hasCustomRange && period === "yearly") {
       data = fillYearlyData(results);
     }
 

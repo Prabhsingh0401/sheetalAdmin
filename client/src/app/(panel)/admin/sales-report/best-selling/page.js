@@ -8,8 +8,6 @@ import {
   PackageCheck,
   IndianRupee,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import PageHeader from "@/components/admin/layout/PageHeader";
 import BestSellingProducts from "@/components/admin/sales/BestSellingProducts";
@@ -17,6 +15,20 @@ import { getBestSellingItems } from "@/services/salesService";
 import { getPaginationRange } from "@/utils/pagination";
 
 const LIMIT_OPTIONS = [5, 10, 25];
+const SORT_OPTIONS = [
+  {
+    value: "units",
+    label: "By Units Sold",
+    helper: "Primary sort",
+    icon: PackageCheck,
+  },
+  {
+    value: "revenue",
+    label: "By Revenue",
+    helper: "Secondary sort",
+    icon: IndianRupee,
+  },
+];
 
 export default function BestSellingPage() {
   const router = useRouter();
@@ -24,11 +36,17 @@ export default function BestSellingPage() {
 
   const limitFromUrl = parseInt(searchParams.get("limit")) || 5;
   const pageFromUrl = parseInt(searchParams.get("page")) || 1;
+  const sortFromUrl = searchParams.get("sort") || "units";
 
   const [limit, setLimit] = useState(
     LIMIT_OPTIONS.includes(limitFromUrl) ? limitFromUrl : 10,
   );
   const [currentPage, setCurrentPage] = useState(pageFromUrl);
+  const [sortBy, setSortBy] = useState(
+    SORT_OPTIONS.some((option) => option.value === sortFromUrl)
+      ? sortFromUrl
+      : "units",
+  );
 
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,9 +79,9 @@ export default function BestSellingPage() {
     }
   }, []);
 
-  const syncUrl = (newLimit, newPage) => {
+  const syncUrl = (newLimit, newPage, newSortBy = sortBy) => {
     router.replace(
-      `/admin/sales-report/best-selling?limit=${newLimit}&page=${newPage}`,
+      `/admin/sales-report/best-selling?limit=${newLimit}&page=${newPage}&sort=${newSortBy}`,
     );
   };
 
@@ -78,22 +96,43 @@ export default function BestSellingPage() {
     syncUrl(limit, newPage);
   };
 
+  const handleSortChange = (newSortBy) => {
+    setSortBy(newSortBy);
+    setCurrentPage(1);
+    syncUrl(limit, 1, newSortBy);
+  };
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  const sortedProducts = [...allProducts].sort((a, b) => {
+    if (sortBy === "units") {
+      return (
+        (b.unitsSold || 0) - (a.unitsSold || 0) ||
+        (b.totalRevenue || 0) - (a.totalRevenue || 0)
+      );
+    }
+
+    return (
+      (b.totalRevenue || 0) - (a.totalRevenue || 0) ||
+      (b.unitsSold || 0) - (a.unitsSold || 0)
+    );
+  });
+
   // Client-side pagination
-  const totalPages = Math.ceil(allProducts.length / limit);
-  const paginatedProducts = allProducts.slice(
+  const totalPages = Math.ceil(sortedProducts.length / limit);
+  const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * limit,
     currentPage * limit,
   );
+  const activeTopProduct = sortedProducts[0]?.name || "—";
 
   return (
     <div className="min-h-screen w-full animate-in fade-in duration-500">
       <PageHeader
         title="Best Selling Products"
-        subtitle="All-time ranking by revenue generated and units sold, including out-of-stock products"
+        subtitle="All-time ranking by units sold and revenue generated, including out-of-stock products"
         action={
           <button
             onClick={fetchData}
@@ -128,11 +167,51 @@ export default function BestSellingPage() {
         />
         <StatCard
           title="Top Product"
-          value={stats.topProduct}
+          value={activeTopProduct}
           icon={<TrendingUp size={20} />}
           color="blue"
           isText
         />
+      </div>
+
+      {/* Sort Tags */}
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+            Sort By
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {SORT_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const active = sortBy === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSortChange(option.value)}
+                className={`cursor-pointer flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold transition-all active:scale-95 ${
+                  active
+                    ? "border-slate-900 bg-slate-900 text-white shadow-md"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                }`}
+              >
+                <Icon size={14} />
+                <span>{option.label}</span>
+                <span
+                  className={`cursor-pointer rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${
+                    active
+                      ? "bg-white/15 text-white"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {option.helper}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table Card */}

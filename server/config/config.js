@@ -19,6 +19,29 @@ export const config = Object.freeze({
   adminPassword: process.env.ADMIN_PASSWORD,
   frontendDomain: process.env.FRONTEND_URL || "http://localhost:3000",
   baseUrl: process.env.BACKEND_URL || "http://localhost:8000",
+  abandonedCart: {
+    inactivityMinutes: Math.min(
+      30,
+      Math.max(15, parseInt(process.env.ABANDONED_CART_INACTIVITY_MINUTES || "20", 10) || 20),
+    ),
+    scanIntervalSeconds: Math.max(
+      15,
+      parseInt(process.env.ABANDONED_CART_SCAN_INTERVAL_SECONDS || "60", 10) || 60,
+    ),
+    retryDelayMinutes: Math.max(
+      5,
+      parseInt(process.env.ABANDONED_CART_RETRY_DELAY_MINUTES || "15", 10) || 15,
+    ),
+    maxAttempts: Math.max(
+      1,
+      parseInt(process.env.ABANDONED_CART_MAX_ATTEMPTS || "3", 10) || 3,
+    ),
+    discountPercent: Math.max(
+      1,
+      parseInt(process.env.ABANDONED_CART_DISCOUNT_PERCENT || "10", 10) || 10,
+    ),
+    couponCode: process.env.ABANDONED_CART_COUPON_CODE || "SAVE10",
+  },
   aws: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,

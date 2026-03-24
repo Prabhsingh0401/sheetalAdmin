@@ -981,11 +981,19 @@ const bulkImportRowBasedService = async (files, userId) => {
     "Stock",
     "VariantImage",
     "VariantImageName",
+    "VariantVideo",
+    "VariantVideoName",
   ];
 
   const imageMap = new Map();
   imageFiles.forEach((file) => {
     imageMap.set(file.originalname.trim().toLowerCase(), file);
+  });
+
+  const videoMap = new Map();
+  const videoFiles = files?.variantVideos || [];
+  videoFiles.forEach((file) => {
+    videoMap.set(file.originalname.trim().toLowerCase(), file);
   });
 
   const allCategories = await Category.find({}).lean();
@@ -1011,6 +1019,7 @@ const bulkImportRowBasedService = async (files, userId) => {
   };
 
   const uploadedImageCache = new Map();
+  const uploadedVideoCache = new Map();
 
   const processImage = async (filename, folder = "products") => {
     if (!filename) return null;
@@ -1027,6 +1036,26 @@ const bulkImportRowBasedService = async (files, userId) => {
     return uploaded;
   };
 
+  const processVideo = async (filename, folder = "products") => {
+    if (!filename) return null;
+    const normalized = filename.toString().trim().toLowerCase();
+    const cached = uploadedVideoCache.get(normalized);
+    if (cached) return cached;
+
+    const file = videoMap.get(normalized);
+    if (!file) return null;
+    const s3Result = await uploadS3File(file.path, folder);
+    const uploaded = {
+      url: s3Result.url,
+      public_id: s3Result.public_id,
+      mimeType: file.mimetype || "video/mp4",
+      size: file.size,
+    };
+    uploadedVideoCache.set(normalized, uploaded);
+    trackUpload(uploaded);
+    return uploaded;
+  };
+
   const buildVariantRow = async (row, rowIndex, productName) => {
     const colorName = readCell(row, ["Color", "ColorName"]);
     const sizeName = readCell(row, ["Size"]);
@@ -1037,6 +1066,11 @@ const bulkImportRowBasedService = async (files, userId) => {
       "VariantImages",
       "VariantImage",
       "VariantImageName",
+    ]);
+    const variantVideoNames = readCell(row, [
+      "VariantVideos",
+      "VariantVideo",
+      "VariantVideoName",
     ]);
     const variantSku = readCell(row, ["VariantSKU", "VSKU", "VariantSku"]);
     const colorCode = readCell(row, ["ColorCode", "HexCode"]);
@@ -1075,6 +1109,21 @@ const bulkImportRowBasedService = async (files, userId) => {
       }
     }
 
+    const variantVideoList = safeSplit(variantVideoNames);
+    if (variantVideoList.length > 1) {
+      errors.push(
+        `Row ${rowIndex} (${productName}): Only one variant video is supported; using "${variantVideoList[0]}"`,
+      );
+    }
+    const v_video = variantVideoList[0]
+      ? await processVideo(variantVideoList[0])
+      : null;
+    if (variantVideoList[0] && !v_video) {
+      errors.push(
+        `Row ${rowIndex} (${productName}): Variant video "${variantVideoList[0]}" not found in uploaded videos`,
+      );
+    }
+
     const v_image = gallery[0]
       ? {
           url: gallery[0].url,
@@ -1087,6 +1136,7 @@ const bulkImportRowBasedService = async (files, userId) => {
       colorCode: colorCode ? colorCode.toString() : "#000000",
       v_sku: variantSku ? variantSku.toString().trim().toUpperCase() : "",
       v_image,
+      v_video,
       gallery,
       size: {
         name: sizeName.toString(),
@@ -1579,7 +1629,16 @@ export const bulkImportService = async (files, userId) => {
               v_image = await processImage(v.imageFilename);
               delete v.imageFilename;
             }
-            variants.push({ ...v, ...(v_image && { v_image }) });
+            let v_video = null;
+            if (v.videoFilename) {
+              v_video = await processVideo(v.videoFilename);
+              delete v.videoFilename;
+            }
+            variants.push({
+              ...v,
+              ...(v_image && { v_image }),
+              ...(v_video && { v_video }),
+            });
           }
         } catch (e) {
           errors.push(

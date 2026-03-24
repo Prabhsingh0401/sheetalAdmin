@@ -4,9 +4,6 @@ import Link from "next/link";
 import {
   Mail,
   ArrowRight,
-  Calendar,
-  Download,
-  ArrowUp,
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
@@ -34,6 +31,7 @@ export default function AdminDashboard() {
   const [orders, setOrders]               = useState([]);
   const [period, setPeriod]               = useState("weekly");
   const [chartTotals, setChartTotals]     = useState({ sales: 0, revenue: 0 });
+  const [previousTotals, setPreviousTotals] = useState({ sales: 0, revenue: 0 });
   const [totalsLoading, setTotalsLoading] = useState(true);
 
   useEffect(() => {
@@ -76,12 +74,64 @@ export default function AdminDashboard() {
   }, []);
 
   // Refetch totals whenever period changes — drives the stat cards
+  const getPeriodRange = (selectedPeriod, offset = 0) => {
+    const now = new Date();
+    let start;
+    let end;
+
+    if (selectedPeriod === "monthly") {
+      const monthIndex = now.getMonth() - offset;
+      start = new Date(now.getFullYear(), monthIndex, 1);
+      end = new Date(now.getFullYear(), monthIndex + 1, 0, 23, 59, 59, 999);
+    } else if (selectedPeriod === "yearly") {
+      const year = now.getFullYear() - offset;
+      start = new Date(year, 0, 1);
+      end = new Date(year, 11, 31, 23, 59, 59, 999);
+    } else {
+      const startOffset = offset ? 13 : 6;
+      const endOffset = offset ? 7 : 0;
+      start = new Date();
+      start.setDate(now.getDate() - startOffset);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setDate(now.getDate() - endOffset);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    return {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    };
+  };
+
+  const getTrendBadge = (current, previous) => {
+    if (current == null || previous == null) return null;
+    if (current === 0 && previous === 0) return null;
+    if (previous === 0) return current > 0 ? { positive: true, label: "New" } : null;
+
+    const delta = current - previous;
+    if (delta === 0) return null;
+
+    return {
+      positive: delta > 0,
+      label: `${delta > 0 ? "+" : "-"}${Math.abs((delta / previous) * 100).toFixed(1)}%`,
+    };
+  };
+
   useEffect(() => {
     const fetchTotals = async () => {
       setTotalsLoading(true);
       try {
-        const res = await getChartData({ period });
-        if (res.success) setChartTotals(res.totals || { sales: 0, revenue: 0 });
+        const currentRange = getPeriodRange(period, 0);
+        const previousRange = getPeriodRange(period, 1);
+
+        const [currentRes, previousRes] = await Promise.all([
+          getChartData({ period, ...currentRange }),
+          getChartData({ period, ...previousRange }),
+        ]);
+
+        if (currentRes.success) setChartTotals(currentRes.totals || { sales: 0, revenue: 0 });
+        if (previousRes.success) setPreviousTotals(previousRes.totals || { sales: 0, revenue: 0 });
       } catch (err) {
         console.error("Error fetching chart totals:", err);
       } finally {
@@ -106,31 +156,37 @@ export default function AdminDashboard() {
   };
 
   const PERIOD_LABEL = { weekly: "This week", monthly: "This month", yearly: "This year" };
+  const salesTrend = getTrendBadge(chartTotals.revenue, previousTotals.revenue);
+  const ordersTrend = getTrendBadge(chartTotals.sales, previousTotals.sales);
 
   const topStats = [
     {
       label: "Total Sales",
       val:    totalsLoading ? "..." : formatCurrency(chartTotals.revenue),
-      change: PERIOD_LABEL[period],
-      positive: true,
+      change: salesTrend ? salesTrend.label : PERIOD_LABEL[period],
+      positive: salesTrend?.positive ?? true,
+      showArrow: Boolean(salesTrend),
     },
     {
       label: "Total Orders",
       val:    totalsLoading ? "..." : chartTotals.sales.toLocaleString(),
-      change: PERIOD_LABEL[period],
-      positive: true,
+      change: ordersTrend ? ordersTrend.label : PERIOD_LABEL[period],
+      positive: ordersTrend?.positive ?? true,
+      showArrow: Boolean(ordersTrend),
     },
     {
       label: "Active Customers",
       val:    loading ? "..." : (stats.activeUsers?.toLocaleString() || "0"),
-      change: "+5.7%",
+      change: "",
       positive: true,
+      showArrow: false,
     },
     {
       label: "Total Products",
       val:    loading ? "..." : (stats.totalProducts?.toLocaleString() || "0"),
-      change: "+0.8%",
+      change: "",
       positive: true,
+      showArrow: false,
     },
   ];
 
@@ -146,10 +202,10 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-3">
             
-            <button className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">
+            {/* <button className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-all">
               <Download size={15} />
               Export Report
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -162,11 +218,13 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-extrabold text-slate-900 tracking-wide leading-none">
                   {stat.val}
                 </h2>
-                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
-                  stat.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
-                }`}>
-                  {stat.positive ? <TrendingUp/> : <TrendingDown/>}{stat.change}
-                </span>
+                {stat.showArrow && stat.change ? (
+                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                    stat.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+                  }`}>
+                    {stat.positive ? <TrendingUp/> : <TrendingDown/>}{stat.change}
+                  </span>
+                ) : null}
               </div>
             </div>
           ))}

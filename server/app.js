@@ -3,12 +3,14 @@ import { config } from "./config/config.js";
 import connectDB from "./config/db.js";
 import { seedAdmin } from "./scripts/seedAdmin.js";
 import initializeFirebase from "./config/firebase.js";
+import { startAbandonedCartScheduler } from "./services/abandonedCart.service.js";
 
 const startServer = async () => {
   try {
     initializeFirebase();
     await connectDB();
     await seedAdmin();
+    await startAbandonedCartScheduler();
 
     const PORT = config.port;
     app.listen(PORT, () => {
