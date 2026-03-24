@@ -407,7 +407,9 @@ export const getCouponStatsService = async () => {
 
 export const getHomepageCouponService = async () => {
   try {
-    const coupon = await Coupon.findOne({ showOnHomepage: true }).lean();
+    const coupon = await Coupon.findOne({ showOnHomepage: true })
+      .populate({ path: "applicableIds", select: "name slug" })
+      .lean();
     return { success: true, data: coupon ?? null };
   } catch (error) {
     return { success: false, statusCode: 500, message: error.message };
