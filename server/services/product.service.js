@@ -13,6 +13,10 @@ import {
   rebuildIndex,
 } from "./ngram.search.service.js";
 import { searchService } from "./search.service.js";
+import {
+  sanitizeProductHtml,
+  sanitizeProductRecord,
+} from "../utils/productHtmlSanitizer.js";
 
 const buildUploadedImage = (file, alt) => ({
   url: file.location || file.path,
@@ -328,7 +332,7 @@ export const getAllProductsService = async (queryStr) => {
 
   return {
     success: true,
-    products,
+    products: products.map(sanitizeProductRecord),
     totalProducts,
     currentPage: Number(page),
     totalPages: Math.ceil(totalProducts / limit),
@@ -358,7 +362,7 @@ export const getNewArrivalsService = async () => {
     products = [...flagged, ...backfill];
   }
 
-  return { success: true, products };
+  return { success: true, products: products.map(sanitizeProductRecord) };
 };
 
 export const getProductDetailsService = async (id) => {
@@ -368,7 +372,7 @@ export const getProductDetailsService = async (id) => {
     .populate("sizeChart")
     .lean();
   return product
-    ? { success: true, product }
+    ? { success: true, product: sanitizeProductRecord(product) }
     : { success: false, statusCode: 404 };
 };
 
@@ -428,6 +432,9 @@ export const createProductService = async (data, files, userId) => {
   if (parsedData.subCategory === "null" || !parsedData.subCategory)
     parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
+
+  parsedData.description = sanitizeProductHtml(parsedData.description || "");
+  parsedData.materialCare = sanitizeProductHtml(parsedData.materialCare || "");
 
   const mainImage = {
     url: files?.mainImage
@@ -544,7 +551,7 @@ export const createProductService = async (data, files, userId) => {
   // Sync to n-gram search index
   await syncToIndex(product, "product");
 
-  return { success: true, product };
+  return { success: true, product: sanitizeProductRecord(product) };
 };
 
 export const updateProductService = async (id, data, files) => {
@@ -607,6 +614,9 @@ export const updateProductService = async (id, data, files) => {
   if (parsedData.subCategory === "null" || !parsedData.subCategory)
     parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
+
+  parsedData.description = sanitizeProductHtml(parsedData.description || "");
+  parsedData.materialCare = sanitizeProductHtml(parsedData.materialCare || "");
 
   if (parsedData.name) {
     parsedData.slug = slugify(parsedData.name, { lower: true, strict: true });
@@ -769,7 +779,7 @@ export const updateProductService = async (id, data, files) => {
   // Sync to n-gram search index
   await syncToIndex(updatedProduct, "product");
 
-  return { success: true, product: updatedProduct };
+  return { success: true, product: sanitizeProductRecord(updatedProduct) };
 };
 
 export const deleteProductService = async (id) => {
@@ -1676,9 +1686,9 @@ export const bulkImportService = async (files, userId) => {
         name,
         sku,
         slug,
-        description: item.Description,
+        description: sanitizeProductHtml(item.Description || ""),
         shortDescription: item.ShortDescription || "",
-        materialCare: item.MaterialCare,
+        materialCare: sanitizeProductHtml(item.MaterialCare || ""),
         category: categoryId,
         subCategory: item.SubCategory || null,
         stock: Number(item.Stock) || 0,
@@ -1852,10 +1862,24 @@ export const getAllReviewsService = async (
 ) => {
   const query = {};
   if (status === "approved") query.isApproved = true;
-  if (status === "pending") query.isApproved = false;
+  if (status === "pending") query.isApproved = { $ne: true };
 
   const total = await Review.countDocuments(query);
   const skip = (page - 1) * limit;
+
+  const [approvedCount, pendingCount, averageRatingResult] = await Promise.all([
+    Review.countDocuments({ isApproved: true }),
+    Review.countDocuments({ isApproved: { $ne: true } }),
+    Review.aggregate([
+      { $match: { isApproved: true } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+        },
+      },
+    ]),
+  ]);
 
   const reviews = await Review.find(query)
     .populate("product", "name mainImage")
@@ -1869,6 +1893,9 @@ export const getAllReviewsService = async (
     total,
     page: Number(page),
     limit: Number(limit),
+    approvedCount,
+    pendingCount,
+    averageRating: averageRatingResult[0]?.averageRating || 0,
   };
 };
 
@@ -1988,7 +2015,7 @@ export const getTrendingProductsService = async () => {
     .populate("category", "name slug")
     .lean();
 
-  return { success: true, products };
+  return { success: true, products: products.map(sanitizeProductRecord) };
 };
 
 export const fetchCollectionProducts = async () => {

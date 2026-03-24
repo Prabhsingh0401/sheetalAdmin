@@ -52,6 +52,19 @@ export const getBasicInfo = async (req, res, next) => {
   }
 };
 
+export const getPublicBasicInfo = async (req, res, next) => {
+  try {
+    const result = await basicInfoService.getBasicInfo();
+    if (!result.success) {
+      return sendSafeBasicInfoError(res, "load", result);
+    }
+
+    return successResponse(res, 200, result.data, "Basic info retrieved");
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateBasicInfo = async (req, res, next) => {
   try {
     const result = await basicInfoService.updateBasicInfo(

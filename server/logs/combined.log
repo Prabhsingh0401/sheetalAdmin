@@ -529,3 +529,10 @@
 {"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T09:59:58.221Z"}
 {"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:00:14.196Z"}
 {"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:06:35.375Z"}
+{"level":"info","message":"[AbandonedCart] Order completion finalized for cart 69be2cb4fed8e71499667ad6","timestamp":"2026-03-24T10:08:53.169Z"}
+{"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:11:54.225Z"}
+{"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:19:37.378Z"}
+{"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:21:27.328Z"}
+{"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:24:03.929Z"}
+{"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:24:21.793Z"}
+{"level":"info","message":"[AbandonedCart] Scheduler started with 60s interval","timestamp":"2026-03-24T10:26:11.357Z"}

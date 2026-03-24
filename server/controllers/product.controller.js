@@ -341,7 +341,19 @@ export const getAllReviews = async (req, res, next) => {
       200,
       result.reviews,
       "Reviews fetched successfully",
-      { total: result.total, page: result.page, limit: result.limit }
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        meta: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          approvedCount: result.approvedCount,
+          pendingCount: result.pendingCount,
+          averageRating: result.averageRating,
+        },
+      }
     );
   } catch (error) {
     next(error);

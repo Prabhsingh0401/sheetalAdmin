@@ -14,9 +14,12 @@ import {
   BadgePercent,
   Ruler,
 } from "lucide-react";
+import { sanitizeProductRichText } from "@/utils/productRichTextSanitizer";
 
 export default function ViewProductDrawer({ isOpen, onClose, product }) {
   if (!product) return null;
+
+  const sanitizedDescription = sanitizeProductRichText(product.description);
 
   return (
     <>
@@ -209,7 +212,7 @@ export default function ViewProductDrawer({ isOpen, onClose, product }) {
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div
                 className="prose prose-sm max-w-full text-slate-600 text-xs leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: product.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
               />
             </div>
           </div>

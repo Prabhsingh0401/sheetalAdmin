@@ -47,7 +47,7 @@ export default function ReviewsPage() {
     try {
       const res = await getAdminReviews(1, 1, "all");
       if (res.success) {
-        const meta = res.meta || {};
+        const meta = res.meta || res;
         setStats({
           average: meta.averageRating ?? 0,
           approved: meta.approvedCount ?? 0,
@@ -65,7 +65,7 @@ export default function ReviewsPage() {
       const res = await getAdminReviews(page, PAGE_SIZE, filter);
       if (res.success) {
         setReviews(res.data || []);
-        setTotalCount(res.meta?.total ?? 0);
+        setTotalCount(res.meta?.total ?? res.total ?? 0);
       }
     } catch {
       toast.error("Failed to fetch reviews");
