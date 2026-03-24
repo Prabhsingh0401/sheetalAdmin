@@ -21,6 +21,15 @@ import DeleteConfirmModal from "../common/DeleteConfirmModal";
 
 import { getCoupons, deleteCoupon } from "@/services/couponService";
 
+const getCouponStatus = (coupon) => {
+  const isExpired = coupon?.endDate
+    ? new Date(coupon.endDate).getTime() < Date.now()
+    : false;
+
+  if (isExpired) return "Expired";
+  return coupon?.isActive ? "Live" : "Paused";
+};
+
 export default function CouponTable({ refreshStats }) {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -92,7 +101,7 @@ export default function CouponTable({ refreshStats }) {
           c.code?.toLowerCase().includes(search.toLowerCase()) ||
           c.description?.toLowerCase().includes(search.toLowerCase());
 
-        const currentStatus = c.isActive ? "Active" : "Inactive";
+        const currentStatus = getCouponStatus(c);
         const statusMatch =
           statusFilter === "All" || currentStatus === statusFilter;
 
@@ -142,8 +151,9 @@ export default function CouponTable({ refreshStats }) {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            <option value="Live">Live</option>
+            <option value="Expired">Expired</option>
+            <option value="Paused">Paused</option>
           </select>
 
           <button
@@ -283,12 +293,14 @@ export default function CouponTable({ refreshStats }) {
                   <td className="px-4 py-4">
                     <span
                       className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${
-                        c.isActive
+                        getCouponStatus(c) === "Live"
                           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-rose-50 text-rose-700 border-rose-200"
+                          : getCouponStatus(c) === "Expired"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-rose-50 text-rose-700 border-rose-200"
                       }`}
                     >
-                      {c.isActive ? "Live" : "Paused"}
+                      {getCouponStatus(c)}
                     </span>
                   </td>
 

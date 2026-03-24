@@ -107,7 +107,7 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
     },
     {
       icon: InfoIcon,
-      label: "Basic Info",
+      label: "Invoice Info",
       href: "/admin/basic-info",
     },
     { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },

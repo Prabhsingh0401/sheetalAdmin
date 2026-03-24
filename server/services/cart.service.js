@@ -1,6 +1,9 @@
 import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
+import {
+  handleUserActivity,
+} from "./abandonedCart.service.js";
 
 export const getCartByUserIdService = async (userId) => {
   const cart = await Cart.findOne({ user: userId }).populate({
@@ -97,6 +100,12 @@ export const addToCartService = async (
   }
 
   await cart.save();
+  handleUserActivity({ userId }).catch((error) => {
+    console.error(
+      `[AbandonedCart] Failed to reset cycle after addToCart for ${userId}:`,
+      error.message,
+    );
+  });
   return {
     success: true,
     data: cart,
@@ -118,6 +127,12 @@ export const removeFromCartService = async (userId, itemId) => {
   if (itemIndex > -1) {
     cart.items.splice(itemIndex, 1); // Remove the item
     await cart.save();
+    handleUserActivity({ userId }).catch((error) => {
+      console.error(
+        `[AbandonedCart] Failed to reset cycle after removeFromCart for ${userId}:`,
+        error.message,
+      );
+    });
     return {
       success: true,
       data: cart,
@@ -155,6 +170,12 @@ export const updateCartItemQuantityService = async (
   }
 
   await cart.save();
+  handleUserActivity({ userId }).catch((error) => {
+    console.error(
+      `[AbandonedCart] Failed to reset cycle after updateCartItemQuantity for ${userId}:`,
+      error.message,
+    );
+  });
   return {
     success: true,
     data: cart,
@@ -171,6 +192,12 @@ export const clearCartService = async (userId) => {
 
   cart.items = [];
   await cart.save();
+  handleUserActivity({ userId }).catch((error) => {
+    console.error(
+      `[AbandonedCart] Failed to reset cycle after clearCart for ${userId}:`,
+      error.message,
+    );
+  });
 
   return {
     success: true,
@@ -214,5 +241,11 @@ export const mergeGuestCartService = async (userId, guestItems) => {
   }
 
   await cart.save();
+  handleUserActivity({ userId }).catch((error) => {
+    console.error(
+      `[AbandonedCart] Failed to reset cycle after mergeGuestCart for ${userId}:`,
+      error.message,
+    );
+  });
   return { success: true, data: cart, message: "Guest cart merged successfully" };
 };

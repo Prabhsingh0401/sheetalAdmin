@@ -5,6 +5,7 @@ import Cart from "../models/cart.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { createShiprocketOrder } from "./shiprocket.service.js";
 import { sendOrderConfirmationEmail } from "./order.email.service.js";
+import { handleOrderCompletion } from "./abandonedCart.service.js";
 
 // --- CREATE NEW ORDER ---
 export const createOrderService = async (data, userId) => {
@@ -96,6 +97,15 @@ export const createOrderService = async (data, userId) => {
     } catch (cartErr) {
       console.error(
         `[COD] Failed to clear cart for user ${userId}:`,
+        cartErr.message,
+      );
+    }
+
+    try {
+      await handleOrderCompletion({ userId });
+    } catch (cartErr) {
+      console.error(
+        `[COD] Failed to finalize abandoned cart cycle for user ${userId}:`,
         cartErr.message,
       );
     }

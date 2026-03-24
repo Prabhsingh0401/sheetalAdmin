@@ -156,6 +156,7 @@ export const getSampleExcel = async (req, res, next) => {
       "DiscountPrice",
       "Stock",
       "VariantImage",
+      "VariantVideo",
       "MetaTitle",
       "MetaDescription",
       "MetaKeywords",
@@ -190,6 +191,7 @@ export const getSampleExcel = async (req, res, next) => {
         DiscountPrice: 3999,
         Stock: 10,
         VariantImage: "example-variant.jpg",
+        VariantVideo: "example-variant.mp4",
         MetaTitle: "Example Product",
         MetaDescription: "Example meta description.",
         MetaKeywords: "example,product",
@@ -224,6 +226,7 @@ export const getSampleExcel = async (req, res, next) => {
         DiscountPrice: 0,
         Stock: 7,
         VariantImage: "example-variant-2.jpg",
+        VariantVideo: "example-variant-2.mp4",
         MetaTitle: "",
         MetaDescription: "",
         MetaKeywords: "",
@@ -338,7 +341,19 @@ export const getAllReviews = async (req, res, next) => {
       200,
       result.reviews,
       "Reviews fetched successfully",
-      { total: result.total, page: result.page, limit: result.limit }
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        meta: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          approvedCount: result.approvedCount,
+          pendingCount: result.pendingCount,
+          averageRating: result.averageRating,
+        },
+      }
     );
   } catch (error) {
     next(error);

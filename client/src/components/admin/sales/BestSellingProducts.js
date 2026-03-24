@@ -70,7 +70,7 @@ export default function BestSellingProducts({
           </h3>
         </div>
         <Link
-          href="/admin/products"
+          href="/admin/sales-report/best-selling"
           className="text-sm font-semibold text-indigo-500 hover:text-indigo-700 flex items-center gap-1 transition-colors"
         >
           See all Products <ArrowRight size={14} />

@@ -9,7 +9,6 @@ import {
   Info,
   Percent,
   IndianRupee,
-  Users,
   ShieldCheck,
   UserCheck,
   Hash,
@@ -19,6 +18,15 @@ import {
 export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
   if (!coupon) return null;
 
+  const isExpired = coupon.endDate
+    ? new Date(coupon.endDate).getTime() < Date.now()
+    : false;
+  const couponStatus = isExpired
+    ? "Expired"
+    : coupon.isActive
+      ? "Live"
+      : "Paused";
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-GB", {
@@ -27,6 +35,13 @@ export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
       year: "numeric",
     });
   };
+
+  const statusChipClass =
+    couponStatus === "Live"
+      ? "text-emerald-600"
+      : couponStatus === "Expired"
+        ? "text-amber-600"
+        : "text-rose-600";
 
   return (
     <>
@@ -89,7 +104,7 @@ export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
               </h4>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
                   Benefit Type
                 </p>
@@ -134,7 +149,7 @@ export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
               </div>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
-                  <ShieldCheck size={10} /> Max Discount
+                  <Activity size={10} /> Max Discount
                 </p>
                 <p className="text-sm font-black text-slate-900">
                   {coupon.maxDiscountAmount
@@ -154,10 +169,12 @@ export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
                   <Activity size={10} /> Status
                 </p>
-                <span
-                  className={`text-[10px] font-black uppercase ${coupon.isActive ? "text-emerald-600" : "text-rose-600"}`}
-                >
-                  {coupon.isActive ? "● Active" : "○ Inactive"}
+                <span className={`text-[10px] font-black uppercase ${statusChipClass}`}>
+                  {couponStatus === "Live"
+                    ? "Live"
+                    : couponStatus === "Expired"
+                      ? "Expired"
+                      : "Paused"}
                 </span>
               </div>
             </div>

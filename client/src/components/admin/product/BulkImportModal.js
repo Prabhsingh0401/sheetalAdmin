@@ -6,6 +6,7 @@ import {
   UploadCloud,
   FileSpreadsheet,
   Image as ImageIcon,
+  Video,
   CheckCircle,
   AlertCircle,
   Loader2,
@@ -17,12 +18,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
   const [step, setStep] = useState(1);
   const [excelFile, setExcelFile] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
+  const [variantVideoFiles, setVariantVideoFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
 
   const excelInputRef = useRef(null);
   const imagesInputRef = useRef(null);
+  const variantVideosInputRef = useRef(null);
 
   const handleExcelChange = (e) => {
     const file = e.target.files[0];
@@ -55,10 +58,47 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
     setImageFiles((prev) => [...prev, ...newEntries]);
   };
 
+  const clearVariantVideoInput = () => {
+    if (variantVideosInputRef.current) {
+      variantVideosInputRef.current.value = "";
+    }
+  };
+
+  const handleVariantVideosChange = (e) => {
+    const files = Array.from(e.target.files);
+    const validVideos = files.filter((file) => {
+      const ext = file.name.split(".").pop().toLowerCase();
+      return ["mp4", "webm", "mov", "mkv"].includes(ext);
+    });
+
+    if (validVideos.length !== files.length) {
+      toast.error(
+        "Some files were skipped. Only MP4, WebM, MOV, and MKV videos are allowed.",
+      );
+    }
+
+    const newEntries = validVideos.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    setVariantVideoFiles((prev) => [...prev, ...newEntries]);
+  };
+
   const removeImage = (index) => {
     setImageFiles((prev) => {
       URL.revokeObjectURL(prev[index].url);
       return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const removeVariantVideo = (index) => {
+    setVariantVideoFiles((prev) => {
+      URL.revokeObjectURL(prev[index].url);
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) {
+        clearVariantVideoInput();
+      }
+      return next;
     });
   };
 
@@ -75,6 +115,9 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
       const formData = new FormData();
       formData.append("file", excelFile);
       imageFiles.forEach(({ file }) => formData.append("images", file));
+      variantVideoFiles.forEach(({ file }) =>
+        formData.append("variantVideos", file),
+      );
 
       const interval = setInterval(() => {
         setProgress((prev) => {
@@ -116,8 +159,11 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
   const resetForm = () => {
     imageFiles.forEach(({ url }) => URL.revokeObjectURL(url));
+    variantVideoFiles.forEach(({ url }) => URL.revokeObjectURL(url));
     setExcelFile(null);
     setImageFiles([]);
+    setVariantVideoFiles([]);
+    clearVariantVideoInput();
     setStep(1);
     setProgress(0);
     setResult(null);
@@ -141,7 +187,8 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
               Bulk Import Products
             </h2>
             <p className="text-sm text-slate-500">
-              Upload Excel rows grouped by product, plus matching images
+              Upload Excel rows grouped by product, plus matching images and
+              variant videos
             </p>
           </div>
           <button
@@ -303,7 +350,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
                     <p className="text-xs text-slate-500">
                       {imageFiles.length} images selected
@@ -326,6 +373,89 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <p className="text-xs text-slate-400 italic">
                   Note: Only JPEG, PNG, and WebP images are accepted. Filenames
                   must match exactly with the names in the Excel sheet.
+                </p>
+              </div>
+
+              {/* Variant Videos Upload */}
+              <div className="space-y-3">
+                <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <span className="bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                    3
+                  </span>
+                  Upload Variant Videos
+                </p>
+
+                <input
+                  type="file"
+                  id="variant-videos-upload"
+                  ref={variantVideosInputRef}
+                  className="sr-only"
+                  multiple
+                  accept=".mp4,.webm,.mov,.mkv,video/*"
+                  onChange={handleVariantVideosChange}
+                />
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+                    <label
+                      htmlFor="variant-videos-upload"
+                      className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-white transition-all bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1"
+                    >
+                      <Video className="w-8 h-8 text-slate-300 mb-1" />
+                      <span className="text-xs font-medium text-slate-500">
+                        Add Videos
+                      </span>
+                    </label>
+
+                    {variantVideoFiles.map((entry, idx) => (
+                      <div
+                        key={idx}
+                        className="aspect-square relative rounded-lg overflow-hidden border border-slate-200 bg-white group"
+                      >
+                        <video
+                          src={entry.url}
+                          className="w-full h-full object-cover bg-black"
+                          muted
+                          playsInline
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeVariantVideo(idx)}
+                          aria-label={`Remove ${entry.file.name}`}
+                          className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shadow-sm hover:bg-white"
+                        >
+                          <X size={12} />
+                        </button>
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate">
+                          {entry.file.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-slate-500">
+                      {variantVideoFiles.length} videos selected
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        variantVideoFiles.forEach(({ url }) =>
+                          URL.revokeObjectURL(url),
+                        );
+                        setVariantVideoFiles([]);
+                        clearVariantVideoInput();
+                      }}
+                      className={`text-xs text-red-600 hover:underline ${variantVideoFiles.length === 0 ? "invisible" : ""}`}
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400 italic">
+                  Note: Variant video filenames must match the VariantVideo
+                  column in the Excel sheet.
                 </p>
               </div>
             </div>

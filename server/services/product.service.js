@@ -13,6 +13,10 @@ import {
   rebuildIndex,
 } from "./ngram.search.service.js";
 import { searchService } from "./search.service.js";
+import {
+  sanitizeProductHtml,
+  sanitizeProductRecord,
+} from "../utils/productHtmlSanitizer.js";
 
 const buildUploadedImage = (file, alt) => ({
   url: file.location || file.path,
@@ -328,7 +332,7 @@ export const getAllProductsService = async (queryStr) => {
 
   return {
     success: true,
-    products,
+    products: products.map(sanitizeProductRecord),
     totalProducts,
     currentPage: Number(page),
     totalPages: Math.ceil(totalProducts / limit),
@@ -358,7 +362,7 @@ export const getNewArrivalsService = async () => {
     products = [...flagged, ...backfill];
   }
 
-  return { success: true, products };
+  return { success: true, products: products.map(sanitizeProductRecord) };
 };
 
 export const getProductDetailsService = async (id) => {
@@ -368,7 +372,7 @@ export const getProductDetailsService = async (id) => {
     .populate("sizeChart")
     .lean();
   return product
-    ? { success: true, product }
+    ? { success: true, product: sanitizeProductRecord(product) }
     : { success: false, statusCode: 404 };
 };
 
@@ -428,6 +432,9 @@ export const createProductService = async (data, files, userId) => {
   if (parsedData.subCategory === "null" || !parsedData.subCategory)
     parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
+
+  parsedData.description = sanitizeProductHtml(parsedData.description || "");
+  parsedData.materialCare = sanitizeProductHtml(parsedData.materialCare || "");
 
   const mainImage = {
     url: files?.mainImage
@@ -544,7 +551,7 @@ export const createProductService = async (data, files, userId) => {
   // Sync to n-gram search index
   await syncToIndex(product, "product");
 
-  return { success: true, product };
+  return { success: true, product: sanitizeProductRecord(product) };
 };
 
 export const updateProductService = async (id, data, files) => {
@@ -607,6 +614,9 @@ export const updateProductService = async (id, data, files) => {
   if (parsedData.subCategory === "null" || !parsedData.subCategory)
     parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
+
+  parsedData.description = sanitizeProductHtml(parsedData.description || "");
+  parsedData.materialCare = sanitizeProductHtml(parsedData.materialCare || "");
 
   if (parsedData.name) {
     parsedData.slug = slugify(parsedData.name, { lower: true, strict: true });
@@ -769,7 +779,7 @@ export const updateProductService = async (id, data, files) => {
   // Sync to n-gram search index
   await syncToIndex(updatedProduct, "product");
 
-  return { success: true, product: updatedProduct };
+  return { success: true, product: sanitizeProductRecord(updatedProduct) };
 };
 
 export const deleteProductService = async (id) => {
@@ -981,11 +991,19 @@ const bulkImportRowBasedService = async (files, userId) => {
     "Stock",
     "VariantImage",
     "VariantImageName",
+    "VariantVideo",
+    "VariantVideoName",
   ];
 
   const imageMap = new Map();
   imageFiles.forEach((file) => {
     imageMap.set(file.originalname.trim().toLowerCase(), file);
+  });
+
+  const videoMap = new Map();
+  const videoFiles = files?.variantVideos || [];
+  videoFiles.forEach((file) => {
+    videoMap.set(file.originalname.trim().toLowerCase(), file);
   });
 
   const allCategories = await Category.find({}).lean();
@@ -1011,6 +1029,7 @@ const bulkImportRowBasedService = async (files, userId) => {
   };
 
   const uploadedImageCache = new Map();
+  const uploadedVideoCache = new Map();
 
   const processImage = async (filename, folder = "products") => {
     if (!filename) return null;
@@ -1027,6 +1046,35 @@ const bulkImportRowBasedService = async (files, userId) => {
     return uploaded;
   };
 
+  const processVideo = async (filename, folder = "products") => {
+    if (!filename) return null;
+    const normalized = filename.toString().trim().toLowerCase();
+    const cached = uploadedVideoCache.get(normalized);
+    if (cached) return cached;
+
+    const file = videoMap.get(normalized);
+    if (!file) return null;
+    const s3Result = await uploadS3File(file.path, folder);
+    const uploaded = {
+      url: s3Result.url,
+      public_id: s3Result.public_id,
+      mimeType: file.mimetype || "video/mp4",
+      size: file.size,
+    };
+    uploadedVideoCache.set(normalized, uploaded);
+    trackUpload(uploaded);
+    if (file?.path) {
+      try {
+        await deleteFile(file.path);
+      } catch (error) {
+        console.warn(
+          `[BulkImport] Failed to remove temp video file "${file.path}": ${error.message}`,
+        );
+      }
+    }
+    return uploaded;
+  };
+
   const buildVariantRow = async (row, rowIndex, productName) => {
     const colorName = readCell(row, ["Color", "ColorName"]);
     const sizeName = readCell(row, ["Size"]);
@@ -1037,6 +1085,11 @@ const bulkImportRowBasedService = async (files, userId) => {
       "VariantImages",
       "VariantImage",
       "VariantImageName",
+    ]);
+    const variantVideoNames = readCell(row, [
+      "VariantVideos",
+      "VariantVideo",
+      "VariantVideoName",
     ]);
     const variantSku = readCell(row, ["VariantSKU", "VSKU", "VariantSku"]);
     const colorCode = readCell(row, ["ColorCode", "HexCode"]);
@@ -1075,6 +1128,21 @@ const bulkImportRowBasedService = async (files, userId) => {
       }
     }
 
+    const variantVideoList = safeSplit(variantVideoNames);
+    if (variantVideoList.length > 1) {
+      errors.push(
+        `Row ${rowIndex} (${productName}): Only one variant video is supported; using "${variantVideoList[0]}"`,
+      );
+    }
+    const v_video = variantVideoList[0]
+      ? await processVideo(variantVideoList[0])
+      : null;
+    if (variantVideoList[0] && !v_video) {
+      errors.push(
+        `Row ${rowIndex} (${productName}): Variant video "${variantVideoList[0]}" not found in uploaded videos`,
+      );
+    }
+
     const v_image = gallery[0]
       ? {
           url: gallery[0].url,
@@ -1087,6 +1155,7 @@ const bulkImportRowBasedService = async (files, userId) => {
       colorCode: colorCode ? colorCode.toString() : "#000000",
       v_sku: variantSku ? variantSku.toString().trim().toUpperCase() : "",
       v_image,
+      v_video,
       gallery,
       size: {
         name: sizeName.toString(),
@@ -1397,7 +1466,7 @@ const bulkImportRowBasedService = async (files, userId) => {
     }
 
     try {
-      const allFiles = [excelFile, ...imageFiles];
+      const allFiles = [excelFile, ...imageFiles, ...videoFiles];
       for (const f of allFiles) {
         if (f?.path) await deleteFile(f.path);
       }
@@ -1579,7 +1648,16 @@ export const bulkImportService = async (files, userId) => {
               v_image = await processImage(v.imageFilename);
               delete v.imageFilename;
             }
-            variants.push({ ...v, ...(v_image && { v_image }) });
+            let v_video = null;
+            if (v.videoFilename) {
+              v_video = await processVideo(v.videoFilename);
+              delete v.videoFilename;
+            }
+            variants.push({
+              ...v,
+              ...(v_image && { v_image }),
+              ...(v_video && { v_video }),
+            });
           }
         } catch (e) {
           errors.push(
@@ -1608,9 +1686,9 @@ export const bulkImportService = async (files, userId) => {
         name,
         sku,
         slug,
-        description: item.Description,
+        description: sanitizeProductHtml(item.Description || ""),
         shortDescription: item.ShortDescription || "",
-        materialCare: item.MaterialCare,
+        materialCare: sanitizeProductHtml(item.MaterialCare || ""),
         category: categoryId,
         subCategory: item.SubCategory || null,
         stock: Number(item.Stock) || 0,
@@ -1784,10 +1862,24 @@ export const getAllReviewsService = async (
 ) => {
   const query = {};
   if (status === "approved") query.isApproved = true;
-  if (status === "pending") query.isApproved = false;
+  if (status === "pending") query.isApproved = { $ne: true };
 
   const total = await Review.countDocuments(query);
   const skip = (page - 1) * limit;
+
+  const [approvedCount, pendingCount, averageRatingResult] = await Promise.all([
+    Review.countDocuments({ isApproved: true }),
+    Review.countDocuments({ isApproved: { $ne: true } }),
+    Review.aggregate([
+      { $match: { isApproved: true } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+        },
+      },
+    ]),
+  ]);
 
   const reviews = await Review.find(query)
     .populate("product", "name mainImage")
@@ -1801,6 +1893,9 @@ export const getAllReviewsService = async (
     total,
     page: Number(page),
     limit: Number(limit),
+    approvedCount,
+    pendingCount,
+    averageRating: averageRatingResult[0]?.averageRating || 0,
   };
 };
 
@@ -1920,7 +2015,7 @@ export const getTrendingProductsService = async () => {
     .populate("category", "name slug")
     .lean();
 
-  return { success: true, products };
+  return { success: true, products: products.map(sanitizeProductRecord) };
 };
 
 export const fetchCollectionProducts = async () => {

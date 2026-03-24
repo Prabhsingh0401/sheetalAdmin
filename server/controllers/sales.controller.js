@@ -2,7 +2,8 @@ import Order from "../models/order.model.js";
 import Cart from "../models/cart.model.js";
 import User from "../models/user.model.js";
 import Product from "../models/product.model.js";
-import { sendAbandonedCartEmail } from "../services/sales.service.js";
+import AbandonedCartCycle from "../models/abandonedCartCycle.model.js";
+import { sendAbandonedCartEmail } from "../services/abandonedCart.service.js";
 
 /**
  * Helper — builds a $match stage from query params.
@@ -57,6 +58,23 @@ function getDateRange(period) {
 
   from.setHours(0, 0, 0, 0);
   return { $gte: from };
+}
+
+function buildDateMatch(query = {}, period = "weekly") {
+  const { startDate, endDate } = query;
+
+  if (startDate || endDate) {
+    const match = {};
+    if (startDate) match.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      match.$lte = end;
+    }
+    return { createdAt: match };
+  }
+
+  return { createdAt: getDateRange(period) };
 }
 
 /* ---------------- GROUPING ---------------- */
@@ -306,11 +324,13 @@ export const getRevenueData = async (req, res) => {
 export const getChartData = async (req, res) => {
   try {
     const period = req.query.period || "weekly";
+    const hasCustomRange = Boolean(req.query.startDate || req.query.endDate);
+    const dateMatch = buildDateMatch(req.query, period);
 
     const results = await Order.aggregate([
       {
         $match: {
-          createdAt: getDateRange(period),
+          ...dateMatch,
           orderStatus: { $nin: ["Cancelled", "Returned"] },
         },
       },
@@ -342,15 +362,15 @@ export const getChartData = async (req, res) => {
 
     let data = results;
 
-    if (period === "weekly") {
+    if (!hasCustomRange && period === "weekly") {
       data = fillWeeklyData(results);
     }
 
-    if (period === "monthly") {
+    if (!hasCustomRange && period === "monthly") {
       data = fillMonthlyData(results);
     }
 
-    if (period === "yearly") {
+    if (!hasCustomRange && period === "yearly") {
       data = fillYearlyData(results);
     }
 
@@ -382,23 +402,73 @@ export const getChartData = async (req, res) => {
 
 export const getBestSellingProducts = async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 5, 50);
+    const hasLimit = req.query.limit !== undefined;
+    const requestedLimit = hasLimit ? parseInt(req.query.limit, 10) : null;
+    const limit = hasLimit
+      ? Math.min(Math.max(requestedLimit || 5, 1), 50)
+      : null;
 
-    const results = await Product.find({ "orderStats.totalOrders": { $gt: 0 } })
-      .sort({ "orderStats.totalRevenue": -1 })
-      .limit(limit)
-      .select("name mainImage orderStats")
-      .lean();
+    const results = await Order.aggregate([
+      {
+        $match: {
+          orderStatus: { $nin: ["Cancelled", "Returned"] },
+        },
+      },
+      {
+        $unwind: "$orderItems",
+      },
+      {
+        $match: {
+          "orderItems.product": { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$orderItems.product",
+          unitsSold: { $sum: "$orderItems.quantity" },
+          totalRevenue: {
+            $sum: {
+              $multiply: ["$orderItems.quantity", "$orderItems.price"],
+            },
+          },
+          fallbackName: { $first: "$orderItems.name" },
+          fallbackImage: { $first: "$orderItems.image" },
+        },
+      },
+      {
+        $sort: {
+          totalRevenue: -1,
+          unitsSold: -1,
+        },
+      },
+      ...(limit ? [{ $limit: limit }] : []),
+      {
+        $lookup: {
+          from: Product.collection.name,
+          localField: "_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $unwind: {
+          path: "$product",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          name: { $ifNull: ["$product.name", "$fallbackName"] },
+          image: { $ifNull: ["$product.mainImage.url", "$fallbackImage"] },
+          unitsSold: 1,
+          totalRevenue: { $round: ["$totalRevenue", 2] },
+        },
+      },
+    ]);
 
-    const data = results.map((p) => ({
-      productId: p._id,
-      name: p.name,
-      image: p.mainImage?.url,
-      unitsSold: p.orderStats.totalOrders,
-      totalRevenue: p.orderStats.totalRevenue,
-    }));
-
-    res.status(200).json({ success: true, count: data.length, data });
+    res.status(200).json({ success: true, count: results.length, data: results });
   } catch (error) {
     console.error("[getBestSellingProducts]", error);
     res.status(500).json({
@@ -523,40 +593,65 @@ export const sendAbandonedCartRecovery = async (req, res) => {
       });
     }
 
-    const cart = await Cart.findOne({ user: user._id }).populate(
+    const liveCart = await Cart.findOne({ user: user._id }).populate(
       "items.product",
       "name images",
     );
 
-    if (!cart || !cart.items.length) {
-      return res.status(404).json({
-        success: false,
-        message: "No abandoned cart found.",
-      });
-    }
-
-    const cartValue = cart.items.reduce((sum, item) => {
+    let items = liveCart?.items || [];
+    let cartValue = items.reduce((sum, item) => {
       const price = item.discountPrice > 0 ? item.discountPrice : item.price;
       return sum + price * item.quantity;
     }, 0);
 
-    if (cartValue <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cart has no value.",
-      });
+    if (!liveCart || !liveCart.items.length || cartValue <= 0) {
+      const cycle = await AbandonedCartCycle.findOne({
+        user: user._id,
+        status: "abandoned",
+        itemsSnapshot: { $exists: true, $ne: [] },
+      })
+        .sort({ abandonedAt: -1 })
+        .lean();
+
+      if (!cycle || !Array.isArray(cycle.itemsSnapshot) || cycle.itemsSnapshot.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No abandoned cart snapshot found.",
+        });
+      }
+
+      items = cycle.itemsSnapshot;
+      cartValue =
+        Number(cycle.cartValue || 0) > 0
+          ? Number(cycle.cartValue)
+          : items.reduce((sum, item) => {
+              const price =
+                Number(item.discountPrice || 0) > 0
+                  ? Number(item.discountPrice || 0)
+                  : Number(item.price || 0);
+              return sum + price * Number(item.quantity || 1);
+            }, 0);
+
+      if (cartValue <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Cart snapshot has no value.",
+        });
+      }
     }
 
     await sendAbandonedCartEmail({
       name: user.name || user.email,
       email: user.email,
-      items: cart.items,
+      items,
       cartValue,
     });
 
-    await Cart.findByIdAndUpdate(cart._id, {
-      recoverySentAt: new Date(),
-    });
+    if (liveCart?._id) {
+      await Cart.findByIdAndUpdate(liveCart._id, {
+        recoverySentAt: new Date(),
+      });
+    }
 
     console.log(`[AbandonedCarts] Recovery email sent → ${email}`);
 
