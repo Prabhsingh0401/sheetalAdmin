@@ -93,7 +93,7 @@ export default function BestSellingPage() {
     <div className="min-h-screen w-full animate-in fade-in duration-500">
       <PageHeader
         title="Best Selling Products"
-        subtitle="Track top performing products by units sold and revenue generated"
+        subtitle="All-time ranking by revenue generated and units sold, including out-of-stock products"
         action={
           <button
             onClick={fetchData}

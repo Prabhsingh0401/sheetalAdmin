@@ -6,8 +6,15 @@ const handleResponse = async (res) => {
   return data;
 };
 
-export const getBestSellingItems = async () => {
-  const res = await fetch(`${API_BASE_URL}/sales/best-selling`, {
+export const getBestSellingItems = async ({ limit } = {}) => {
+  const query = new URLSearchParams();
+  if (limit != null) query.set("limit", limit);
+
+  const url = query.toString()
+    ? `${API_BASE_URL}/sales/best-selling?${query}`
+    : `${API_BASE_URL}/sales/best-selling`;
+
+  const res = await fetch(url, {
     credentials: "include",
   });
   return handleResponse(res);

@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const data = await getBestSellingItems();
+        const data = await getBestSellingItems({ limit: 5 });
         setBestSellingProducts(data);
       } catch (err) {
         console.error("Error fetching best selling items", err);

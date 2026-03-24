@@ -68,6 +68,14 @@ export default function BestSellingProducts({
           <h3 className="text-xl font-extrabold text-slate-900 leading-tight">
             Best Selling Products
           </h3>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-700">
+              Primary: Revenue
+            </span>
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
+              Secondary: Units Sold
+            </span>
+          </div>
         </div>
         <Link
           href="/admin/products"
@@ -197,6 +205,9 @@ export default function BestSellingProducts({
                           }}
                         >
                           ₹{product.totalRevenue.toLocaleString()}
+                        </span>
+                        <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                          Units tie-break
                         </span>
                         <div
                           style={{

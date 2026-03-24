@@ -382,23 +382,73 @@ export const getChartData = async (req, res) => {
 
 export const getBestSellingProducts = async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 5, 50);
+    const hasLimit = req.query.limit !== undefined;
+    const requestedLimit = hasLimit ? parseInt(req.query.limit, 10) : null;
+    const limit = hasLimit
+      ? Math.min(Math.max(requestedLimit || 5, 1), 50)
+      : null;
 
-    const results = await Product.find({ "orderStats.totalOrders": { $gt: 0 } })
-      .sort({ "orderStats.totalRevenue": -1 })
-      .limit(limit)
-      .select("name mainImage orderStats")
-      .lean();
+    const results = await Order.aggregate([
+      {
+        $match: {
+          orderStatus: { $nin: ["Cancelled", "Returned"] },
+        },
+      },
+      {
+        $unwind: "$orderItems",
+      },
+      {
+        $match: {
+          "orderItems.product": { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$orderItems.product",
+          unitsSold: { $sum: "$orderItems.quantity" },
+          totalRevenue: {
+            $sum: {
+              $multiply: ["$orderItems.quantity", "$orderItems.price"],
+            },
+          },
+          fallbackName: { $first: "$orderItems.name" },
+          fallbackImage: { $first: "$orderItems.image" },
+        },
+      },
+      {
+        $sort: {
+          totalRevenue: -1,
+          unitsSold: -1,
+        },
+      },
+      ...(limit ? [{ $limit: limit }] : []),
+      {
+        $lookup: {
+          from: Product.collection.name,
+          localField: "_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $unwind: {
+          path: "$product",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          name: { $ifNull: ["$product.name", "$fallbackName"] },
+          image: { $ifNull: ["$product.mainImage.url", "$fallbackImage"] },
+          unitsSold: 1,
+          totalRevenue: { $round: ["$totalRevenue", 2] },
+        },
+      },
+    ]);
 
-    const data = results.map((p) => ({
-      productId: p._id,
-      name: p.name,
-      image: p.mainImage?.url,
-      unitsSold: p.orderStats.totalOrders,
-      totalRevenue: p.orderStats.totalRevenue,
-    }));
-
-    res.status(200).json({ success: true, count: data.length, data });
+    res.status(200).json({ success: true, count: results.length, data: results });
   } catch (error) {
     console.error("[getBestSellingProducts]", error);
     res.status(500).json({

@@ -45,7 +45,7 @@ export default function SalesPage() {
 
   // ── Best-selling products ──────────────────────────────────────
   useEffect(() => {
-    getBestSellingItems()
+    getBestSellingItems({ limit: 5 })
       .then((data) => setBestSellingProducts(data))
       .catch((err) => setFetchError(err.message));
   }, []);
