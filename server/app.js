@@ -3,12 +3,17 @@ import { config } from "./config/config.js";
 import connectDB from "./config/db.js";
 import { seedAdmin } from "./scripts/seedAdmin.js";
 import initializeFirebase from "./config/firebase.js";
+import { initializeAbandonedCartWorker } from "./workers/abandonedCart.worker.js";
+import { isRedisReachable } from "./config/redis.js";
 
 const startServer = async () => {
   try {
     initializeFirebase();
     await connectDB();
     await seedAdmin();
+    if (await isRedisReachable()) {
+      initializeAbandonedCartWorker();
+    }
   } catch (error) {
     console.error("Database connection failed:", error);
     process.exit(1);

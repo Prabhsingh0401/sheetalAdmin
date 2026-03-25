@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
     "@aws-sdk/client-s3": "^3.982.0",
     "algoliasearch": "^5.48.1",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.71.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

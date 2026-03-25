@@ -5,6 +5,7 @@ import Cart from "../models/cart.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { createShiprocketOrder } from "./shiprocket.service.js";
 import { sendOrderConfirmationEmail } from "./order.email.service.js";
+import { completeAbandonedCartFlow } from "./abandonedCart.service.js";
 
 // --- CREATE NEW ORDER ---
 export const createOrderService = async (data, userId) => {
@@ -55,7 +56,8 @@ export const createOrderService = async (data, userId) => {
     billingAddress: {
       fullName: billingAddress?.fullName || shippingAddress.fullName,
       phoneNumber: billingAddress?.phoneNumber || shippingAddress.phoneNumber,
-      addressLine1: billingAddress?.addressLine1 || shippingAddress.addressLine1,
+      addressLine1:
+        billingAddress?.addressLine1 || shippingAddress.addressLine1,
       city: billingAddress?.city || shippingAddress.city,
       state: billingAddress?.state || shippingAddress.state,
       postalCode: billingAddress?.postalCode || shippingAddress.postalCode,
@@ -116,6 +118,15 @@ export const createOrderService = async (data, userId) => {
       console.error(
         `[Shiprocket] Failed to push COD order ${order._id}:`,
         srError.message,
+      );
+    }
+
+    try {
+      await completeAbandonedCartFlow({ userId });
+    } catch (abandonErr) {
+      console.error(
+        `[AbandonedCart] Failed to complete flow for user ${userId}:`,
+        abandonErr.message,
       );
     }
   }
