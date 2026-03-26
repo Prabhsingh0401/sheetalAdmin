@@ -46,6 +46,16 @@ export default function AdminDashboard() {
     fetch();
   }, []);
 
+  const visibleBestSellingProducts = Array.isArray(bestSellingProducts?.data)
+    ? bestSellingProducts.data.filter(
+        (product) =>
+          product &&
+          product.productId &&
+          product.name &&
+          product.totalRevenue != null,
+      )
+    : [];
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -286,7 +296,7 @@ export default function AdminDashboard() {
 
         {/* Bottom Row: Best Selling + Recent Orders + Top Reviews */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-10">
-          <BestSellingProducts products={bestSellingProducts?.data} />
+          <BestSellingProducts products={visibleBestSellingProducts} />
 
           {/* Recent Orders */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">

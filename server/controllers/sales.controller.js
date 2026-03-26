@@ -429,8 +429,6 @@ export const getBestSellingProducts = async (req, res) => {
               $multiply: ["$orderItems.quantity", "$orderItems.price"],
             },
           },
-          fallbackName: { $first: "$orderItems.name" },
-          fallbackImage: { $first: "$orderItems.image" },
         },
       },
       {
@@ -439,7 +437,6 @@ export const getBestSellingProducts = async (req, res) => {
           unitsSold: -1,
         },
       },
-      ...(limit ? [{ $limit: limit }] : []),
       {
         $lookup: {
           from: Product.collection.name,
@@ -451,15 +448,21 @@ export const getBestSellingProducts = async (req, res) => {
       {
         $unwind: {
           path: "$product",
-          preserveNullAndEmptyArrays: true,
+          preserveNullAndEmptyArrays: false,
         },
       },
+      {
+        $match: {
+          "product.status": "Active",
+        },
+      },
+      ...(limit ? [{ $limit: limit }] : []),
       {
         $project: {
           _id: 0,
           productId: "$_id",
-          name: { $ifNull: ["$product.name", "$fallbackName"] },
-          image: { $ifNull: ["$product.mainImage.url", "$fallbackImage"] },
+          name: "$product.name",
+          image: "$product.mainImage.url",
           unitsSold: 1,
           totalRevenue: { $round: ["$totalRevenue", 2] },
         },

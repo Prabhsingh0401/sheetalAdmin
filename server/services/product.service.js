@@ -1976,6 +1976,10 @@ export const getProductStatsService = async () => {
 };
 
 export const incrementViewCountService = async (id) => {
+  if (!id || typeof id !== "string") {
+    return { success: false, statusCode: 400, message: "Product id is required" };
+  }
+
   const query = id.match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
 
   const product = await Product.findOneAndUpdate(

@@ -26,8 +26,18 @@ export default function BestSellingProducts({
   isLoading = false,
   error = null,
 }) {
-  const maxRevenue = products?.length
-    ? Math.max(...products.map((p) => p.totalRevenue))
+  const visibleProducts = Array.isArray(products)
+    ? products.filter(
+        (product) =>
+          product &&
+          product.productId &&
+          product.name &&
+          product.totalRevenue != null,
+      )
+    : [];
+
+  const maxRevenue = visibleProducts.length
+    ? Math.max(...visibleProducts.map((p) => p.totalRevenue))
     : 1;
 
   return (
@@ -102,7 +112,7 @@ export default function BestSellingProducts({
                 <SkeletonRow />
                 <SkeletonRow />
               </>
-            ) : products.length === 0 ? (
+            ) : visibleProducts.length === 0 ? (
               <tr>
                 <td
                   colSpan={3}
@@ -112,7 +122,7 @@ export default function BestSellingProducts({
                 </td>
               </tr>
             ) : (
-              products.map((product, i) => {
+              visibleProducts.map((product, i) => {
                 const barWidth = Math.round(
                   (product.totalRevenue / maxRevenue) * 100,
                 );

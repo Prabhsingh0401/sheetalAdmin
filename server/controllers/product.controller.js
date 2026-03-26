@@ -301,7 +301,8 @@ export const getTrendingProducts = async (req, res, next) => {
 
 export const incrementViewCount = async (req, res, next) => {
   try {
-    const result = await productService.incrementViewCountService(req.params.id);
+    const productIdOrSlug = req.params.id || req.params.slug;
+    const result = await productService.incrementViewCountService(productIdOrSlug);
     if (!result.success) return res.status(result.statusCode).json(result);
     return successResponse(res, 200, null, "View count incremented");
   } catch (error) {
@@ -323,10 +324,10 @@ export const getCollectionProducts = async (req, res) => {
 export const getMostViewedProducts = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
-    const products = await Product.find({ isActive: true })
+    const products = await Product.find({ status: "Active" })
       .sort({ viewCount: -1 })
       .limit(limit)
-      .select("name viewCount category slug mainImage")
+      .select("name viewCount category slug mainImage status")
       .populate("category", "name");
 
     const items = products.map((p, i) => ({
