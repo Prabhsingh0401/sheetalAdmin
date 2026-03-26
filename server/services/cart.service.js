@@ -1,6 +1,8 @@
 import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
+import logger from "../utils/logger.js";
+import { handleUserActivity } from "./abandonedCart.service.js";
 
 export const getCartByUserIdService = async (userId) => {
   const cart = await Cart.findOne({ user: userId }).populate({
@@ -31,7 +33,6 @@ export const getCartByUserIdService = async (userId) => {
 
   return { success: true, data: cart };
 };
-
 
 export const addToCartService = async (
   userId,
@@ -97,6 +98,14 @@ export const addToCartService = async (
   }
 
   await cart.save();
+  try {
+    await handleUserActivity({ userId, cartId: cart._id, source: "cart_add" });
+  } catch (error) {
+    logger.error(
+      { userId, cartId: cart._id?.toString?.(), error: error.message },
+      "[Cart] Failed to register cart add activity",
+    );
+  }
   return {
     success: true,
     data: cart,
@@ -118,6 +127,18 @@ export const removeFromCartService = async (userId, itemId) => {
   if (itemIndex > -1) {
     cart.items.splice(itemIndex, 1); // Remove the item
     await cart.save();
+    try {
+      await handleUserActivity({
+        userId,
+        cartId: cart._id,
+        source: "cart_remove",
+      });
+    } catch (error) {
+      logger.error(
+        { userId, cartId: cart._id?.toString?.(), error: error.message },
+        "[Cart] Failed to register cart remove activity",
+      );
+    }
     return {
       success: true,
       data: cart,
@@ -155,6 +176,18 @@ export const updateCartItemQuantityService = async (
   }
 
   await cart.save();
+  try {
+    await handleUserActivity({
+      userId,
+      cartId: cart._id,
+      source: "cart_update",
+    });
+  } catch (error) {
+    logger.error(
+      { userId, cartId: cart._id?.toString?.(), error: error.message },
+      "[Cart] Failed to register cart update activity",
+    );
+  }
   return {
     success: true,
     data: cart,
@@ -171,10 +204,22 @@ export const clearCartService = async (userId) => {
 
   cart.items = [];
   await cart.save();
+  try {
+    await handleUserActivity({
+      userId,
+      cartId: cart._id,
+      source: "cart_clear",
+    });
+  } catch (error) {
+    logger.error(
+      { userId, cartId: cart._id?.toString?.(), error: error.message },
+      "[Cart] Failed to register cart clear activity",
+    );
+  }
 
   return {
     success: true,
-    message: "Cart cleared successfully"
+    message: "Cart cleared successfully",
   };
 };
 
@@ -194,7 +239,15 @@ export const mergeGuestCartService = async (userId, guestItems) => {
   }
 
   for (const guestItem of guestItems) {
-    const { productId, quantity, size, color, price, discountPrice, variantImage } = guestItem;
+    const {
+      productId,
+      quantity,
+      size,
+      color,
+      price,
+      discountPrice,
+      variantImage,
+    } = guestItem;
 
     const existingItem = cart.items.find(
       (item) =>
@@ -209,10 +262,34 @@ export const mergeGuestCartService = async (userId, guestItems) => {
       existingItem.discountPrice = discountPrice;
       if (variantImage) existingItem.variantImage = variantImage;
     } else {
-      cart.items.push({ product: productId, quantity, size, color, price, discountPrice, variantImage });
+      cart.items.push({
+        product: productId,
+        quantity,
+        size,
+        color,
+        price,
+        discountPrice,
+        variantImage,
+      });
     }
   }
 
   await cart.save();
-  return { success: true, data: cart, message: "Guest cart merged successfully" };
+  try {
+    await handleUserActivity({
+      userId,
+      cartId: cart._id,
+      source: "cart_merge",
+    });
+  } catch (error) {
+    logger.error(
+      { userId, cartId: cart._id?.toString?.(), error: error.message },
+      "[Cart] Failed to register cart merge activity",
+    );
+  }
+  return {
+    success: true,
+    data: cart,
+    message: "Guest cart merged successfully",
+  };
 };

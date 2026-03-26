@@ -429,8 +429,6 @@ export const getBestSellingProducts = async (req, res) => {
               $multiply: ["$orderItems.quantity", "$orderItems.price"],
             },
           },
-          fallbackName: { $first: "$orderItems.name" },
-          fallbackImage: { $first: "$orderItems.image" },
         },
       },
       {
@@ -439,7 +437,6 @@ export const getBestSellingProducts = async (req, res) => {
           unitsSold: -1,
         },
       },
-      ...(limit ? [{ $limit: limit }] : []),
       {
         $lookup: {
           from: Product.collection.name,
@@ -451,22 +448,30 @@ export const getBestSellingProducts = async (req, res) => {
       {
         $unwind: {
           path: "$product",
-          preserveNullAndEmptyArrays: true,
+          preserveNullAndEmptyArrays: false,
         },
       },
+      {
+        $match: {
+          "product.status": "Active",
+        },
+      },
+      ...(limit ? [{ $limit: limit }] : []),
       {
         $project: {
           _id: 0,
           productId: "$_id",
-          name: { $ifNull: ["$product.name", "$fallbackName"] },
-          image: { $ifNull: ["$product.mainImage.url", "$fallbackImage"] },
+          name: "$product.name",
+          image: "$product.mainImage.url",
           unitsSold: 1,
           totalRevenue: { $round: ["$totalRevenue", 2] },
         },
       },
     ]);
 
-    res.status(200).json({ success: true, count: results.length, data: results });
+    res
+      .status(200)
+      .json({ success: true, count: results.length, data: results });
   } catch (error) {
     console.error("[getBestSellingProducts]", error);
     res.status(500).json({
@@ -484,16 +489,13 @@ export const getBestSellingProducts = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getAbandonedCarts = async (req, res) => {
   try {
-    const ABANDONED_DAYS = 3;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
 
-    const cutoff = new Date(Date.now() - ABANDONED_DAYS * 24 * 60 * 60 * 1000);
-
     const carts = await Cart.find({
-      updatedAt: { $lte: cutoff },
+      abandonmentStatus: "abandoned",
       "items.0": { $exists: true },
     })
-      .populate("user", "name email")
+      .populate("user", "name email phoneNumber")
       .populate("items.product", "name images")
       .sort({ updatedAt: -1 })
       .limit(limit)
@@ -535,13 +537,16 @@ export const getAbandonedCarts = async (req, res) => {
         return {
           cartId: cart._id,
           userId: cart.user?._id,
-          email: cart.user?.email,
+          email: cart.email || cart.user?.email,
+          phoneNumber: cart.phoneNumber || cart.user?.phoneNumber,
           name,
           initials,
           cartValue: Math.round(cartValue * 100) / 100,
           itemCount: cart.items.length,
           date,
-          lastUpdated: cart.updatedAt,
+          lastActivityAt: cart.lastActivityAt || cart.updatedAt,
+          abandonedAt: cart.abandonedAt || cart.updatedAt,
+          abandonmentReason: cart.abandonmentReason || "inactivity",
           previewImage:
             cart.items[0]?.variantImage ||
             cart.items[0]?.product?.images?.[0] ||

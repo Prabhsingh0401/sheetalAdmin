@@ -51,11 +51,19 @@ export default function SalesPage() {
 
   const bestSellingByUnits = useMemo(
     () =>
-      [...bestSellingProducts].sort(
+      [...bestSellingProducts]
+        .filter(
+          (product) =>
+            product &&
+            product.productId &&
+            product.name &&
+            product.totalRevenue != null,
+        )
+        .sort(
         (a, b) =>
           (b.unitsSold || 0) - (a.unitsSold || 0) ||
           (b.totalRevenue || 0) - (a.totalRevenue || 0),
-      ),
+        ),
     [bestSellingProducts],
   );
 

@@ -70,6 +70,16 @@ const verifyFirebaseIdTokenController = async (req, res, next) => {
     const result = await verifyFirebaseIdTokenService(idToken, currentUserId);
     res.status(200).json({ success: true, ...result });
   } catch (error) {
+    if (
+      typeof error?.message === "string" &&
+      (error.message.includes("Firebase ID token") ||
+        error.message.includes("verifyIdToken"))
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid Firebase token. Please sign in again with Google.",
+      });
+    }
     next(error);
   }
 };

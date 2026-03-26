@@ -16,8 +16,8 @@ import TiptapEditor from "@/components/TiptapEditor"; // adjust path as needed
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 const ACCEPTED_EXTENSIONS = ".jpg,.jpeg,.png";
-const REQUIRED_WIDTH = 600;
-const REQUIRED_HEIGHT = 900;
+const REQUIRED_WIDTH = 650;
+const REQUIRED_HEIGHT = 500;
 
 const DEFAULT_CENTER = {
   label: "Exclusive Deal · Few Days Left",
@@ -194,7 +194,7 @@ export default function LookbookForm() {
           </p>
           <p className="text-[11px] text-amber-700 mt-0.5">
             All images must be exactly{" "}
-            <span className="font-bold">600 × 900 px</span> and in{" "}
+            <span className="font-bold">650 × 500 px</span> and in{" "}
             <span className="font-bold">JPG or PNG</span> format. Images not
             meeting these requirements will be rejected automatically.
           </p>
@@ -394,7 +394,7 @@ function ImageSection({
           <p className="text-[10px] text-slate-500 mt-0.5">{description}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              📐 600 × 900 px
+              📐 650 × 500 px
             </span>
             <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
               🖼 JPG · PNG
@@ -454,7 +454,7 @@ function ImageSection({
               No images added
             </p>
             <p className="text-[9px] text-slate-300 mt-1">
-              600 × 900 px · JPG or PNG
+              650 × 500 px · JPG or PNG
             </p>
           </div>
         )}

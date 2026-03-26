@@ -274,7 +274,7 @@ export default function TrafficSourcesPage() {
           {/* Mock data notice */}
           <div className="px-6 py-3 border-t border-slate-100 bg-amber-50/50">
             <p className="text-[11px] text-amber-600 font-medium">
-              ⚠ Displaying mock data — connect a real analytics API to populate this page.
+              ⚠ Displaying mock data
             </p>
           </div>
         </div>

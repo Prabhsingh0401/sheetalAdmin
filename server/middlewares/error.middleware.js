@@ -6,7 +6,7 @@ const errorHandler = (err, req, res, next) => {
   let message = err.message || "Internal Server Error";
 
   // winston logging
-  logger.error({
+  logger.error("Request failed", {
     message: err.message,
     stack: err.stack,
     path: req.originalUrl,
@@ -49,13 +49,11 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // final response
-  res
-    .status(statusCode)
-    .json({
-      success: false,
-      message: message,
-      stack: config.mode === "development" ? err.stack : undefined,
-    });
+  res.status(statusCode).json({
+    success: false,
+    message: message,
+    stack: config.mode === "development" ? err.stack : undefined,
+  });
 };
 
 export default errorHandler;

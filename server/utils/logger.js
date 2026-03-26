@@ -1,7 +1,7 @@
 import winston from "winston";
 import { config } from "../config/config.js";
 
-const logger = winston.createLogger({
+const baseLogger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
     winston.format.timestamp(),
@@ -14,7 +14,7 @@ const logger = winston.createLogger({
 });
 
 if (config.mode === "development") {
-  logger.add(
+  baseLogger.add(
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
@@ -23,5 +23,50 @@ if (config.mode === "development") {
     }),
   );
 }
+
+const normalizeLogArgs = (firstArg, secondArg) => {
+  if (typeof firstArg === "string") {
+    const meta =
+      secondArg && typeof secondArg === "object" && !Array.isArray(secondArg)
+        ? secondArg
+        : {};
+
+    return {
+      message: firstArg,
+      ...meta,
+    };
+  }
+
+  if (firstArg && typeof firstArg === "object") {
+    const meta = { ...firstArg };
+    const message =
+      meta.message || meta.error || meta.msg || secondArg || "Structured log";
+    delete meta.message;
+    return {
+      message,
+      ...meta,
+    };
+  }
+
+  return {
+    message: secondArg || "Structured log",
+  };
+};
+
+const logWithLevel = (level, firstArg, secondArg) => {
+  baseLogger.log({
+    level,
+    ...normalizeLogArgs(firstArg, secondArg),
+  });
+};
+
+const logger = {
+  error: (firstArg, secondArg) => logWithLevel("error", firstArg, secondArg),
+  warn: (firstArg, secondArg) => logWithLevel("warn", firstArg, secondArg),
+  info: (firstArg, secondArg) => logWithLevel("info", firstArg, secondArg),
+  debug: (firstArg, secondArg) => logWithLevel("debug", firstArg, secondArg),
+  log: (level, firstArg, secondArg) => logWithLevel(level, firstArg, secondArg),
+  child: (...args) => baseLogger.child(...args),
+};
 
 export default logger;
