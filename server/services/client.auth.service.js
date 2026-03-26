@@ -6,6 +6,25 @@ import Otp from "../models/otp.model.js";
 import { signToken } from "../utils/jwt.js";
 import sendEmail from "../utils/sendEmail.js";
 
+const normalizeEmail = (email) => {
+  if (!email || typeof email !== "string") {
+    return null;
+  }
+
+  const normalized = email.trim().toLowerCase();
+  return normalized || null;
+};
+
+const getFirebaseEmail = (decodedToken) => {
+  const topLevelEmail = normalizeEmail(decodedToken?.email);
+  if (topLevelEmail) {
+    return topLevelEmail;
+  }
+
+  const providerEmail = decodedToken?.firebase?.identities?.email?.[0];
+  return normalizeEmail(providerEmail);
+};
+
 const sendOtp = async (phoneNumber) => {
   try {
     const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);
@@ -183,7 +202,12 @@ const mergeAccounts = async (primary, secondary) => {
 
 const verifyFirebaseIdToken = async (idToken, currentUserId = null) => {
   const decodedToken = await admin.auth().verifyIdToken(idToken);
-  const { phone_number: phoneNumber, email, name, picture } = decodedToken;
+  const {
+    phone_number: phoneNumber,
+    name,
+    picture,
+  } = decodedToken;
+  const email = getFirebaseEmail(decodedToken);
 
   if (!phoneNumber && !email) {
     throw new Error("Neither phone number nor email found in Firebase ID token.");
