@@ -6,6 +6,35 @@ import {
     Trash2,
     ImageIcon,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+    getRatioLabel,
+    validateImageAspectRatio,
+} from "@/utils/imageAspectRatio";
+
+const PRODUCT_IMAGE_RATIO = { width: 3, height: 4 };
+const PRODUCT_IMAGE_RATIO_LABEL = getRatioLabel(
+    PRODUCT_IMAGE_RATIO.width,
+    PRODUCT_IMAGE_RATIO.height,
+);
+
+const handleProductImageChange = async (e, setFormData, fieldName) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+        await validateImageAspectRatio(file, PRODUCT_IMAGE_RATIO, {
+            label: fieldName === "mainImageFile" ? "Main image" : "Hover image",
+        });
+        setFormData((prev) => ({
+            ...prev,
+            [fieldName]: file,
+        }));
+    } catch (err) {
+        toast.error(err.message || "Invalid image aspect ratio");
+        e.target.value = "";
+    }
+};
 
 export default function MediaParams({
     formData,
@@ -23,6 +52,9 @@ export default function MediaParams({
                             Main Display Image
                         </span>
                     </div>
+                    <p className="mb-3 text-[10px] font-semibold text-slate-500">
+                        Required aspect ratio: {PRODUCT_IMAGE_RATIO_LABEL}
+                    </p>
 
                     <div className="relative group border-2 border-dashed border-slate-200 rounded-3xl p-2 bg-white hover:border-blue-500 hover:bg-blue-50/30 transition-all duration-300 aspect-[4/3] flex flex-col items-center justify-center overflow-hidden shadow-sm">
                         {formData.mainImageFile || formData.mainImage?.url ? (
@@ -49,10 +81,11 @@ export default function MediaParams({
                                             type="file"
                                             className="hidden"
                                             onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    mainImageFile: e.target.files[0],
-                                                })
+                                                handleProductImageChange(
+                                                    e,
+                                                    setFormData,
+                                                    "mainImageFile",
+                                                )
                                             }
                                         />
                                     </label>
@@ -74,10 +107,11 @@ export default function MediaParams({
                                     type="file"
                                     className="absolute inset-0 opacity-0 cursor-pointer"
                                     onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            mainImageFile: e.target.files[0],
-                                        })
+                                        handleProductImageChange(
+                                            e,
+                                            setFormData,
+                                            "mainImageFile",
+                                        )
                                     }
                                 />
                             </div>
@@ -108,6 +142,9 @@ export default function MediaParams({
                             Secondary / Hover Image
                         </span>
                     </div>
+                    <p className="mb-3 text-[10px] font-semibold text-slate-500">
+                        Required aspect ratio: {PRODUCT_IMAGE_RATIO_LABEL}
+                    </p>
 
                     <div className="relative group border-2 border-dashed border-slate-200 rounded-3xl p-2 bg-white hover:border-purple-500 hover:bg-purple-50/30 transition-all duration-300 aspect-[4/3] flex flex-col items-center justify-center overflow-hidden shadow-sm">
                         {formData.hoverImageFile || formData.hoverImage?.url ? (
@@ -140,18 +177,19 @@ export default function MediaParams({
                                     >
                                         <Trash2 size={16} />
                                     </button>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        id="hover-upload"
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                hoverImageFile: e.target.files[0],
-                                            })
-                                        }
-                                    />
-                                </div>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            id="hover-upload"
+                                            onChange={(e) =>
+                                                handleProductImageChange(
+                                                    e,
+                                                    setFormData,
+                                                    "hoverImageFile",
+                                                )
+                                            }
+                                        />
+                                    </div>
                             </>
                         ) : (
                             <div className="text-center p-6">
@@ -168,10 +206,11 @@ export default function MediaParams({
                                     type="file"
                                     className="absolute inset-0 opacity-0 cursor-pointer"
                                     onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            hoverImageFile: e.target.files[0],
-                                        })
+                                        handleProductImageChange(
+                                            e,
+                                            setFormData,
+                                            "hoverImageFile",
+                                        )
                                     }
                                 />
                             </div>

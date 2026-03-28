@@ -1,6 +1,29 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, Layers, Shirt, X, Video } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  getRatioLabel,
+  validateImageAspectRatio,
+  validateVideoAspectRatio,
+} from "@/utils/imageAspectRatio";
+
+const VARIANT_MEDIA_RATIO = { width: 3, height: 4 };
+const VARIANT_MEDIA_RATIO_LABEL = getRatioLabel(
+  VARIANT_MEDIA_RATIO.width,
+  VARIANT_MEDIA_RATIO.height,
+);
+
+const validateVariantImage = async (file) => {
+  await validateImageAspectRatio(file, VARIANT_MEDIA_RATIO, {
+    label: "Variant image",
+  });
+};
+
+const validateVariantVideo = async (file) => {
+  await validateVideoAspectRatio(file, VARIANT_MEDIA_RATIO, {
+    label: "Variant video",
+  });
+};
 
 export default function InventoryParams({
   formData,
@@ -193,6 +216,9 @@ export default function InventoryParams({
                   <label className="text-[10px] font-bold text-slate-500 uppercase">
                     Variant Image
                   </label>
+                  <p className="text-[9px] text-slate-400 mb-1">
+                    Required aspect ratio: {VARIANT_MEDIA_RATIO_LABEL}
+                  </p>
                   <div className="flex items-center gap-3">
                     {v.v_image ? (
                       <div className="relative w-10 h-10 rounded border border-slate-300 overflow-hidden bg-white">
@@ -226,12 +252,22 @@ export default function InventoryParams({
                           type="file"
                           className="hidden"
                           onChange={(e) => {
-                            const up = [...formData.variants];
-                            up[i].v_image = e.target.files[0];
-                            setFormData({
-                              ...formData,
-                              variants: up,
-                            });
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            (async () => {
+                              try {
+                                await validateVariantImage(file);
+                                const up = [...formData.variants];
+                                up[i].v_image = file;
+                                setFormData({
+                                  ...formData,
+                                  variants: up,
+                                });
+                              } catch (err) {
+                                toast.error(err.message || "Invalid variant image");
+                                e.target.value = "";
+                              }
+                            })();
                           }}
                         />
                       </label>
@@ -338,6 +374,9 @@ export default function InventoryParams({
                 <label className="text-[10px] font-bold text-slate-500 uppercase mr-2">
                   Variant Video
                 </label>
+                <p className="text-[9px] text-slate-400 mt-1 mb-2">
+                  Required aspect ratio: {VARIANT_MEDIA_RATIO_LABEL}
+                </p>
                 {(v.v_video || v.videoFile) && (
                   <div className="mb-3 flex items-center gap-3">
                     <div className="relative group h-12 w-12 sm:h-14 sm:w-14 overflow-hidden rounded-lg border border-slate-300 bg-black flex-shrink-0">
@@ -410,14 +449,22 @@ export default function InventoryParams({
                         return;
                       }
 
-                      const up = [...formData.variants];
-                      up[i].videoFile = file;
-                      up[i].v_video = "";
-                      setFormData({
-                        ...formData,
-                        variants: up,
-                      });
-                      e.target.value = "";
+                      (async () => {
+                        try {
+                          await validateVariantVideo(file);
+                          const up = [...formData.variants];
+                          up[i].videoFile = file;
+                          up[i].v_video = "";
+                          setFormData({
+                            ...formData,
+                            variants: up,
+                          });
+                          e.target.value = "";
+                        } catch (err) {
+                          toast.error(err.message || "Invalid variant video");
+                          e.target.value = "";
+                        }
+                      })();
                     }}
                   />
                 </label>

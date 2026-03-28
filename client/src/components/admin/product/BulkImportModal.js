@@ -186,12 +186,41 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
             <h2 className="text-xl font-bold text-slate-900">
               Bulk Import Products
             </h2>
-            <p className="text-sm text-slate-500">
-              First row per product should include Name and SKU. Add detail or
-              variant rows beneath it, plus matching main/hover image files
-              and one variant video per variant row. Variant gallery images are
-              uploaded separately.
-            </p>
+            <div className="mt-2 space-y-2">
+              <ul className="space-y-1 text-xs text-slate-600">
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
+                  <span>
+                    Use <span className="font-semibold">-</span> at the start of
+                    a line in <span className="font-semibold">Description</span>
+                    , <span className="font-semibold">Material & Care</span>,
+                    and
+                    <span className="font-semibold">
+                      {" "}
+                      Full Description
+                    </span>{" "}
+                    cells to create unordered list items.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
+                  <span>
+                    Images must be <span className="font-semibold">3:4</span>{" "}
+                    aspect ratio. Keep each image file within{" "}
+                    <span className="font-semibold">5MB</span>.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
+                  <span>
+                    Variant videos must be{" "}
+                    <span className="font-semibold">3:4</span> aspect ratio.
+                    Keep each video file within{" "}
+                    <span className="font-semibold">5MB</span>.
+                  </span>
+                </li>
+              </ul>
+            </div>
           </div>
           <button
             onClick={handleClose}
@@ -374,7 +403,8 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
 
                 <p className="text-xs text-slate-400 italic">
                   Note: Only JPEG, PNG, and WebP images are accepted. Filenames
-                  must match exactly with the names in the Excel sheet.
+                  must match exactly with the names in the Excel sheet. Images
+                  should be 3:4 and under 5MB each.
                 </p>
               </div>
 
@@ -458,7 +488,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <p className="text-xs text-slate-400 italic">
                   Note: Add one video filename per variant row in the
                   VariantVideo column. Filenames must match the uploaded video
-                  files exactly.
+                  files exactly. Videos should be 3:4 and under 5MB each.
                 </p>
               </div>
             </div>

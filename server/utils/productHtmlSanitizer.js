@@ -72,6 +72,9 @@ const allowedStyles = {
       /^rgba?\([\d\s.,%]+\)$/i,
       /^[a-z]+$/i,
     ],
+    "font-size": [/^-?\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i],
+    "font-weight": [/^(normal|bold|bolder|lighter|[1-9]00)$/i],
+    "font-style": [/^(normal|italic|oblique)$/i],
   },
 };
 

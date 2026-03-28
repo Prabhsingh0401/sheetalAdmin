@@ -9,6 +9,23 @@ import {
 } from "@/services/categoryService";
 import { toast } from "react-hot-toast";
 import { IMAGE_BASE_URL } from "@/services/api";
+import {
+  getRatioLabel,
+  validateImageAspectRatio,
+} from "@/utils/imageAspectRatio";
+
+const OG_RATIO = { width: 1200, height: 630 };
+const OG_RATIO_LABEL = getRatioLabel(OG_RATIO.width, OG_RATIO.height);
+const MAIN_IMAGE_RATIO = { width: 3, height: 4 };
+const MAIN_IMAGE_RATIO_LABEL = getRatioLabel(
+  MAIN_IMAGE_RATIO.width,
+  MAIN_IMAGE_RATIO.height,
+);
+const BANNER_RATIO = { width: 3, height: 2 };
+const BANNER_RATIO_LABEL = getRatioLabel(
+  BANNER_RATIO.width,
+  BANNER_RATIO.height,
+);
 
 const TABS = ["Details", "SEO"];
 
@@ -140,13 +157,37 @@ export default function CategoryModal({
   const handleFileChange = (e, fieldName) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024)
+      if (file.size > 2 * 1024 * 1024) {
+        e.target.value = "";
         return toast.error("File size should be less than 2MB");
-      setFormData((prev) => ({ ...prev, [fieldName]: file }));
-      const url = URL.createObjectURL(file);
-      if (fieldName === "mainImage") setPreviewMainImage(url);
-      else if (fieldName === "bannerImage") setPreviewBannerImage(url);
-      else if (fieldName === "ogImage") setPreviewOgImage(url);
+      }
+      (async () => {
+        try {
+          if (fieldName === "mainImage") {
+            await validateImageAspectRatio(file, MAIN_IMAGE_RATIO, {
+              label: "Category main image",
+            });
+          }
+          if (fieldName === "bannerImage") {
+            await validateImageAspectRatio(file, BANNER_RATIO, {
+              label: "Category banner image",
+            });
+          }
+          if (fieldName === "ogImage") {
+            await validateImageAspectRatio(file, OG_RATIO, {
+              label: "Category OG image",
+            });
+          }
+          setFormData((prev) => ({ ...prev, [fieldName]: file }));
+          const url = URL.createObjectURL(file);
+          if (fieldName === "mainImage") setPreviewMainImage(url);
+          else if (fieldName === "bannerImage") setPreviewBannerImage(url);
+          else if (fieldName === "ogImage") setPreviewOgImage(url);
+        } catch (err) {
+          toast.error(err.message || "Invalid image");
+          e.target.value = "";
+        }
+      })();
     }
   };
 
@@ -264,6 +305,9 @@ export default function CategoryModal({
                       <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
                         Main Image
                       </label>
+                      <p className="text-[10px] font-semibold text-slate-500 mb-2">
+                        Required aspect ratio: {MAIN_IMAGE_RATIO_LABEL}
+                      </p>
                       <div className="relative group w-32 h-32">
                         <input
                           type="file"
@@ -299,6 +343,9 @@ export default function CategoryModal({
                       <label className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
                         Banner Image
                       </label>
+                      <p className="text-[10px] font-semibold text-slate-500 mb-2">
+                        Required aspect ratio: {BANNER_RATIO_LABEL}
+                      </p>
                       <div className="relative group w-full h-24">
                         <input
                           type="file"
@@ -688,38 +735,41 @@ export default function CategoryModal({
                 </div>
 
                 {/* OG Image */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
-                    OG Image (Social Share)
-                  </label>
-                  <div className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl">
-                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center border border-dashed border-slate-300 overflow-hidden shrink-0">
-                      {previewOgImage ? (
-                        <img
-                          src={previewOgImage}
-                          className="w-full h-full object-cover"
-                          alt="OG Preview"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/placeholder.png";
-                          }}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                      OG Image (Social Share)
+                    </label>
+                    <p className="text-[10px] font-semibold text-slate-500">
+                      Required aspect ratio: {OG_RATIO_LABEL}
+                    </p>
+                    <div className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl">
+                      <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center border border-dashed border-slate-300 overflow-hidden shrink-0">
+                        {previewOgImage ? (
+                          <img
+                            src={previewOgImage}
+                            className="w-full h-full object-cover"
+                            alt="OG Preview"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "/placeholder.png";
+                            }}
+                          />
+                        ) : (
+                          <Upload size={20} className="text-slate-300" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-700 cursor-pointer"
+                          onChange={(e) => handleFileChange(e, "ogImage")}
                         />
-                      ) : (
-                        <Upload size={20} className="text-slate-300" />
-                      )}
+                        <p className="text-[9px] text-slate-400 mt-2">
+                          Visible when category is shared on WhatsApp/Facebook
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-700 cursor-pointer"
-                        onChange={(e) => handleFileChange(e, "ogImage")}
-                      />
-                      <p className="text-[9px] text-slate-400 mt-2">
-                        Visible when category is shared on WhatsApp/Facebook
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

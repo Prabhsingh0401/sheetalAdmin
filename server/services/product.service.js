@@ -17,6 +17,7 @@ import {
   sanitizeProductHtml,
   sanitizeProductRecord,
 } from "../utils/productHtmlSanitizer.js";
+import { spreadsheetCellToHtml } from "../utils/spreadsheetRichText.js";
 
 const buildUploadedImage = (file, alt) => ({
   url: file.location || file.path,
@@ -910,10 +911,42 @@ const bulkImportRowBasedService = async (files, userId) => {
     throw new Error("Excel file is required");
   }
 
-  const workbook = xlsx.readFile(excelFile.path);
-  const rawData = xlsx.utils.sheet_to_json(
-    workbook.Sheets[workbook.SheetNames[0]],
+  const workbook = xlsx.readFile(excelFile.path, {
+    cellHTML: true,
+    cellStyles: true,
+    cellText: true,
+  });
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rawRows = xlsx.utils.sheet_to_json(worksheet, {
+    header: 1,
+    raw: false,
+    defval: "",
+  });
+  const headers = (rawRows[0] || []).map((header) => String(header || "").trim());
+  const headerIndex = new Map(
+    headers.map((header, index) => [header.toLowerCase(), index]),
   );
+
+  const getHeaderIndex = (...names) => {
+    for (const name of names) {
+      const index = headerIndex.get(String(name).toLowerCase());
+      if (index !== undefined) return index;
+    }
+    return undefined;
+  };
+
+  const getCellByHeader = (rowNumber, ...headerNames) => {
+    const index = getHeaderIndex(...headerNames);
+    if (index === undefined) return null;
+    const address = xlsx.utils.encode_cell({ r: rowNumber - 1, c: index });
+    return worksheet[address] || null;
+  };
+
+  const getRowValue = (rowValues, ...headerNames) => {
+    const index = getHeaderIndex(...headerNames);
+    if (index === undefined) return "";
+    return rowValues[index] ?? "";
+  };
 
   const productsToInsert = [];
   const errors = [];
@@ -1520,9 +1553,35 @@ export const bulkImportService = async (files, userId) => {
   const batchSlugs = new Set();
   const batchSkus = new Set();
 
-  for (let i = 0; i < rawData.length; i++) {
-    const item = rawData[i];
-    const rowIndex = i + 2;
+  for (let i = 1; i < rawRows.length; i++) {
+    const rowValues = rawRows[i] || [];
+    const rowNumber = i + 1;
+    const item = {
+      Name: getRowValue(rowValues, "Name"),
+      SKU: getRowValue(rowValues, "SKU"),
+      Description: spreadsheetCellToHtml(
+        getCellByHeader(rowNumber, "Description", "FullDescription", "Full Description"),
+      ),
+      ShortDescription: getRowValue(rowValues, "ShortDescription", "Short Description"),
+      MaterialCare: spreadsheetCellToHtml(
+        getCellByHeader(rowNumber, "MaterialCare", "Material Care", "Material & Care"),
+      ),
+      Category: getRowValue(rowValues, "Category"),
+      SubCategory: getRowValue(rowValues, "SubCategory", "Sub Category"),
+      Status: getRowValue(rowValues, "Status"),
+      Tags: getRowValue(rowValues, "Tags"),
+      WearType: getRowValue(rowValues, "WearType", "Wear Type"),
+      Occasion: getRowValue(rowValues, "Occasion"),
+      Style: getRowValue(rowValues, "Style"),
+      Work: getRowValue(rowValues, "Work"),
+      Fabric: getRowValue(rowValues, "Fabric"),
+      Type: getRowValue(rowValues, "Type"),
+      ByPrice: getRowValue(rowValues, "ByPrice", "By Price"),
+      MainImage: getRowValue(rowValues, "MainImage", "Main Image"),
+      HoverImage: getRowValue(rowValues, "HoverImage", "Hover Image"),
+      Variants: getRowValue(rowValues, "Variants"),
+    };
+    const rowIndex = i + 1;
 
     try {
       // ── 0. Skip completely empty rows (xlsx trailing row artefacts) ─────────

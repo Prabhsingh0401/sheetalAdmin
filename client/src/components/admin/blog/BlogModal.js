@@ -5,6 +5,18 @@ import { X, Newspaper, Edit3, Loader2, Info, ImageIcon } from "lucide-react";
 import { addBlog, updateBlog } from "@/services/blogService";
 import { toast } from "react-hot-toast";
 import TiptapEditor from "@/components/TiptapEditor";
+import {
+  getRatioLabel,
+  validateImageAspectRatio,
+} from "@/utils/imageAspectRatio";
+
+const BANNER_RATIO = { width: 3, height: 2 };
+const CONTENT_RATIO = { width: 960, height: 640 };
+const BANNER_RATIO_LABEL = getRatioLabel(BANNER_RATIO.width, BANNER_RATIO.height);
+const CONTENT_RATIO_LABEL = getRatioLabel(
+  CONTENT_RATIO.width,
+  CONTENT_RATIO.height,
+);
 
 export default function BlogModal({
   isOpen,
@@ -69,26 +81,50 @@ export default function BlogModal({
   const handleBannerChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 3 * 1024 * 1024)
-        return toast.error("File size should be less than 3MB");
-      if (bannerPreview && bannerPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(bannerPreview);
-      }
-      setFormData({ ...formData, bannerImage: file });
-      setBannerPreview(URL.createObjectURL(file));
+      (async () => {
+        try {
+          if (file.size > 3 * 1024 * 1024) {
+            e.target.value = "";
+            return toast.error("File size should be less than 3MB");
+          }
+          await validateImageAspectRatio(file, BANNER_RATIO, {
+            label: "Blog banner image",
+          });
+          if (bannerPreview && bannerPreview.startsWith("blob:")) {
+            URL.revokeObjectURL(bannerPreview);
+          }
+          setFormData({ ...formData, bannerImage: file });
+          setBannerPreview(URL.createObjectURL(file));
+        } catch (err) {
+          toast.error(err.message || "Invalid blog banner image");
+          e.target.value = "";
+        }
+      })();
     }
   };
 
   const handleContentImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 3 * 1024 * 1024)
-        return toast.error("File size should be less than 3MB");
-      if (contentImagePreview && contentImagePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(contentImagePreview);
-      }
-      setFormData({ ...formData, contentImage: file });
-      setContentImagePreview(URL.createObjectURL(file));
+      (async () => {
+        try {
+          if (file.size > 3 * 1024 * 1024) {
+            e.target.value = "";
+            return toast.error("File size should be less than 3MB");
+          }
+          await validateImageAspectRatio(file, CONTENT_RATIO, {
+            label: "Blog content image",
+          });
+          if (contentImagePreview && contentImagePreview.startsWith("blob:")) {
+            URL.revokeObjectURL(contentImagePreview);
+          }
+          setFormData({ ...formData, contentImage: file });
+          setContentImagePreview(URL.createObjectURL(file));
+        } catch (err) {
+          toast.error(err.message || "Invalid blog content image");
+          e.target.value = "";
+        }
+      })();
     }
   };
 
@@ -172,6 +208,9 @@ export default function BlogModal({
                       <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         Banner Image
                       </label>
+                      <p className="text-[10px] font-semibold text-slate-500 mb-1">
+                        Required aspect ratio: {BANNER_RATIO_LABEL}
+                      </p>
                       <div className="flex items-center gap-4">
                         <div className="w-24 h-24 rounded-lg border border-slate-400 overflow-hidden bg-slate-50 flex-shrink-0">
                           {bannerPreview ? (
@@ -190,7 +229,7 @@ export default function BlogModal({
                             className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-black file:cursor-pointer cursor-pointer"
                           />
                           <p className="text-[10px] text-slate-400 mt-2 italic font-medium">Max 3MB</p>
-                          <p className="text-[10px] text-slate-400 mt-1 italic font-medium">Size: 1920 X 735</p>
+                      <p className="text-[10px] text-slate-400 mt-1 italic font-medium">Target ratio: 3:2</p>
                         </div>
                       </div>
                     </div>
@@ -199,6 +238,9 @@ export default function BlogModal({
                       <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                         Content Image
                       </label>
+                      <p className="text-[10px] font-semibold text-slate-500 mb-1">
+                        Required aspect ratio: {CONTENT_RATIO_LABEL}
+                      </p>
                       <div className="flex items-center gap-4">
                         <div className="w-24 h-24 rounded-lg border border-slate-400 overflow-hidden bg-slate-50 flex-shrink-0">
                           {contentImagePreview ? (
