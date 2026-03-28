@@ -2,6 +2,7 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { Extension } from "@tiptap/core";
 import Underline from "@tiptap/extension-underline";
 import LinkExtension from "@tiptap/extension-link";
 import ImageExtension from "@tiptap/extension-image";
@@ -51,6 +52,35 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const FontSize = Extension.create({
+  name: "fontSize",
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["textStyle"],
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element) => element.style.fontSize || null,
+            renderHTML: (attributes) => {
+              if (!attributes.fontSize) return {};
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+});
+
+const ToolbarGroup = ({ children }) => (
+  <div className="flex items-center gap-0.5 border-r border-slate-300 pr-2 mr-2 last:border-r-0 last:mr-0 last:pr-0">
+    {children}
+  </div>
+);
+
 const TiptapEditor = ({ value, onChange }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [, forceUpdate] = useState(0);
@@ -96,6 +126,7 @@ const TiptapEditor = ({ value, onChange }) => {
         types: ["heading", "paragraph", "image"],
       }),
       TextStyle,
+      FontSize,
       Color,
       Highlight.configure({
         multicolor: true,
@@ -134,9 +165,6 @@ const TiptapEditor = ({ value, onChange }) => {
         class:
           "focus:outline-none min-h-[400px] p-6 bg-white rounded-b-lg max-w-none prose prose-slate prose-sm md:prose-base lg:prose-lg overflow-y-auto",
       },
-    },
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -203,12 +231,6 @@ const TiptapEditor = ({ value, onChange }) => {
       ? "bg-slate-900 text-white"
       : "hover:bg-slate-200 text-slate-700 hover:text-slate-900"
     }`;
-
-  const ToolbarGroup = ({ children }) => (
-    <div className="flex items-center gap-0.5 border-r border-slate-300 pr-2 mr-2 last:border-r-0 last:mr-0 last:pr-0">
-      {children}
-    </div>
-  );
 
   return (
     <div className="w-full text-left border rounded-lg border-slate-400 shadow-sm relative flex flex-col">

@@ -1,6 +1,14 @@
 import React from "react";
 import { ImageIcon } from "lucide-react";
 import InputField from "./InputField";
+import {
+    getRatioLabel,
+    validateImageAspectRatio,
+} from "@/utils/imageAspectRatio";
+import toast from "react-hot-toast";
+
+const OG_RATIO = { width: 1200, height: 630 };
+const OG_RATIO_LABEL = getRatioLabel(OG_RATIO.width, OG_RATIO.height);
 
 export default function SeoParams({ formData, handleChange, setFormData }) {
     return (
@@ -55,10 +63,13 @@ export default function SeoParams({ formData, handleChange, setFormData }) {
                 />
 
                 <div className="md:col-span-2">
-                    <label className="text-[10px] font-bold uppercase text-slate-500 block mb-2">
-                        OG Image (Social Share)
-                    </label>
-                    <div className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-2">
+                            OG Image (Social Share)
+                        </label>
+                        <p className="text-[10px] font-semibold text-slate-500 mb-2">
+                            Required aspect ratio: {OG_RATIO_LABEL}
+                        </p>
+                        <div className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl">
                         <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center border border-dashed border-slate-300 overflow-hidden">
                             {formData.ogImage ? (
                                 <img
@@ -83,12 +94,20 @@ export default function SeoParams({ formData, handleChange, setFormData }) {
                                 type="file"
                                 accept="image/*"
                                 className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-700 cursor-pointer"
-                                onChange={(e) => {
-                                    if (e.target.files[0]) {
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                        await validateImageAspectRatio(file, OG_RATIO, {
+                                            label: "OG image",
+                                        });
                                         setFormData({
                                             ...formData,
-                                            ogImage: e.target.files[0],
+                                            ogImage: file,
                                         });
+                                    } catch (err) {
+                                        toast.error(err.message || "Invalid OG image");
+                                        e.target.value = "";
                                     }
                                 }}
                             />

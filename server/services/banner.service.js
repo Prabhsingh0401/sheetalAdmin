@@ -1,6 +1,9 @@
 import Banner from "../models/banner.model.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 
+const normalizeBannerStatus = (status) =>
+  status === "Inactive" ? "Inactive" : "Active";
+
 export const createBannerService = async (data, files) => {
   try {
     const { title, link, status, expiresAt } = data;
@@ -38,7 +41,7 @@ export const createBannerService = async (data, files) => {
     const newBanner = await Banner.create({
       title,
       link: link || "/",
-      status: status || "Active",
+      status: normalizeBannerStatus(status),
       image,
       order: newOrder,
       expiresAt: expiresAt || null,
@@ -58,7 +61,7 @@ export const createBannerService = async (data, files) => {
 export const getAllBannersService = async () => {
   const currentDate = new Date();
   await Banner.updateMany(
-    { expiresAt: { $lt: currentDate }, status: "Active" },
+    { expiresAt: { $ne: null, $lt: currentDate }, status: "Active" },
     { $set: { status: "Inactive", isActive: false } },
   );
 
@@ -106,10 +109,10 @@ export const updateBannerService = async (id, data, files) => {
     const updateData = {
       title: data.title,
       link: data.link,
-      status: data.status,
+      status: normalizeBannerStatus(data.status),
       image: banner.image || {}, // Ensure image object exists
       expiresAt: data.expiresAt || null,
-      isActive: data.status === "Active", // Explicitly sync isActive with status
+      isActive: normalizeBannerStatus(data.status) === "Active", // Explicitly sync isActive with status
     };
 
     // Only process files if files object exists and is valid

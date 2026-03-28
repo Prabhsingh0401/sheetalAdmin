@@ -98,7 +98,10 @@ export const uploadTo = (folderName) => {
     storage,
     fileFilter,
     limits: {
-      fileSize: 55 * 1024 * 1024,
+      fileSize:
+        folderName === "temp/bulk"
+          ? 5 * 1024 * 1024
+          : 55 * 1024 * 1024,
     },
   });
 };

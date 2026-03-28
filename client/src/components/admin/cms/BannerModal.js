@@ -12,6 +12,21 @@ import { addBanner, updateBanner } from "@/services/bannerService";
 import { getCategories } from "@/services/categoryService";
 import { getProducts } from "@/services/productService";
 import toast from "react-hot-toast";
+import {
+  getRatioLabel,
+  validateImageAspectRatio,
+} from "@/utils/imageAspectRatio";
+
+const DESKTOP_RATIO = { width: 1920, height: 720 };
+const MOBILE_RATIO = { width: 800, height: 1000 };
+const DESKTOP_RATIO_LABEL = getRatioLabel(
+  DESKTOP_RATIO.width,
+  DESKTOP_RATIO.height,
+);
+const MOBILE_RATIO_LABEL = getRatioLabel(
+  MOBILE_RATIO.width,
+  MOBILE_RATIO.height,
+);
 
 export default function BannerModal({
   isOpen,
@@ -152,20 +167,44 @@ export default function BannerModal({
   const handleDesktopImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024)
-        return toast.error("File too large (Max 5MB)");
-      setSelectedDesktopFile(file);
-      setDesktopPreview(URL.createObjectURL(file));
+      (async () => {
+        try {
+          if (file.size > 5 * 1024 * 1024) {
+            e.target.value = "";
+            return toast.error("File too large (Max 5MB)");
+          }
+          await validateImageAspectRatio(file, DESKTOP_RATIO, {
+            label: "Desktop banner image",
+          });
+          setSelectedDesktopFile(file);
+          setDesktopPreview(URL.createObjectURL(file));
+        } catch (err) {
+          toast.error(err.message || "Invalid banner image");
+          e.target.value = "";
+        }
+      })();
     }
   };
 
   const handleMobileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024)
-        return toast.error("File too large (Max 5MB)");
-      setSelectedMobileFile(file);
-      setMobilePreview(URL.createObjectURL(file));
+      (async () => {
+        try {
+          if (file.size > 5 * 1024 * 1024) {
+            e.target.value = "";
+            return toast.error("File too large (Max 5MB)");
+          }
+          await validateImageAspectRatio(file, MOBILE_RATIO, {
+            label: "Mobile banner image",
+          });
+          setSelectedMobileFile(file);
+          setMobilePreview(URL.createObjectURL(file));
+        } catch (err) {
+          toast.error(err.message || "Invalid banner image");
+          e.target.value = "";
+        }
+      })();
     }
   };
 
@@ -255,6 +294,9 @@ export default function BannerModal({
               {/* Desktop Image */}
               <div className="relative group w-full max-w-xs">
                 <h3 className="text-center text-sm font-bold mb-2 uppercase tracking-wider text-slate-700">Desktop Image (1920x720)</h3>
+                <p className="text-center text-[10px] font-semibold text-slate-500 mb-2">
+                  Required aspect ratio: {DESKTOP_RATIO_LABEL}
+                </p>
                 <div className="aspect-video">
                   <input
                     type="file"
@@ -282,6 +324,9 @@ export default function BannerModal({
               {/* Mobile Image */}
               <div className="relative group w-full max-w-[150px]">
                 <h3 className="text-center text-sm font-bold mb-2 uppercase tracking-wider text-slate-700">Mobile Image (800x1000)</h3>
+                <p className="text-center text-[10px] font-semibold text-slate-500 mb-2">
+                  Required aspect ratio: {MOBILE_RATIO_LABEL}
+                </p>
                 <div className="aspect-[9/16]">
                   <input
                     type="file"

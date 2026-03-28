@@ -5,6 +5,17 @@ import { Save, Loader2, UploadCloud, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { API_BASE_URL } from "@/services/api";
+import {
+    getRatioLabel,
+    validateImageAspectRatio,
+} from "@/utils/imageAspectRatio";
+
+const ABOUT_RATIOS = {
+    banner: { width: 1920, height: 600 },
+    founder: { width: 500, height: 600 },
+    mission: { width: 960, height: 640 },
+    craft: { width: 600, height: 600 },
+};
 
 export default function AboutUsForm() {
     const [isLoading, setIsLoading] = useState(true);
@@ -69,14 +80,22 @@ export default function AboutUsForm() {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleFileChange = (e, fieldName) => {
+    const handleFileChange = async (e, fieldName, expectedRatio) => {
         const file = e.target.files[0];
         if (file) {
-            setFormData((prev) => ({
-                ...prev,
-                [fieldName]: file,
-                [`${fieldName}Preview`]: URL.createObjectURL(file),
-            }));
+            try {
+                await validateImageAspectRatio(file, expectedRatio, {
+                    label: `${fieldName.replace(/([A-Z])/g, " $1").trim()}`,
+                });
+                setFormData((prev) => ({
+                    ...prev,
+                    [fieldName]: file,
+                    [`${fieldName}Preview`]: URL.createObjectURL(file),
+                }));
+            } catch (err) {
+                toast.error(err.message || "Invalid image ratio");
+                e.target.value = "";
+            }
         }
     };
 
@@ -139,7 +158,13 @@ export default function AboutUsForm() {
                     <ImageUpload
                         label="Banner Image"
                         preview={formData.bannerImagePreview}
-                        onChange={(e) => handleFileChange(e, "bannerImage")}
+                        aspectRatioLabel={getRatioLabel(
+                            ABOUT_RATIOS.banner.width,
+                            ABOUT_RATIOS.banner.height,
+                        )}
+                        onChange={(e) =>
+                            handleFileChange(e, "bannerImage", ABOUT_RATIOS.banner)
+                        }
                     />
                     <div className="space-y-4">
                         <Input
@@ -159,7 +184,17 @@ export default function AboutUsForm() {
                     <ImageUpload
                         label="Founder Image"
                         preview={formData.founderImagePreview}
-                        onChange={(e) => handleFileChange(e, "founderImage")}
+                        aspectRatioLabel={getRatioLabel(
+                            ABOUT_RATIOS.founder.width,
+                            ABOUT_RATIOS.founder.height,
+                        )}
+                        onChange={(e) =>
+                            handleFileChange(
+                                e,
+                                "founderImage",
+                                ABOUT_RATIOS.founder,
+                            )
+                        }
                     />
                     <div className="space-y-4">
                         <Input
@@ -186,7 +221,17 @@ export default function AboutUsForm() {
                     <ImageUpload
                         label="Growth Image"
                         preview={formData.missionImagePreview}
-                        onChange={(e) => handleFileChange(e, "missionImage")}
+                        aspectRatioLabel={getRatioLabel(
+                            ABOUT_RATIOS.mission.width,
+                            ABOUT_RATIOS.mission.height,
+                        )}
+                        onChange={(e) =>
+                            handleFileChange(
+                                e,
+                                "missionImage",
+                                ABOUT_RATIOS.mission,
+                            )
+                        }
                     />
                     <div className="space-y-4">
                         <Input
@@ -213,7 +258,13 @@ export default function AboutUsForm() {
                     <ImageUpload
                         label="Craft Image"
                         preview={formData.craftImagePreview}
-                        onChange={(e) => handleFileChange(e, "craftImage")}
+                        aspectRatioLabel={getRatioLabel(
+                            ABOUT_RATIOS.craft.width,
+                            ABOUT_RATIOS.craft.height,
+                        )}
+                        onChange={(e) =>
+                            handleFileChange(e, "craftImage", ABOUT_RATIOS.craft)
+                        }
                     />
                     <div className="space-y-4">
                         <Input
@@ -271,10 +322,13 @@ function SectionCard({ title, children }) {
     );
 }
 
-function ImageUpload({ label, preview, onChange }) {
+function ImageUpload({ label, preview, onChange, aspectRatioLabel }) {
     return (
         <div className="flex flex-col gap-2">
             <label className="text-sm font-bold">{label}</label>
+            <p className="text-[10px] font-semibold text-slate-500">
+                Required aspect ratio: {aspectRatioLabel}
+            </p>
             <div className="relative group border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all aspect-video flex flex-col items-center justify-center overflow-hidden cursor-pointer">
                 {preview ? (
                     <>
