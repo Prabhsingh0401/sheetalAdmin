@@ -2,183 +2,136 @@ const escapeHtml = (value = "") =>
   String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/>/g, "&gt;");
 
-const normalizeText = (value = "") =>
-  String(value ?? "")
-    .replace(/\r\n?/g, "\n")
-    .trim();
+const renderItalicMarkdown = (text = "") => {
+  const source = String(text ?? "");
+  let out = "";
+  let i = 0;
 
-const BULLET_PREFIX = "(?:-|\\u2022|\\u00B7|\\u2013|\\u2014)";
+  while (i < source.length) {
+    const ch = source[i];
 
-const stripBulletMarker = (value = "") =>
-  value.replace(new RegExp(`^((?:<[^>]+>\\s*)*)${BULLET_PREFIX}\\s*`), "$1");
+    if (ch === "*" || ch === "_") {
+      const close = source.indexOf(ch, i + 1);
+      if (close === -1) {
+        out += escapeHtml(ch);
+        i += 1;
+        continue;
+      }
 
-const isBulletLine = (line = "") =>
-  new RegExp(`^\\s*${BULLET_PREFIX}(?:\\s+|(?=\\S))`).test(line.trim());
+      out += `<em>${renderItalicMarkdown(source.slice(i + 1, close))}</em>`;
+      i = close + 1;
+      continue;
+    }
 
-const applyMarkdownInlineFormatting = (text = "") => {
-  let output = escapeHtml(text);
-  output = output.replace(
-    /(^|[^*])\*\*([\s\S]+?)\*\*(?!\*)/g,
-    "$1<strong>$2</strong>",
-  );
-  output = output.replace(
-    /(^|[^_])__([\s\S]+?)__(?!_)/g,
-    "$1<strong>$2</strong>",
-  );
-  output = output.replace(
-    /(^|[^*])\*([^\n*][\s\S]*?[^\n*])\*(?!\*)/g,
-    "$1<em>$2</em>",
-  );
-  output = output.replace(
-    /(^|[^_])_([^\n_][\s\S]*?[^\n_])_(?!_)/g,
-    "$1<em>$2</em>",
-  );
-  return output;
-};
-
-const isBulletBlock = (lines = []) => {
-  const nonEmpty = lines.filter((line) => line.trim() !== "");
-  return nonEmpty.length > 0 && nonEmpty.every(isBulletLine);
-};
-
-const wrapInlineFormatting = (value = "", font = {}) => {
-  const styleParts = [];
-  const size = font?.sz;
-
-  if (size) {
-    styleParts.push(
-      `font-size: ${typeof size === "number" ? `${size}pt` : String(size)}`,
-    );
+    let j = i;
+    while (j < source.length && source[j] !== "*" && source[j] !== "_") {
+      j += 1;
+    }
+    out += source.slice(i, j);
+    i = j;
   }
 
-  let html = applyMarkdownInlineFormatting(value);
-
-  if (font?.italic) {
-    html = `<em>${html}</em>`;
-  }
-
-  if (font?.bold) {
-    html = `<strong>${html}</strong>`;
-  }
-
-  if (styleParts.length > 0) {
-    return `<span style="${styleParts.join("; ")}">${html}</span>`;
-  }
-
-  return html;
+  return out;
 };
 
-const renderMarkdownHeading = (line = "", font = {}) => {
-  const match = String(line).trim().match(/^(#{1,3})\s+([\s\S]+)$/);
-  if (!match) return null;
-  const level = match[1].length;
-  const content = wrapInlineFormatting(match[2].trim(), font);
-  return `<h${level}>${content}</h${level}>`;
+const renderInlineMarkdown = (text = "") => {
+  const source = String(text ?? "");
+  const boldStore = [];
+
+  const extractBold = (input) => {
+    let out = "";
+    let i = 0;
+
+    while (i < input.length) {
+      const start = input.indexOf("**", i);
+      if (start === -1) {
+        out += escapeHtml(input.slice(i));
+        break;
+      }
+
+      out += escapeHtml(input.slice(i, start));
+
+      const end = input.indexOf("**", start + 2);
+      if (end === -1) {
+        out += escapeHtml("**");
+        i = start + 2;
+        continue;
+      }
+
+      const inner = input.slice(start + 2, end);
+      const key = `{{B${boldStore.length}}}`;
+      boldStore.push(`<strong>${renderInlineMarkdown(inner)}</strong>`);
+      out += key;
+      i = end + 2;
+    }
+
+    return out;
+  };
+
+  const restoreBold = (input) =>
+    input.replace(/\{\{B(\d+)\}\}/g, (_, idx) => boldStore[Number(idx)] ?? "");
+
+  const boldProcessed = extractBold(source);
+  const italicProcessed = renderItalicMarkdown(boldProcessed);
+  return restoreBold(italicProcessed);
 };
 
-const renderPlainTextBlocks = (text = "", font = {}) => {
-  const lines = normalizeText(text).split("\n");
+const markdownToHtml = (text = "") => {
+  const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
   const blocks = [];
   let bulletItems = [];
 
   const flushBullets = () => {
     if (!bulletItems.length) return;
-    blocks.push(
-      `<ul>${bulletItems
-        .map((item) => `<li>${wrapInlineFormatting(item, font)}</li>`)
-        .join("")}</ul>`,
-    );
+    blocks.push(`<ul>${bulletItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
     bulletItems = [];
   };
 
-  lines.forEach((line) => {
+  for (const line of lines) {
     const trimmed = line.trim();
 
-    if (trimmed === "") {
+    if (!trimmed) {
       flushBullets();
-      blocks.push("<p><br></p>");
-      return;
+      blocks.push("<p><br/></p>");
+      continue;
     }
 
-    const heading = renderMarkdownHeading(trimmed, font);
-    if (heading) {
+    const headingMatch = trimmed.match(/^(#{1,6})\s+([\s\S]+)$/);
+    if (headingMatch) {
       flushBullets();
-      blocks.push(heading);
-      return;
+      const level = headingMatch[1].length;
+      blocks.push(`<h${level}>${renderInlineMarkdown(headingMatch[2].trim())}</h${level}>`);
+      continue;
     }
 
-    if (isBulletLine(trimmed)) {
-      bulletItems.push(trimmed.replace(new RegExp(`^\\s*${BULLET_PREFIX}\\s*`), ""));
-      return;
+    const bulletMatch = trimmed.match(/^\-\s*([\s\S]*)$/);
+    if (bulletMatch) {
+      bulletItems.push(renderInlineMarkdown(bulletMatch[1].trim()));
+      continue;
     }
 
     flushBullets();
-    blocks.push(`<p>${wrapInlineFormatting(line, font)}</p>`);
-  });
+    blocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  }
 
   flushBullets();
   return blocks.join("");
 };
 
-const splitHtmlBlocks = (html = "") => {
-  const cleaned = String(html)
-    .trim()
-    .replace(/^<p[^>]*>/i, "")
-    .replace(/<\/p>$/i, "");
-
-  return cleaned
-    .split(/(?:<br\s*\/?>|<\/p>\s*<p[^>]*>)/i)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-};
-
-const renderBulletsFromHtml = (html = "", text = "", font = {}) => {
-  const plainLines = normalizeText(text)
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const htmlLines = splitHtmlBlocks(html);
-  const useHtmlSegments = htmlLines.length >= plainLines.length;
-
-  return `<ul>${plainLines
-    .map((line, index) => {
-      const fallback = wrapInlineFormatting(
-        line.replace(new RegExp(`^\\s*${BULLET_PREFIX}\\s*`), ""),
-        font,
-      );
-      const segment = useHtmlSegments ? htmlLines[index] : fallback;
-      return `<li>${stripBulletMarker(segment || fallback)}</li>`;
-    })
-    .join("")}</ul>`;
-};
-
 export const spreadsheetCellToHtml = (cell) => {
   if (!cell) return "";
 
-  const text = normalizeText(cell.v ?? cell.w ?? "");
-  if (!text) return "";
-
-  const html = typeof cell.h === "string" ? cell.h.trim() : "";
-  const lines = text.split("\n");
-  const font = cell?.s?.font || {};
-  const hasHtmlTags = /<\/?[a-z][\s\S]*>/i.test(html);
-
-  if (isBulletBlock(lines)) {
-    if (hasHtmlTags) {
-      return renderBulletsFromHtml(html, text, font);
-    }
-    return renderPlainTextBlocks(text, font);
+  const plainText = cell.v ?? cell.w ?? "";
+  if (typeof plainText === "string" && /(?:^|\n)\s*-\s*(?:\S|$)/.test(plainText)) {
+    return markdownToHtml(plainText);
   }
 
-  if (hasHtmlTags) {
-    return html;
+  if (typeof cell.h === "string" && /<[^>]+>/.test(cell.h)) {
+    return cell.h;
   }
 
-  return renderPlainTextBlocks(text, font);
+  const text = cell.h ?? plainText;
+  return markdownToHtml(text);
 };
-
