@@ -87,7 +87,7 @@ export default function AdminLogin() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -97,7 +97,7 @@ export default function AdminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-slate-900 hover:bg-black disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.99]"
+              className="w-full bg-slate-900 hover:bg-black disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.99] cursor-pointer"
             >
               {loading ? (
                 <>

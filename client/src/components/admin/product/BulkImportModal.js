@@ -191,13 +191,14 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <li className="flex gap-2">
                   <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
                   <span>
-                    Use markdown-style markers in <span className="font-semibold">Description</span>,
-                    <span className="font-semibold">Material & Care</span>, and
-                    <span className="font-semibold">Full Description</span> cells:
+                    Use markdown-style markers in {" "}
+                    <span className="font-semibold">Material & Care</span> and {" "}
+                    <span className="font-semibold">Full Description</span>{" "}
+                    cells:
                     <span className="font-semibold"> **text** </span> for bold,
                     <span className="font-semibold"> *text* </span> for italics,
                     <span className="font-semibold"> # / ## / ### </span> for
-                    headings, and <span className="font-semibold">-</span> for
+                    headings, and <span className="font-bold">-</span> for
                     bullet points.
                   </span>
                 </li>
