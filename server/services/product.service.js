@@ -475,11 +475,11 @@ export const createProductService = async (data, files, userId) => {
   if (parsedData.variants && Array.isArray(parsedData.variants)) {
     let variantFileIndex = 0;
     const uploadedVariantFiles = files?.["variantImages"] || [];
-  const uploadedVariantGalleryFiles = [
-    ...(files?.["variantGalleryImages"] || []),
-  ];
-  const uploadedVariantVideoFiles = files?.["variantVideos"] || [];
-  parsedData.variants = parsedData.variants.map((v) => {
+    const uploadedVariantGalleryFiles = [
+      ...(files?.["variantGalleryImages"] || []),
+    ];
+    const uploadedVariantVideoFiles = files?.["variantVideos"] || [];
+    parsedData.variants = parsedData.variants.map((v) => {
       // Process sizes to ensure numerical types for stock, price, and discountPrice
       const processedSizes = v.sizes.map((s) => ({
         ...s,
@@ -685,12 +685,12 @@ export const updateProductService = async (id, data, files) => {
   if (parsedData.variants && Array.isArray(parsedData.variants)) {
     let variantFileIndex = 0;
     const uploadedVariantFiles = files?.["variantImages"] || [];
-  const uploadedVariantGalleryFiles = [
-    ...(files?.["variantGalleryImages"] || []),
-  ];
-  const uploadedVariantVideoFiles = files?.["variantVideos"] || [];
+    const uploadedVariantGalleryFiles = [
+      ...(files?.["variantGalleryImages"] || []),
+    ];
+    const uploadedVariantVideoFiles = files?.["variantVideos"] || [];
 
-  parsedData.variants = parsedData.variants.map((v) => {
+    parsedData.variants = parsedData.variants.map((v) => {
       // Process sizes to ensure numerical types for stock, price, and discountPrice
       const processedSizes = v.sizes.map((s) => ({
         ...s,
@@ -912,7 +912,7 @@ const bulkImportRowBasedService = async (files, userId) => {
   }
 
   const workbook = xlsx.readFile(excelFile.path, {
-    cellHTML: true,
+    cellRichText: true,
     cellStyles: true,
     cellText: true,
   });
@@ -922,7 +922,9 @@ const bulkImportRowBasedService = async (files, userId) => {
     raw: false,
     defval: "",
   });
-  const headers = (rawRows[0] || []).map((header) => String(header || "").trim());
+  const headers = (rawRows[0] || []).map((header) =>
+    String(header || "").trim(),
+  );
   const headerIndex = new Map(
     headers.map((header, index) => [header.toLowerCase(), index]),
   );
@@ -1325,17 +1327,23 @@ const bulkImportRowBasedService = async (files, userId) => {
     for (let i = 0; i < rawRows.length - 1; i++) {
       const rowValues = rawRows[i + 1] || [];
       const rowIndex = i + 2;
+
+      const descCell = getCellByHeader(
+        rowIndex,
+        "Description",
+        "FullDescription",
+        "Full Description",
+      );
+      // console.log("=== CELL DEBUG row", rowIndex, "===");
+      // console.log("cell.v:", descCell?.v);
+      // console.log("cell.r:", JSON.stringify(descCell?.r, null, 2));
+      // console.log("cell.s:", JSON.stringify(descCell?.s, null, 2));
+      // console.log("==============================");
+
       const item = {
         Name: getRowValue(rowValues, "Name"),
         SKU: getRowValue(rowValues, "SKU"),
-        Description: spreadsheetCellToHtml(
-          getCellByHeader(
-            rowIndex,
-            "Description",
-            "FullDescription",
-            "Full Description",
-          ),
-        ),
+        Description: spreadsheetCellToHtml(descCell),
         ShortDescription: getRowValue(
           rowValues,
           "ShortDescription",
@@ -1627,11 +1635,25 @@ export const bulkImportService = async (files, userId) => {
       Name: getRowValue(rowValues, "Name"),
       SKU: getRowValue(rowValues, "SKU"),
       Description: spreadsheetCellToHtml(
-        getCellByHeader(rowNumber, "Description", "FullDescription", "Full Description"),
+        getCellByHeader(
+          rowNumber,
+          "Description",
+          "FullDescription",
+          "Full Description",
+        ),
       ),
-      ShortDescription: getRowValue(rowValues, "ShortDescription", "Short Description"),
+      ShortDescription: getRowValue(
+        rowValues,
+        "ShortDescription",
+        "Short Description",
+      ),
       MaterialCare: spreadsheetCellToHtml(
-        getCellByHeader(rowNumber, "MaterialCare", "Material Care", "Material & Care"),
+        getCellByHeader(
+          rowNumber,
+          "MaterialCare",
+          "Material Care",
+          "Material & Care",
+        ),
       ),
       Category: getRowValue(rowValues, "Category"),
       SubCategory: getRowValue(rowValues, "SubCategory", "Sub Category"),
@@ -2103,7 +2125,11 @@ export const getProductStatsService = async () => {
 
 export const incrementViewCountService = async (id) => {
   if (!id || typeof id !== "string") {
-    return { success: false, statusCode: 400, message: "Product id is required" };
+    return {
+      success: false,
+      statusCode: 400,
+      message: "Product id is required",
+    };
   }
 
   const query = id.match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
