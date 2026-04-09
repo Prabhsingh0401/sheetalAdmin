@@ -45,6 +45,9 @@ export default function CategoryModal({
   const [previewMainImage, setPreviewMainImage] = useState(null);
   const [previewBannerImage, setPreviewBannerImage] = useState(null);
   const [previewOgImage, setPreviewOgImage] = useState(null);
+  const freeSizeChart = sizeCharts.find(
+    (chart) => String(chart?.name || "").trim().toLowerCase() === "free size",
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -570,6 +573,9 @@ export default function CategoryModal({
                       className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition font-medium"
                     >
                       <option value="">No chart selected</option>
+                      {freeSizeChart ? (
+                        <option value={freeSizeChart._id}>Free Size</option>
+                      ) : null}
                       {sizeCharts.map((chart) => (
                         <option key={chart._id} value={chart._id}>
                           {chart.name || "Untitled Size Chart"}

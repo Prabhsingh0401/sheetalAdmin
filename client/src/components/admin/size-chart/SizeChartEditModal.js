@@ -4,23 +4,22 @@ import { Plus, Trash2, X } from "lucide-react";
 import { updateSizeChart } from "@/services/sizeChartService";
 import toast from "react-hot-toast";
 
-const EMPTY_ROW = {
-  label: "",
-  bust: "",
-  waist: "",
-  hip: "",
-  shoulder: "",
-  length: "",
-};
+const DEFAULT_HEADERS = ["Size", "Bust", "Waist"];
+const MAX_COLUMNS = 8;
 
-const cloneRow = (row = {}) => ({
-  label: row.label || "",
-  bust: row.bust || "",
-  waist: row.waist || "",
-  hip: row.hip || "",
-  shoulder: row.shoulder || "",
-  length: row.length || "",
+const createEmptyRow = (columnCount) => ({
+  cells: Array.from({ length: columnCount }, () => ""),
 });
+
+const normalizeRow = (row = {}, columnCount = DEFAULT_HEADERS.length) => {
+  const cells = Array.isArray(row.cells)
+    ? row.cells
+    : [row.label, row.bust, row.waist, row.hip, row.shoulder, row.length];
+
+  return {
+    cells: Array.from({ length: columnCount }, (_, index) => cells[index] || ""),
+  };
+};
 
 export default function SizeChartEditModal({
   isOpen,
@@ -29,37 +28,83 @@ export default function SizeChartEditModal({
   chart,
 }) {
   const [name, setName] = useState(chart?.name || "");
+  const [headers, setHeaders] = useState([...DEFAULT_HEADERS]);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !chart) return;
+    const nextHeaders =
+      Array.isArray(chart.headers) && chart.headers.length > 0
+        ? chart.headers
+        : DEFAULT_HEADERS;
     setName(chart.name || "");
+    setHeaders(nextHeaders);
     setRows(
       Array.isArray(chart.table) && chart.table.length > 0
-        ? chart.table.map((row) => cloneRow(row))
-        : [cloneRow(EMPTY_ROW)],
+        ? chart.table.map((row) => normalizeRow(row, nextHeaders.length))
+        : [createEmptyRow(nextHeaders.length)],
     );
   }, [isOpen, chart]);
 
   const rowCount = useMemo(() => rows.length, [rows]);
+  const columnCount = headers.length;
 
   if (!isOpen || !chart) return null;
 
-  const updateRow = (index, field, value) => {
+  const updateHeader = (index, value) => {
+    setHeaders((prev) =>
+      prev.map((header, idx) => (idx === index ? value : header)),
+    );
+  };
+
+  const addColumn = () => {
+    if (headers.length >= MAX_COLUMNS) {
+      toast.error(`You can add up to ${MAX_COLUMNS} columns only.`);
+      return;
+    }
+
+    const nextHeaders = [...headers, `Column ${headers.length + 1}`];
+    setHeaders(nextHeaders);
+    setRows((prev) => prev.map((row) => normalizeRow(row, nextHeaders.length)));
+  };
+
+  const removeColumn = (index) => {
+    if (index === 0) {
+      toast.error("The first column is required for sizes.");
+      return;
+    }
+
+    setHeaders((prev) => prev.filter((_, idx) => idx !== index));
     setRows((prev) =>
-      prev.map((row, idx) => (idx === index ? { ...row, [field]: value } : row)),
+      prev.map((row) => ({
+        cells: row.cells.filter((_, cellIndex) => cellIndex !== index),
+      })),
+    );
+  };
+
+  const updateRowCell = (rowIndex, cellIndex, value) => {
+    setRows((prev) =>
+      prev.map((row, index) =>
+        index === rowIndex
+          ? {
+              cells: row.cells.map((cell, idx) =>
+                idx === cellIndex ? value : cell,
+              ),
+            }
+          : row,
+      ),
     );
   };
 
   const addRow = () => {
-    setRows((prev) => [...prev, cloneRow(EMPTY_ROW)]);
+    setRows((prev) => [...prev, createEmptyRow(headers.length)]);
   };
 
   const removeRow = (index) => {
     setRows((prev) => {
       const next = prev.filter((_, idx) => idx !== index);
-      return next.length > 0 ? next : [cloneRow(EMPTY_ROW)];
+      return next.length > 0 ? next : [createEmptyRow(headers.length)];
     });
   };
 
@@ -71,16 +116,17 @@ export default function SizeChartEditModal({
       return;
     }
 
+    const cleanedHeaders = headers.map((header) => header.trim());
+    if (cleanedHeaders.some((header) => !header)) {
+      toast.error("All column headers are required.");
+      return;
+    }
+
     const cleanedRows = rows
       .map((row) => ({
-        label: row.label.trim(),
-        bust: row.bust.trim(),
-        waist: row.waist.trim(),
-        hip: row.hip.trim(),
-        shoulder: row.shoulder.trim(),
-        length: row.length.trim(),
+        cells: row.cells.map((cell) => String(cell || "").trim()),
       }))
-      .filter((row) => row.label);
+      .filter((row) => row.cells[0]);
 
     if (cleanedRows.length === 0) {
       toast.error("Add at least one size row.");
@@ -91,6 +137,7 @@ export default function SizeChartEditModal({
     try {
       const data = await updateSizeChart(chart._id, {
         name: nextName,
+        headers: cleanedHeaders,
         table: cleanedRows,
       });
       onChartUpdated(data.data);
@@ -105,12 +152,12 @@ export default function SizeChartEditModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[120]">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] overflow-hidden flex flex-col text-black">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden flex flex-col text-black">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-base font-semibold text-black">Edit Size Chart</h2>
             <p className="text-xs text-black/70 mt-1">
-              Update chart name and size measurements here.
+              Update headers, reorder the measurements visually, and keep the chart within 8 columns.
             </p>
           </div>
           <button
@@ -136,8 +183,55 @@ export default function SizeChartEditModal({
             </div>
             <div className="flex items-end">
               <div className="text-xs text-black/70">
-                {rowCount} row{rowCount !== 1 ? "s" : ""} in this chart
+                {rowCount} row{rowCount !== 1 ? "s" : ""} and {columnCount} column
+                {columnCount !== 1 ? "s" : ""} in this chart
               </div>
+            </div>
+          </div>
+
+          <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-black">Columns</h3>
+              <button
+                type="button"
+                onClick={addColumn}
+                disabled={headers.length >= MAX_COLUMNS}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus size={14} />
+                Add Column
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              {headers.map((header, index) => (
+                <div
+                  key={`header-${index}`}
+                  className="rounded-lg border border-gray-200 bg-white p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                      Header {index + 1}
+                    </span>
+                    {index > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => removeColumn(index)}
+                        className="text-rose-600 hover:text-rose-700 cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    type="text"
+                    value={header}
+                    onChange={(e) => updateHeader(index, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    placeholder={`Column ${index + 1}`}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -154,57 +248,29 @@ export default function SizeChartEditModal({
           </div>
 
           <div className="space-y-3">
-            {rows.map((row, index) => (
+            {rows.map((row, rowIndex) => (
               <div
-                key={`${row.label || "row"}-${index}`}
+                key={`row-${rowIndex}`}
                 className="rounded-xl border border-gray-200 bg-gray-50 p-4"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-                  <Field
-                    label="Size"
-                    value={row.label}
-                    onChange={(value) => updateRow(index, "label", value)}
-                    placeholder="S, M, L"
-                  />
-                  <Field
-                    label="Bust"
-                    value={row.bust}
-                    onChange={(value) => updateRow(index, "bust", value)}
-                    placeholder="34"
-                  />
-                  <Field
-                    label="Waist"
-                    value={row.waist}
-                    onChange={(value) => updateRow(index, "waist", value)}
-                    placeholder="28"
-                  />
-                  <Field
-                    label="Hip"
-                    value={row.hip}
-                    onChange={(value) => updateRow(index, "hip", value)}
-                    placeholder="36"
-                  />
-                  <Field
-                    label="Shoulder"
-                    value={row.shoulder}
-                    onChange={(value) => updateRow(index, "shoulder", value)}
-                    placeholder="15"
-                  />
-                  <div className="flex items-end justify-end">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                  {headers.map((header, cellIndex) => (
                     <Field
-                      label="Length"
-                      value={row.length}
-                      onChange={(value) => updateRow(index, "length", value)}
-                      placeholder="24"
-                      className="w-full"
+                      key={`cell-${rowIndex}-${cellIndex}`}
+                      label={header || `Column ${cellIndex + 1}`}
+                      value={row.cells[cellIndex] || ""}
+                      onChange={(value) =>
+                        updateRowCell(rowIndex, cellIndex, value)
+                      }
+                      placeholder={cellIndex === 0 ? "S, M, L" : "Value"}
                     />
-                  </div>
+                  ))}
                 </div>
 
                 <div className="mt-3 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => removeRow(index)}
+                    onClick={() => removeRow(rowIndex)}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
                   >
                     <Trash2 size={14} />
@@ -237,9 +303,9 @@ export default function SizeChartEditModal({
   );
 }
 
-function Field({ label, value, onChange, placeholder, className = "" }) {
+function Field({ label, value, onChange, placeholder }) {
   return (
-    <label className={`block ${className}`}>
+    <label className="block">
       <span className="block text-[11px] font-semibold text-black uppercase tracking-wider mb-1">
         {label}
       </span>
