@@ -63,6 +63,7 @@ const localOrigins = [
   "http://192.168.1.10:3000",
   "http://192.168.0.141:3000",
   "http://192.168.0.227:4000",
+  "https://sheetal-admin.vercel.app"
 ].map(normalizeOrigin);
 
 const allowedOrigins = new Set([...localOrigins, ...configuredOrigins]);
