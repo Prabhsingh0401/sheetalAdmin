@@ -1,10 +1,20 @@
 import Homepage from "../models/homepage.model.js";
 
+const applyNoStoreHeaders = (res) => {
+    res.set({
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+        "Surrogate-Control": "no-store",
+    });
+};
+
 // @desc    Get homepage visibility settings
 // @route   GET /api/v1/homepage/sections
 // @access  Public
 export const getSections = async (req, res, next) => {
     try {
+        applyNoStoreHeaders(res);
         let homepage = await Homepage.findOne();
 
         // Create default if doesn't exist
@@ -23,6 +33,7 @@ export const getSections = async (req, res, next) => {
 // @access  Private/Admin
 export const updateSections = async (req, res, next) => {
     try {
+        applyNoStoreHeaders(res);
         const { sections } = req.body;
 
         let homepage = await Homepage.findOne();

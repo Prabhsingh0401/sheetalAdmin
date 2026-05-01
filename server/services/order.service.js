@@ -92,6 +92,9 @@ export const createOrderService = async (data, userId) => {
       id: paymentInfo?.id || `manual_${Date.now()}`,
       status: paymentInfo?.status || "Pending",
       method: paymentInfo?.method || "COD",
+      displayMethod:
+        paymentInfo?.displayMethod ||
+        (paymentInfo?.method === "COD" ? "Cash on Delivery" : "Online"),
     },
     couponId: data.couponId || null,
     couponCode: data.couponCode || "",
