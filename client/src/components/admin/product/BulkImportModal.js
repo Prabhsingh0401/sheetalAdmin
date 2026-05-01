@@ -205,6 +205,24 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <li className="flex gap-2">
                   <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
                   <span>
+                    New columns supported: <span className="font-semibold">Trending, NewArrival, Collection, Starred, DisplayCollections, EventTags, KeyBenefits, ProductVideo, ProductGallery, GST, Threshold, BrandInfo, Warranty, ReturnPolicy</span>.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
+                  <span>
+                    Use <span className="font-semibold">Yes/No</span> or <span className="font-semibold">true/false</span> for Trending, NewArrival, Collection, and Starred flags.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
+                  <span>
+                    For <span className="font-semibold">ProductGallery</span> and other list fields, use comma-separated filenames/values.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
+                  <span>
                     Images must be <span className="font-semibold">3:4</span>{" "}
                     aspect ratio. Keep each image file within{" "}
                     <span className="font-semibold">5MB</span>.
@@ -213,7 +231,7 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 <li className="flex gap-2">
                   <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-900 shrink-0" />
                   <span>
-                    Variant videos must be{" "}
+                    Videos must be{" "}
                     <span className="font-semibold">3:4</span> aspect ratio.
                     Keep each video file within{" "}
                     <span className="font-semibold">5MB</span>.
@@ -486,9 +504,11 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <p className="text-xs text-slate-400 italic">
-                  Note: Add one video filename per variant row in the
-                  VariantVideo column. Filenames must match the uploaded video
-                  files exactly. Videos should be 3:4 and under 5MB each.
+                  Note: Add video filenames in the
+                  <span className="font-semibold"> VariantVideo </span> or
+                  <span className="font-semibold"> ProductVideo </span> columns.
+                  Filenames must match the uploaded video files exactly.
+                  Videos should be 3:4 and under 5MB each.
                 </p>
               </div>
             </div>

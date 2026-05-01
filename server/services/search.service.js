@@ -3,7 +3,6 @@ import Product from "../models/product.model.js";
 import Category from "../models/category.model.js";
 
 const SINGLE_CHAR_SEARCH_LIMIT = 100;
-const MAX_MATCHING_PRODUCTS = 8;
 
 /**
  * Searches products and categories using the custom n-gram index.
@@ -20,6 +19,10 @@ const MAX_MATCHING_PRODUCTS = 8;
 export const searchService = async ({ query, limit, page }) => {
   const normalisedQuery = normalise(query);
   const isSingleCharacterQuery = normalisedQuery.length === 1;
+  const maxProducts =
+    Number.isFinite(Number(limit)) && Number(limit) > 0
+      ? Number(limit)
+      : Infinity;
 
   const result = await searchNgram(query, {
     limit: isSingleCharacterQuery ? SINGLE_CHAR_SEARCH_LIMIT : limit,
@@ -39,7 +42,10 @@ export const searchService = async ({ query, limit, page }) => {
     : [];
 
   // --- Step 1: Category resolution ---
-  const targetedCategory = findTargetedCategoryHit(hits, normalisedQuery);
+  const targetedCategory = await findTargetedCategoryHit(
+    hits,
+    normalisedQuery,
+  );
   if (targetedCategory) {
     return limitProductResults(
       await buildCategoryWithProductsResults(targetedCategory.data),
@@ -50,12 +56,6 @@ export const searchService = async ({ query, limit, page }) => {
   const intentOrFieldMatchedProducts = hits.filter((hit) => {
     if (hit.type !== "product") return false;
 
-    // Tighten 1-2 char partials to product names only. This prevents false
-    // positives from tags, descriptions, or other indexed fields.
-    if (shortPartialQuery) {
-      return productNameHasPartialMatch(hit.data, normalisedQuery);
-    }
-
     return productMatchesSearchIntent(hit.data, normalisedQuery);
   });
   if (intentOrFieldMatchedProducts.length > 0) {
@@ -63,6 +63,7 @@ export const searchService = async ({ query, limit, page }) => {
       shortQueryCategoryHits.length > 0
         ? [...shortQueryCategoryHits, ...intentOrFieldMatchedProducts]
         : intentOrFieldMatchedProducts,
+      maxProducts,
     );
   }
 
@@ -86,32 +87,44 @@ export const searchService = async ({ query, limit, page }) => {
   //
   // FIX #11: Return products only — never return raw category hits in fallback.
   const productHits = hits.filter((hit) => hit.type === "product");
-  const fuzzyMatchedProducts = shortPartialQuery
-    ? productHits.filter((hit) =>
-        productNameHasPartialMatch(hit.data, normalisedQuery),
-      )
-    : productHits.filter((hit) =>
-        productHasFuzzyWordMatch(hit.data, normalisedQuery),
-      );
+  const fuzzyMatchedProducts = productHits.filter((hit) =>
+    shortPartialQuery
+      ? productMatchesSearchIntent(hit.data, normalisedQuery)
+      : productHasFuzzyWordMatch(hit.data, normalisedQuery),
+  );
 
   return limitProductResults(
     shortQueryCategoryHits.length > 0
       ? [...shortQueryCategoryHits, ...fuzzyMatchedProducts]
       : fuzzyMatchedProducts,
+    maxProducts,
   );
 };
 
-const limitProductResults = (results) => {
+const limitProductResults = (results, maxProducts = Infinity) => {
   const limitedResults = [];
   let productCount = 0;
+  const seenProductIds = new Set();
+  const seenCategoryIds = new Set();
 
   for (const result of results) {
     if (result.type !== "product") {
+      const categoryId = result?.data?._id?.toString?.() || result?.data?.id;
+      if (categoryId) {
+        if (seenCategoryIds.has(categoryId)) continue;
+        seenCategoryIds.add(categoryId);
+      }
       limitedResults.push(result);
       continue;
     }
 
-    if (productCount >= MAX_MATCHING_PRODUCTS) continue;
+    const productId = result?.data?._id?.toString?.() || result?.data?.id;
+    if (productId) {
+      if (seenProductIds.has(productId)) continue;
+      seenProductIds.add(productId);
+    }
+
+    if (productCount >= maxProducts) continue;
 
     limitedResults.push(result);
     productCount += 1;
@@ -332,16 +345,59 @@ const isCategoryFuzzyMatch = (normalisedQuery, normalisedCategoryName) => {
   return false;
 };
 
-const findTargetedCategoryHit = (hits, normalisedQuery) => {
+const hasPrefixTypoMatch = (queryWord, categoryWord) => {
+  if (!queryWord || !categoryWord) return false;
+  if (queryWord.length < 3 || categoryWord.length < 3) return false;
+
+  const comparableCategoryPrefix = categoryWord.slice(0, queryWord.length);
+  const comparableQueryPrefix = queryWord.slice(0, categoryWord.length);
+
+  return (
+    levenshteinDistance(queryWord, comparableCategoryPrefix) <= 1 ||
+    levenshteinDistance(comparableQueryPrefix, categoryWord) <= 1
+  );
+};
+
+const categoryMatchesQuery = (category, normalisedQuery, queryWords) => {
+  const normalisedCategoryName = normalise(category?.name);
+  if (!normalisedCategoryName) return false;
+
+  if (
+    (queryWords.length <= 1 ||
+      valueMatchesAllQueryWords(normalisedCategoryName, queryWords)) &&
+    isCategoryFuzzyMatch(normalisedQuery, normalisedCategoryName)
+  ) {
+    return true;
+  }
+
+  const categoryWords = normalisedCategoryName
+    .split(" ")
+    .filter((word) => word.length >= 3);
+
+  return queryWords.some((qWord) =>
+    categoryWords.some((categoryWord) => hasPrefixTypoMatch(qWord, categoryWord)),
+  );
+};
+
+const findTargetedCategoryHit = async (hits, normalisedQuery) => {
   const queryWords = getQueryWords(normalisedQuery, 3);
 
-  return hits.find(
-    (hit) =>
-      hit.type === "category" &&
-      (queryWords.length <= 1 ||
-        valueMatchesAllQueryWords(normalise(hit.data.name), queryWords)) &&
-      isCategoryFuzzyMatch(normalisedQuery, normalise(hit.data.name)),
+  const hitMatch = hits.find(
+    (hit) => hit.type === "category" && categoryMatchesQuery(hit.data, normalisedQuery, queryWords),
   );
+
+  if (hitMatch) return hitMatch;
+
+  if (queryWords.length === 0) return null;
+
+  const activeCategories = await Category.find({ status: "Active" })
+    .select("_id name slug description status")
+    .lean();
+  const fallbackCategory = activeCategories.find((category) =>
+    categoryMatchesQuery(category, normalisedQuery, queryWords),
+  );
+
+  return fallbackCategory ? { type: "category", data: fallbackCategory } : null;
 };
 
 const buildCategoryWithProductsResults = async (category) => {
@@ -374,11 +430,14 @@ const STRUCTURED_SEARCH_FIELDS = [
   "byPrice",
 ];
 
+const TEXT_SEARCH_FIELDS = ["shortDescription"];
+
 const productMatchesSearchIntent = (product, normalisedQuery) => {
   const queryWords = getQueryWords(normalisedQuery);
   if (queryWords.length <= 1) {
     return (
       productMatchesStructuredFields(product, normalisedQuery) ||
+      productMatchesTextFields(product, normalisedQuery) ||
       primaryTextMatchesProduct(product, normalisedQuery)
     );
   }
@@ -425,6 +484,33 @@ const productMatchesStructuredFields = (product, normalisedQuery) => {
   });
 };
 
+const productMatchesTextFields = (product, normalisedQuery) => {
+  if (!normalisedQuery) return false;
+
+  return TEXT_SEARCH_FIELDS.some((field) => {
+    const value = product?.[field];
+    if (!value) return false;
+
+    const normalisedValue = normalise(value);
+    if (!normalisedValue) return false;
+
+    if (
+      normalisedValue === normalisedQuery ||
+      normalisedValue.includes(normalisedQuery) ||
+      normalisedQuery.includes(normalisedValue)
+    ) {
+      return true;
+    }
+
+    const queryWords = getQueryWords(normalisedQuery);
+    const valueWords = getSearchableWords([normalisedValue]);
+
+    return queryWords.every((qWord) =>
+      valueWords.some((valueWord) => wordsMatch(qWord, valueWord)),
+    );
+  });
+};
+
 const primaryTextMatchesProduct = (product, normalisedQuery) => {
   return (
     primaryTextMatches(product.name, normalisedQuery) ||
@@ -465,12 +551,6 @@ const primaryTextMatches = (value, normalisedExpandedQuery) => {
 const isShortPartialQuery = (normalisedQuery) =>
   normalisedQuery.length > 0 && normalisedQuery.length < 3;
 
-const productNameHasPartialMatch = (product, normalisedQuery) => {
-  const normalisedName = normalise(product?.name);
-  if (!normalisedName || !normalisedQuery) return false;
-  return normalisedName.includes(normalisedQuery);
-};
-
 const getQueryWords = (normalisedQuery, minLength = 2) =>
   normalisedQuery.split(" ").filter((w) => w.length >= minLength);
 
@@ -505,6 +585,7 @@ const getProductIntentWords = (product) =>
     product.slug,
     product.subCategory,
     getProductCategoryName(product),
+    product.shortDescription,
     ...getProductColorValues(product),
     ...STRUCTURED_SEARCH_FIELDS.flatMap((field) =>
       field === "colors"

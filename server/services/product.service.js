@@ -141,6 +141,8 @@ export const getAllProductsService = async (queryStr) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   let filter = {};
+  let searchProductIds = [];
+  let searchOrderMap = new Map();
 
   if (search) {
     const searchResults = await searchService({
@@ -148,9 +150,17 @@ export const getAllProductsService = async (queryStr) => {
       limit: 1000,
       page: 1,
     });
-    const productIds = searchResults
+    searchProductIds = searchResults
       .filter((hit) => hit.type === "product" && hit.data && hit.data._id)
-      .map((hit) => new mongoose.Types.ObjectId(hit.data._id));
+      .map((hit) => hit.data._id.toString());
+
+    searchOrderMap = new Map(
+      searchProductIds.map((id, index) => [id, index]),
+    );
+
+    const productIds = searchProductIds.map(
+      (id) => new mongoose.Types.ObjectId(id),
+    );
 
     if (productIds.length === 0) {
       return {
@@ -267,6 +277,17 @@ export const getAllProductsService = async (queryStr) => {
 
   const pipeline = [
     { $match: filter },
+    ...(searchProductIds.length > 0
+      ? [
+          {
+            $addFields: {
+              _searchRank: {
+                $indexOfArray: [searchProductIds, { $toString: "$_id" }],
+              },
+            },
+          },
+        ]
+      : []),
     {
       $addFields: {
         _threshold: { $ifNull: ["$lowStockThreshold", 5] },
@@ -321,14 +342,32 @@ export const getAllProductsService = async (queryStr) => {
     },
     {
       $sort: (() => {
-        if (!sort) return { createdAt: -1 };
+        const searchSort = searchProductIds.length > 0 ? { _searchRank: 1 } : {};
+        if (!sort) return searchProductIds.length > 0 ? searchSort : { createdAt: -1 };
         if (typeof sort === "object") return sort;
-        if (sort === "newest") return { createdAt: -1 };
-        if (sort === "price_asc") return { "variants.sizes.price": 1 };
-        if (sort === "price_desc") return { "variants.sizes.price": -1 };
-        if (sort === "popularity") return { averageRating: -1 };
-        if (sort.startsWith("-")) return { [sort.substring(1)]: -1 };
-        return { [sort]: 1 };
+        if (sort === "newest")
+          return searchProductIds.length > 0
+            ? { ...searchSort, createdAt: -1 }
+            : { createdAt: -1 };
+        if (sort === "price_asc")
+          return searchProductIds.length > 0
+            ? { ...searchSort, "variants.sizes.price": 1 }
+            : { "variants.sizes.price": 1 };
+        if (sort === "price_desc")
+          return searchProductIds.length > 0
+            ? { ...searchSort, "variants.sizes.price": -1 }
+            : { "variants.sizes.price": -1 };
+        if (sort === "popularity")
+          return searchProductIds.length > 0
+            ? { ...searchSort, averageRating: -1 }
+            : { averageRating: -1 };
+        if (sort.startsWith("-"))
+          return searchProductIds.length > 0
+            ? { ...searchSort, [sort.substring(1)]: -1 }
+            : { [sort.substring(1)]: -1 };
+        return searchProductIds.length > 0
+          ? { ...searchSort, [sort]: 1 }
+          : { [sort]: 1 };
       })(),
     },
   ];
@@ -342,7 +381,14 @@ export const getAllProductsService = async (queryStr) => {
     },
   ]);
 
-  const products = result.products;
+  const products =
+    searchOrderMap.size > 0
+      ? [...result.products].sort(
+          (left, right) =>
+            (searchOrderMap.get(left._id.toString()) ?? Number.MAX_SAFE_INTEGER) -
+            (searchOrderMap.get(right._id.toString()) ?? Number.MAX_SAFE_INTEGER),
+        )
+      : result.products;
   const totalProducts = result.totalProducts[0]?.count || 0;
 
   return {
@@ -1103,6 +1149,21 @@ const bulkImportRowBasedService = async (files, userId) => {
     "MetaTitle",
     "MetaDescription",
     "MetaKeywords",
+    "Trending",
+    "NewArrival",
+    "Collection",
+    "Starred",
+    "DisplayCollections",
+    "EventTags",
+    "KeyBenefits",
+    "ProductVideo",
+    "ProductGallery",
+    "GST",
+    "Threshold",
+    "BrandInfo",
+    "Warranty",
+    "ReturnPolicy",
+    "CanonicalUrl",
   ];
 
   const DETAIL_FIELD_KEYS = ["DetailKey", "DetailValue"];
@@ -1346,13 +1407,26 @@ const bulkImportRowBasedService = async (files, userId) => {
       }
 
       const hoverImage = await processImage(item.HoverImage);
-
       const variants = [...draft.variantMap.values()];
       if (variants.length === 0) {
         errors.push(
           `Row ${rowIndex} (${name}): At least one variant row is required — row skipped`,
         );
         return;
+      }
+
+      const productVideo = await processVideo(item.ProductVideo);
+      const productGallery = [];
+      const galleryList = safeSplit(item.ProductGallery);
+      for (const imgName of galleryList) {
+        const img = await processImage(imgName);
+        if (img) {
+          productGallery.push({ ...img, alt: `${name} gallery image` });
+        } else {
+          errors.push(
+            `Row ${rowIndex} (${name}): Product gallery image "${imgName}" not found`,
+          );
+        }
       }
 
       let totalStock = 0;
@@ -1376,6 +1450,13 @@ const bulkImportRowBasedService = async (files, userId) => {
         slug = `${base}-${suffix}`;
       }
 
+      const isTrue = (val) => {
+        if (val === true || val === "true" || val === 1 || val === "1")
+          return true;
+        if (typeof val === "string" && val.toLowerCase() === "yes") return true;
+        return false;
+      };
+
       productsToInsert.push({
         name,
         sku,
@@ -1395,12 +1476,27 @@ const bulkImportRowBasedService = async (files, userId) => {
         fabric: safeSplit(item.Fabric),
         productType: safeSplit(item.Type),
         byPrice: safeSplit(item.ByPrice),
+        displayCollections: safeSplit(item.DisplayCollections),
+        eventTags: safeSplit(item.EventTags),
+        keyBenefits: safeSplit(item.KeyBenefits),
+        isTrending: isTrue(item.Trending),
+        isNewArrival: isTrue(item.NewArrival),
+        isCollection: isTrue(item.Collection),
+        isStarred: isTrue(item.Starred),
+        gstPercent: Number(item.GST) || 0,
+        lowStockThreshold: Number(item.Threshold) || 5,
+        brandInfo: item.BrandInfo || "",
+        warranty: item.Warranty || "No Warranty",
+        returnPolicy: item.ReturnPolicy || "7 Days Return Policy",
+        canonicalUrl: item.CanonicalUrl || "",
         specifications: draft.specifications,
         metaTitle: item.MetaTitle || "",
         metaDescription: item.MetaDescription || "",
         metaKeywords: item.MetaKeywords || "",
         mainImage,
         ...(hoverImage && { hoverImage }),
+        images: productGallery,
+        ...(productVideo && { video: productVideo }),
         variants,
         createdBy: userId,
       });
@@ -1490,6 +1586,24 @@ const bulkImportRowBasedService = async (files, userId) => {
         ),
         VariantVideo: getRowValue(rowValues, "VariantVideo"),
         VariantVideoName: getRowValue(rowValues, "VariantVideoName"),
+        Trending: getRowValue(rowValues, "Trending", "IsTrending"),
+        NewArrival: getRowValue(rowValues, "NewArrival", "IsNewArrival"),
+        Collection: getRowValue(rowValues, "Collection", "IsCollection"),
+        Starred: getRowValue(rowValues, "Starred", "IsStarred"),
+        DisplayCollections: getRowValue(rowValues, "DisplayCollections", "Display Collections"),
+        EventTags: getRowValue(rowValues, "EventTags", "Event Tags"),
+        KeyBenefits: getRowValue(rowValues, "KeyBenefits", "Key Benefits"),
+        ProductVideo: getRowValue(rowValues, "ProductVideo", "Product Video"),
+        ProductGallery: getRowValue(rowValues, "ProductGallery", "Product Gallery", "Images"),
+        GST: getRowValue(rowValues, "GST", "GSTPercent"),
+        Threshold: getRowValue(rowValues, "Threshold", "LowStockThreshold"),
+        BrandInfo: getRowValue(rowValues, "BrandInfo", "Brand Info"),
+        Warranty: getRowValue(rowValues, "Warranty"),
+        ReturnPolicy: getRowValue(rowValues, "ReturnPolicy", "Return Policy"),
+        CanonicalUrl: getRowValue(rowValues, "CanonicalUrl", "Canonical URL"),
+        MetaTitle: getRowValue(rowValues, "MetaTitle", "Meta Title"),
+        MetaDescription: getRowValue(rowValues, "MetaDescription", "Meta Description"),
+        MetaKeywords: getRowValue(rowValues, "MetaKeywords", "Meta Keywords"),
       };
 
       try {

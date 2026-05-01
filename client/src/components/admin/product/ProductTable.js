@@ -93,8 +93,26 @@ export default function ProductTable({ refreshStats }) {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await getCategories(1, 1000, "");
-        if (res.success) setCategories(res.data?.categories || []);
+        const pageSize = 200;
+        let page = 1;
+        let totalPages = 1;
+        const allCategories = [];
+
+        while (page <= totalPages) {
+          const res = await getCategories(page, pageSize, "");
+          if (!res.success) break;
+
+          const batch = Array.isArray(res.data?.categories)
+            ? res.data.categories
+            : [];
+          const pagination = res.data?.pagination || {};
+
+          allCategories.push(...batch);
+          totalPages = Number(pagination.totalPages || 1);
+          page += 1;
+        }
+
+        setCategories(allCategories);
       } catch (err) {
         console.error("Failed to fetch categories:", err);
       }
