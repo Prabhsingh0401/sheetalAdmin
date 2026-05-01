@@ -10,6 +10,34 @@ import { sendOrderConfirmationEmail } from "./order.email.service.js";
 import { completeAbandonedCartFlow } from "./abandonedCart.service.js";
 import { confirmCouponUsageForOrder } from "./coupon.service.js";
 
+const normalizePaymentDisplayMethod = (method) => {
+  const normalizedMethod = String(method || "").trim().toLowerCase();
+
+  switch (normalizedMethod) {
+    case "card":
+      return "Card";
+    case "upi":
+      return "UPI";
+    case "netbanking":
+      return "Net Banking";
+    case "wallet":
+      return "Wallet";
+    case "emi":
+      return "EMI";
+    case "paylater":
+      return "Pay Later";
+    case "cod":
+      return "Cash on Delivery";
+    default:
+      return normalizedMethod
+        ? normalizedMethod
+            .split(/[_\s-]+/)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(" ")
+        : "Online";
+  }
+};
+
 export const createPaymentLinkService = async (
   userId,
   shippingAddress,
@@ -119,6 +147,7 @@ export const createPaymentLinkService = async (
       id: `pay_${Date.now()}`,
       status: "Pending",
       method: "Online",
+      displayMethod: "Online",
     },
     couponId: couponData.couponId || null,
     couponCode: couponData.couponCode || "",
@@ -298,8 +327,21 @@ export const verifyOnlinePaymentService = async (params) => {
   }
 
   // 7. Mark order as Paid
+  let paymentDetails = null;
+  try {
+    paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+  } catch (paymentFetchError) {
+    console.error(
+      "[PaymentVerify] Failed to fetch payment details:",
+      paymentFetchError.message,
+    );
+  }
+
   order.paymentInfo.id = razorpay_payment_id;
   order.paymentInfo.status = "Paid";
+  order.paymentInfo.displayMethod = normalizePaymentDisplayMethod(
+    paymentDetails?.method,
+  );
   order.paidAt = new Date();
   if (order.recoverySource && !order.recoveredAt) {
     order.recoveredAt = new Date();

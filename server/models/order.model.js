@@ -43,6 +43,7 @@ const orderSchema = new mongoose.Schema(
       id: { type: String },
       status: { type: String, default: "Pending" },
       method: { type: String, enum: ["COD", "Online"], required: true },
+      displayMethod: { type: String, default: "" },
     },
     couponId: {
       type: mongoose.Schema.Types.ObjectId,
