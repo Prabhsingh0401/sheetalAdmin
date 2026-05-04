@@ -102,60 +102,102 @@ export default function BulkImportModal({ isOpen, onClose, onSuccess }) {
     });
   };
 
-  const handleSubmit = async () => {
-    if (!excelFile) {
-      toast.error("Please select an Excel file");
-      return;
-    }
+const handleSubmit = async () => {
+  if (!excelFile) {
+    toast.error("Please select an Excel file");
+    return;
+  }
 
-    setUploading(true);
-    setStep(2);
+  setUploading(true);
+  setStep(2);
 
-    try {
-      const formData = new FormData();
-      formData.append("file", excelFile);
-      imageFiles.forEach(({ file }) => formData.append("images", file));
-      variantVideoFiles.forEach(({ file }) =>
-        formData.append("variantVideos", file, file.name),
-      );
+  try {
+    const formData = new FormData();
+    formData.append("file", excelFile);
+    imageFiles.forEach(({ file }) => formData.append("images", file));
+    variantVideoFiles.forEach(({ file }) =>
+      formData.append("variantVideos", file, file.name),
+    );
 
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 90) { clearInterval(interval); return 90; }
+        return prev + 10;
+      });
+    }, 500);
+
+    const res = await bulkImportProducts(formData);
+
+    clearInterval(interval);
+    setProgress(100);
+
+    if (res.success) {
+      const rawErrors = res.data?.errors || [];
+
+      const filteredErrors = rawErrors
+        // Remove "Name and SKU are required" noise from partial/continuation rows
+        .filter((err) => {
+          const msg = typeof err === "string" ? err.toLowerCase() : JSON.stringify(err).toLowerCase();
+          return !(
+            msg.includes("name and sku are required") ||
+            msg.includes("no sku") ||
+            msg.includes("missing sku") ||
+            msg.includes("sku is required") ||
+            msg.includes("variant row found before")
+          );
+        })
+        // Humanize DB duplicate key errors
+        .map((err) => {
+          const msg = typeof err === "string" ? err : JSON.stringify(err);
+
+          const variantSkuMatch = msg.match(
+            /DB insert failed for "([^"]+)".*variants\.v_sku.*dup key.*"([^"]+)"/,
+          );
+          if (variantSkuMatch) {
+            return `"${variantSkuMatch[1]}" was not saved — variant SKU "${variantSkuMatch[2]}" already exists in the catalog. Please use a unique variant SKU.`;
           }
-          return prev + 10;
+
+          const productSkuMatch = msg.match(
+            /DB insert failed for "([^"]+)".*\bsku\b.*dup key.*"([^"]+)"/i,
+          );
+          if (productSkuMatch) {
+            return `"${productSkuMatch[1]}" was not saved — product SKU "${productSkuMatch[2]}" already exists. Please use a unique SKU.`;
+          }
+
+          const slugMatch = msg.match(/DB insert failed for "([^"]+)".*slug/i);
+          if (slugMatch) {
+            return `"${slugMatch[1]}" was not saved — a product with a very similar name already exists. Please rename it slightly and try again.`;
+          }
+
+          const genericDbMatch = msg.match(/DB insert failed for "([^"]+)"/);
+          if (genericDbMatch) {
+            return `"${genericDbMatch[1]}" could not be saved — please check the data and try again.`;
+          }
+
+          return msg;
         });
-      }, 500);
 
-      const res = await bulkImportProducts(formData);
-
-      clearInterval(interval);
-      setProgress(100);
-
-      if (res.success) {
-        setResult({
-          success: true,
-          count: res.data?.imported || 0,
-          message: res.message || "Products imported successfully",
-          errors: res.data?.errors || [],
-        });
-        setStep(3);
-        onSuccess?.();
-      } else {
-        throw new Error(res.message || "Import failed");
-      }
-    } catch (error) {
       setResult({
-        success: false,
-        message: error.message || "Failed to import products.",
+        success: true,
+        count: res.data?.imported || 0,
+        message: res.message || "Products imported successfully",
+        errors: filteredErrors,
       });
       setStep(3);
-    } finally {
-      setUploading(false);
+      onSuccess?.();
+    } else {
+      throw new Error(res.message || "Import failed");
     }
-  };
+  } catch (error) {
+    setResult({
+      success: false,
+      message: error.message || "Failed to import products.",
+    });
+    setStep(3);
+  } finally {
+    setUploading(false);
+  }
+};
 
   const resetForm = () => {
     imageFiles.forEach(({ url }) => URL.revokeObjectURL(url));
