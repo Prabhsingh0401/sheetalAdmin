@@ -154,9 +154,7 @@ export const getAllProductsService = async (queryStr) => {
       .filter((hit) => hit.type === "product" && hit.data && hit.data._id)
       .map((hit) => hit.data._id.toString());
 
-    searchOrderMap = new Map(
-      searchProductIds.map((id, index) => [id, index]),
-    );
+    searchOrderMap = new Map(searchProductIds.map((id, index) => [id, index]));
 
     const productIds = searchProductIds.map(
       (id) => new mongoose.Types.ObjectId(id),
@@ -342,8 +340,10 @@ export const getAllProductsService = async (queryStr) => {
     },
     {
       $sort: (() => {
-        const searchSort = searchProductIds.length > 0 ? { _searchRank: 1 } : {};
-        if (!sort) return searchProductIds.length > 0 ? searchSort : { createdAt: -1 };
+        const searchSort =
+          searchProductIds.length > 0 ? { _searchRank: 1 } : {};
+        if (!sort)
+          return searchProductIds.length > 0 ? searchSort : { createdAt: -1 };
         if (typeof sort === "object") return sort;
         if (sort === "newest")
           return searchProductIds.length > 0
@@ -385,8 +385,10 @@ export const getAllProductsService = async (queryStr) => {
     searchOrderMap.size > 0
       ? [...result.products].sort(
           (left, right) =>
-            (searchOrderMap.get(left._id.toString()) ?? Number.MAX_SAFE_INTEGER) -
-            (searchOrderMap.get(right._id.toString()) ?? Number.MAX_SAFE_INTEGER),
+            (searchOrderMap.get(left._id.toString()) ??
+              Number.MAX_SAFE_INTEGER) -
+            (searchOrderMap.get(right._id.toString()) ??
+              Number.MAX_SAFE_INTEGER),
         )
       : result.products;
   const totalProducts = result.totalProducts[0]?.count || 0;
@@ -1210,8 +1212,17 @@ const bulkImportRowBasedService = async (files, userId) => {
   const existingSkus = new Set(
     (await Product.find({}, { sku: 1 }).lean()).map((p) => p.sku),
   );
+
+  // Pre-fetch all existing product names (lowercase) for duplicate check
+  const existingNames = new Set(
+    (await Product.find({}, { name: 1 }).lean()).map((p) =>
+      p.name.toLowerCase().trim(),
+    ),
+  );
+
   const batchSlugs = new Set();
   const batchSkus = new Set();
+  const batchNames = new Set();
 
   const allUploadedMedia = [];
   let activeUploadTracker = null;
@@ -1228,7 +1239,6 @@ const bulkImportRowBasedService = async (files, userId) => {
     const normalized = filename.toString().trim().toLowerCase();
     const cached = uploadedImageCache.get(normalized);
     if (cached) return cached;
-
     const file = imageMap.get(normalized);
     if (!file) return null;
     const s3Result = await uploadS3File(file.path, folder);
@@ -1243,7 +1253,6 @@ const bulkImportRowBasedService = async (files, userId) => {
     const normalized = filename.toString().trim().toLowerCase();
     const cached = uploadedVideoCache.get(normalized);
     if (cached) return cached;
-
     const file = videoMap.get(normalized);
     if (!file) return null;
     const s3Result = await uploadS3File(file.path, folder);
@@ -1297,7 +1306,7 @@ const bulkImportRowBasedService = async (files, userId) => {
     const discountPrice = Number(discountValue || 0);
     const stock = Number(stockValue || 0);
 
-    if (!price || Number.isNaN(price)) {
+    if (priceValue === "" || Number.isNaN(price)) {
       errors.push(
         `Row ${rowIndex} (${productName}): Price is required for size "${sizeName}"`,
       );
@@ -1309,10 +1318,7 @@ const bulkImportRowBasedService = async (files, userId) => {
     for (const imageName of variantImageList) {
       const image = await processImage(imageName);
       if (image) {
-        gallery.push({
-          ...image,
-          alt: `${productName} ${colorName} gallery`,
-        });
+        gallery.push({ ...image, alt: `${productName} ${colorName} gallery` });
       } else {
         errors.push(
           `Row ${rowIndex} (${productName}): Variant image "${imageName}" not found in uploaded images`,
@@ -1336,10 +1342,7 @@ const bulkImportRowBasedService = async (files, userId) => {
     }
 
     const v_image = gallery[0]
-      ? {
-          url: gallery[0].url,
-          public_id: gallery[0].public_id,
-        }
+      ? { url: gallery[0].url, public_id: gallery[0].public_id }
       : null;
 
     return {
@@ -1503,6 +1506,7 @@ const bulkImportRowBasedService = async (files, userId) => {
 
       batchSlugs.add(slug);
       batchSkus.add(sku);
+      batchNames.add(name.toLowerCase().trim());
       rowSucceeded = true;
       allUploadedMedia.push(...rowUploads);
     } finally {
@@ -1590,11 +1594,20 @@ const bulkImportRowBasedService = async (files, userId) => {
         NewArrival: getRowValue(rowValues, "NewArrival", "IsNewArrival"),
         Collection: getRowValue(rowValues, "Collection", "IsCollection"),
         Starred: getRowValue(rowValues, "Starred", "IsStarred"),
-        DisplayCollections: getRowValue(rowValues, "DisplayCollections", "Display Collections"),
+        DisplayCollections: getRowValue(
+          rowValues,
+          "DisplayCollections",
+          "Display Collections",
+        ),
         EventTags: getRowValue(rowValues, "EventTags", "Event Tags"),
         KeyBenefits: getRowValue(rowValues, "KeyBenefits", "Key Benefits"),
         ProductVideo: getRowValue(rowValues, "ProductVideo", "Product Video"),
-        ProductGallery: getRowValue(rowValues, "ProductGallery", "Product Gallery", "Images"),
+        ProductGallery: getRowValue(
+          rowValues,
+          "ProductGallery",
+          "Product Gallery",
+          "Images",
+        ),
         GST: getRowValue(rowValues, "GST", "GSTPercent"),
         Threshold: getRowValue(rowValues, "Threshold", "LowStockThreshold"),
         BrandInfo: getRowValue(rowValues, "BrandInfo", "Brand Info"),
@@ -1602,15 +1615,20 @@ const bulkImportRowBasedService = async (files, userId) => {
         ReturnPolicy: getRowValue(rowValues, "ReturnPolicy", "Return Policy"),
         CanonicalUrl: getRowValue(rowValues, "CanonicalUrl", "Canonical URL"),
         MetaTitle: getRowValue(rowValues, "MetaTitle", "Meta Title"),
-        MetaDescription: getRowValue(rowValues, "MetaDescription", "Meta Description"),
+        MetaDescription: getRowValue(
+          rowValues,
+          "MetaDescription",
+          "Meta Description",
+        ),
         MetaKeywords: getRowValue(rowValues, "MetaKeywords", "Meta Keywords"),
       };
 
       try {
+        // Stop if the entire row is empty
         const hasAnyValue = Object.values(item).some(
           (v) => v !== null && v !== undefined && v.toString().trim() !== "",
         );
-        if (!hasAnyValue) continue;
+        if (!hasAnyValue) break;
 
         const startsNewProduct = hasAnyField(item, BASE_FIELD_KEYS);
         const hasVariantData = hasAnyField(item, VARIANT_FIELD_KEYS);
@@ -1621,9 +1639,30 @@ const bulkImportRowBasedService = async (files, userId) => {
           const name = readCell(item, ["Name"]);
           const sku = readCell(item, ["SKU"]).toString().trim().toUpperCase();
 
-          if (!name || !sku) {
+          // No name and no SKU — silent skip (partial/continuation rows like rows 3-14)
+          if (!name && !sku) {
+            currentDraft = null;
+            continue;
+          }
+
+          if (!name) {
+            errors.push(`Row ${rowIndex}: Name is required — row skipped`);
+            currentDraft = null;
+            continue;
+          }
+
+          if (!sku) {
             errors.push(
-              `Row ${rowIndex}: Name and SKU are required for the first row of a product`,
+              `Row ${rowIndex} (${name}): SKU is required — row skipped`,
+            );
+            currentDraft = null;
+            continue;
+          }
+
+          const nameLower = name.toLowerCase().trim();
+          if (existingNames.has(nameLower) || batchNames.has(nameLower)) {
+            errors.push(
+              `Row ${rowIndex}: Product "${name}" already exists — skipped`,
             );
             currentDraft = null;
             continue;
@@ -1638,20 +1677,8 @@ const bulkImportRowBasedService = async (files, userId) => {
             specifications: [],
           };
         } else if (!currentDraft) {
-          errors.push(
-            `Row ${rowIndex}: Variant row found before any product base row`,
-          );
+          // Variant row before any product — silent skip
           continue;
-        }
-
-        if (!hasVariantData && !startsNewProduct) {
-          const hasDetailData = hasAnyField(item, DETAIL_FIELD_KEYS);
-          if (!hasDetailData) {
-            errors.push(
-              `Row ${rowIndex}: No variant or detail data found for this row`,
-            );
-            continue;
-          }
         }
 
         const detailKey = readCell(item, ["DetailKey"]);
@@ -1669,9 +1696,7 @@ const bulkImportRowBasedService = async (files, userId) => {
           }
         }
 
-        if (!hasVariantData) {
-          continue;
-        }
+        if (!hasVariantData) continue;
 
         const variantRow = await buildVariantRow(
           item,
@@ -1734,31 +1759,49 @@ const bulkImportRowBasedService = async (files, userId) => {
     await finalizeDraftProduct(currentDraft);
 
     if (productsToInsert.length === 0) {
-      throw new Error("No products found in Excel file");
+      throw new Error("No valid products found in Excel file");
     }
 
     let inserted = [];
-    if (productsToInsert.length > 0) {
-      try {
-        inserted = await Product.insertMany(productsToInsert, {
-          ordered: false,
-        });
-      } catch (err) {
-        await cleanupMediaItems(allUploadedMedia);
-        allUploadedMedia.length = 0;
-        if (err.insertedDocs) {
-          inserted = err.insertedDocs;
-        }
-        if (err.writeErrors?.length) {
-          err.writeErrors.forEach((we) => {
-            const failed = productsToInsert[we.index];
-            errors.push(
-              `DB insert failed for "${failed?.name || `index ${we.index}`}": ${we.errmsg || we.err?.errmsg || "unknown error"}`,
+    try {
+      inserted = await Product.insertMany(productsToInsert, { ordered: false });
+    } catch (err) {
+      await cleanupMediaItems(allUploadedMedia);
+      allUploadedMedia.length = 0;
+      if (err.insertedDocs) {
+        inserted = err.insertedDocs;
+      }
+      if (err.writeErrors?.length) {
+        err.writeErrors.forEach((we) => {
+          const failed = productsToInsert[we.index];
+          const productName = failed?.name || `index ${we.index}`;
+          const errmsg = we.errmsg || we.err?.errmsg || "";
+
+          let friendlyMessage;
+
+          if (errmsg.includes("variants.v_sku")) {
+            // Extract the duplicate v_sku value from the error message
+            const match = errmsg.match(
+              /dup key: \{ variants\.v_sku: "([^"]+)" \}/,
             );
-          });
-        } else {
-          errors.push(`Database insert error: ${err.message}`);
-        }
+            const dupSku = match ? match[1] : "unknown";
+            friendlyMessage = `"${productName}" has a variant SKU (${dupSku}) that already exists in the catalog. Please use a unique variant SKU and try again.`;
+          } else if (errmsg.includes("sku_1") || errmsg.includes('"sku"')) {
+            const match = errmsg.match(/dup key: \{ sku: "([^"]+)" \}/);
+            const dupSku = match ? match[1] : "unknown";
+            friendlyMessage = `"${productName}" has a product SKU (${dupSku}) that already exists. Please use a unique SKU.`;
+          } else if (errmsg.includes("slug")) {
+            friendlyMessage = `"${productName}" could not be saved because its URL slug conflicts with an existing product.`;
+          } else {
+            friendlyMessage = `"${productName}" could not be saved — please check the data and try again.`;
+          }
+
+          errors.push(friendlyMessage);
+        });
+      } else {
+        errors.push(
+          `Import failed unexpectedly — please try again or contact support.`,
+        );
       }
     }
 
