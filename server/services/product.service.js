@@ -14,6 +14,7 @@ import {
   rebuildIndex,
 } from "./ngram.search.service.js";
 import { searchService } from "./search.service.js";
+import { getGlobalTax } from "./settings.service.js";
 import {
   sanitizeProductHtml,
   sanitizeProductRecord,
@@ -502,6 +503,13 @@ export const createProductService = async (data, files, userId) => {
     parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
 
+  if (parsedData.category) {
+    const category = await Category.findById(parsedData.category).select(
+      "gstPercent",
+    );
+    parsedData.gstPercent = category?.gstPercent || await getGlobalTax();
+  }
+
   parsedData.description = sanitizeProductHtml(parsedData.description || "");
   parsedData.materialCare = sanitizeProductHtml(parsedData.materialCare || "");
 
@@ -680,6 +688,13 @@ export const updateProductService = async (id, data, files) => {
   if (parsedData.subCategory === "null" || !parsedData.subCategory)
     parsedData.subCategory = null;
   if (parsedData.brand === "null" || !parsedData.brand) parsedData.brand = null;
+
+  if (parsedData.category) {
+    const category = await Category.findById(parsedData.category).select(
+      "gstPercent",
+    );
+    parsedData.gstPercent = category?.gstPercent || await getGlobalTax();
+  }
 
   parsedData.description = sanitizeProductHtml(parsedData.description || "");
   parsedData.materialCare = sanitizeProductHtml(parsedData.materialCare || "");
@@ -1203,7 +1218,7 @@ const bulkImportRowBasedService = async (files, userId) => {
   const allCategories = await Category.find({}).lean();
   const categoryMap = new Map();
   allCategories.forEach((c) => {
-    categoryMap.set(c.name.toLowerCase().trim(), c._id);
+    categoryMap.set(c.name.toLowerCase().trim(), c);
   });
 
   const existingSlugs = new Set(
@@ -1393,7 +1408,8 @@ const bulkImportRowBasedService = async (files, userId) => {
       }
 
       const catName = item.Category?.trim().toLowerCase();
-      const categoryId = catName ? categoryMap.get(catName) : null;
+      const categoryDoc = catName ? categoryMap.get(catName) : null;
+      const categoryId = categoryDoc?._id || null;
       if (!categoryId) {
         errors.push(
           `Row ${rowIndex} (${name}): Category "${item.Category || ""}" not found — row skipped`,
@@ -1486,7 +1502,7 @@ const bulkImportRowBasedService = async (files, userId) => {
         isNewArrival: isTrue(item.NewArrival),
         isCollection: isTrue(item.Collection),
         isStarred: isTrue(item.Starred),
-        gstPercent: Number(item.GST) || 0,
+        gstPercent: categoryDoc?.gstPercent || await getGlobalTax(),
         lowStockThreshold: Number(item.Threshold) || 5,
         brandInfo: item.BrandInfo || "",
         warranty: item.Warranty || "No Warranty",
@@ -1824,7 +1840,7 @@ const bulkImportRowBasedService = async (files, userId) => {
     }
 
     return {
-      success: true,
+      success: inserted.length > 0,
       data: inserted,
       errors,
     };

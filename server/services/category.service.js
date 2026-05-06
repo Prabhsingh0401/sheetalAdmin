@@ -5,6 +5,7 @@ import slugify from "slugify";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 import { syncToIndex, deleteFromIndex } from "./ngram.search.service.js";
+import { getGlobalTax } from "./settings.service.js";
 
 const resolveCategorySizing = async ({ sizeMode, sizeChart }) => {
   const normalizedMode = String(sizeMode || "").trim().toLowerCase();
@@ -53,6 +54,7 @@ export const createCategoryService = async (data, files) => {
     wearType,
     occasion,
     byPrice,
+    gstPercent,
     sizeMode,
     sizeChart,
   } = data;
@@ -125,6 +127,10 @@ export const createCategoryService = async (data, files) => {
     wearType: parsedWearType,
     occasion: parsedOccasion,
     byPrice: parsedByPrice,
+    gstPercent:
+      Number(gstPercent) > 0
+        ? Number(gstPercent)
+        : await getGlobalTax(),
     sizeMode: parsedSizing.sizeMode,
     sizeChart: parsedSizing.sizeChart,
   };
@@ -161,7 +167,7 @@ export const createCategoryService = async (data, files) => {
 export const getAllCategoriesService = async () => {
   const categories = await Category.find({ isActive: true })
     .select(
-      "name slug mainImage bannerImage parentCategory subCategories style work fabric productType wearType occasion byPrice sizeMode sizeChart",
+      "name slug mainImage bannerImage parentCategory subCategories style work fabric productType wearType occasion byPrice sizeMode sizeChart gstPercent",
     )
     .populate("parentCategory", "name")
     .populate("sizeChart", "name table howToMeasureImage")
@@ -285,6 +291,10 @@ export const updateCategoryService = async (id, data, files) => {
     status: data.status,
     isActive: data.status === "Active",
     categoryBanner: data.categoryBanner,
+    gstPercent:
+      Number(data.gstPercent) > 0
+        ? Number(data.gstPercent)
+        : await getGlobalTax(),
     metaTitle: data.metaTitle,
     metaDescription: data.metaDescription,
     metaKeywords: data.metaKeywords,
@@ -396,6 +406,11 @@ export const updateCategoryService = async (id, data, files) => {
     id,
     { $set: updateData },
     { new: true, runValidators: true },
+  );
+
+  await Product.updateMany(
+    { category: id },
+    { $set: { gstPercent: updated.gstPercent || 0 } },
   );
 
   // Sync to n-gram search index

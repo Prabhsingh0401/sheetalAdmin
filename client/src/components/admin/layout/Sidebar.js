@@ -27,16 +27,14 @@ import {
   MessageSquare,
   BadgeIndianRupee,
   InfoIcon,
+  Truck,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef } from "react";
 
-export default function Sidebar({
-  storeName = "Admin",
-  isOpen,
-  setIsOpen,
-}) {
+export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
   const pathname = usePathname();
 
   const menuItems = [
@@ -108,12 +106,18 @@ export default function Sidebar({
       ],
     },
     {
+      icon: Truck,
+      label: "Delivery & Returns",
+      href: "/admin/delivery-returns",
+    },
+    {
       icon: InfoIcon,
       label: "Invoice Info",
       href: "/admin/basic-info",
     },
     { icon: Monitor, label: "Navbar & Footer", href: "/admin/navbar-footer" },
     { icon: ListTree, label: "Size Chart", href: "/admin/size-chart" },
+    { icon: Settings, label: "Settings", href: "/admin/settings" },
   ];
 
   return (
