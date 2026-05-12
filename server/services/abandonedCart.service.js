@@ -200,8 +200,17 @@ const sanitizeReminderAttempts = (cart) => {
     return [];
   }
 
+  const validStatuses = new Set(["success", "failure", "skipped"]);
+
   return cart.abandonmentReminderAttempts.filter(
-    (attempt) => attempt && typeof attempt.jobId === "string" && attempt.jobId.trim(),
+    (attempt) =>
+      attempt &&
+      typeof attempt.stage === "string" &&
+      attempt.stage.trim() &&
+      typeof attempt.jobId === "string" &&
+      attempt.jobId.trim() &&
+      typeof attempt.status === "string" &&
+      validStatuses.has(attempt.status),
   );
 };
 

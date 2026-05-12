@@ -87,7 +87,7 @@ export const applyOrderInventoryAdjustments = async (orderItems = []) => {
           },
         },
       ],
-      { new: true, validateBeforeSave: false },
+      { new: true, validateBeforeSave: false, updatePipeline: true },
     );
 
     if (!product) {
