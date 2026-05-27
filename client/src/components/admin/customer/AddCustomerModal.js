@@ -26,7 +26,14 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
   }, [isOpen, editUser]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({
+      ...form,
+      [name]:
+        name === "phoneNumber"
+          ? value.replace(/\D/g, "").slice(0, 10)
+          : value,
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -108,7 +115,11 @@ export default function AddUserModal({ isOpen, onClose, onAddUser, editUser }) {
                 name="phoneNumber"
                 value={form.phoneNumber}
                 onChange={handleChange}
+                type="tel"
                 placeholder="+91 9876543210"
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                maxLength={10}
                 className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
               />
             </div>

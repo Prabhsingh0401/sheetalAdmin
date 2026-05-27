@@ -6,21 +6,29 @@ import Appointment from "../models/appointment.model.js";
 export const createAppointment = async (req, res, next) => {
     try {
         const { name, email, contact, address, city, pincode, requirements } = req.body;
+        const trimmedContact = contact?.trim();
+        const trimmedPincode = pincode?.trim();
 
         if (!name?.trim()) return res.status(400).json({ success: false, message: "Name is required" });
         if (!email?.trim()) return res.status(400).json({ success: false, message: "Email is required" });
-        if (!contact?.trim()) return res.status(400).json({ success: false, message: "Contact is required" });
+        if (!trimmedContact) return res.status(400).json({ success: false, message: "Contact is required" });
+        if (!/^\d{10}$/.test(trimmedContact)) {
+            return res.status(400).json({ success: false, message: "Contact must be a 10-digit number" });
+        }
         if (!address?.trim()) return res.status(400).json({ success: false, message: "Address is required" });
         if (!city?.trim()) return res.status(400).json({ success: false, message: "City is required" });
-        if (!pincode?.trim()) return res.status(400).json({ success: false, message: "Pincode is required" });
+        if (!trimmedPincode) return res.status(400).json({ success: false, message: "Pincode is required" });
+        if (!/^\d{6}$/.test(trimmedPincode)) {
+            return res.status(400).json({ success: false, message: "Pincode must be a 6-digit number" });
+        }
 
         const appointment = await Appointment.create({
             name: name.trim(),
             email: email.trim(),
-            contact: contact.trim(),
+            contact: trimmedContact,
             address: address.trim(),
             city: city.trim(),
-            pincode: pincode.trim(),
+            pincode: trimmedPincode,
             requirements: requirements?.trim() || "",
         });
 

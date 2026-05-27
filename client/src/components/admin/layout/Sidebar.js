@@ -99,11 +99,11 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
         { icon: Layout, label: "Banners", href: "/admin/cms/banners" },
         { icon: BookOpen, label: "Lookbooks", href: "/admin/cms/lookbooks" },
         { icon: FileText, label: "Text Pages", href: "/admin/cms/pages" },
-        {
-          icon: InstagramIcon,
-          label: "Instagram Cards",
-          href: "/admin/cms/instagram",
-        },
+        // {
+        //   icon: InstagramIcon,
+        //   label: "Instagram Cards",
+        //   href: "/admin/cms/instagram",
+        // },
         {
           icon: UserIcon,
           label: "Testimonials",

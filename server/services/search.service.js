@@ -41,12 +41,17 @@ const ATTRIBUTE_FIELDS = [
   "eventTags",
 ];
 
+const CATEGORY_TERM_ALIASES = new Map([
+  ["kurti", ["kurta"]],
+  ["kurty", ["kurta"]],
+  ["kurte", ["kurta"]],
+]);
 // ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
 export const searchService = async ({ query, limit, page }) => {
-  const normQ = normalise(query);
+  const normQ = normaliseSearchText(query);
   if (!normQ || normQ.length < MIN_QUERY_LENGTH) {
     return [];
   }
@@ -75,23 +80,20 @@ export const searchService = async ({ query, limit, page }) => {
   // return ONLY that category + its products. Skip attribute scan entirely.
   // This prevents "Sarees" from leaking in products tagged "saree" that
   // belong to other categories.
+  let matchedCategoryBlocks = [];
   if (normQ.length >= 2) {
     const matchedCategories = await findMatchingCategories(normQ);
     if (matchedCategories.length > 0) {
-      const categoryBlocks = [];
-
       for (const matchedCategory of matchedCategories) {
         const categoryProducts = await getCategoryProducts(matchedCategory._id);
         categoryProducts.forEach((product) =>
           resolvedCategoryProductIds.add(product._id.toString()),
         );
-        categoryBlocks.push(
+        matchedCategoryBlocks.push(
           { type: "category", data: matchedCategory },
           ...categoryProducts.map((p) => ({ type: "product", data: p })),
         );
       }
-
-      hydrated.unshift(...categoryBlocks);
     }
   }
 
@@ -111,15 +113,22 @@ export const searchService = async ({ query, limit, page }) => {
   }
 
   // ── Step 5: Deduplicate and limit ────────────────────────────────────────
+  const hasResolvedCategory = matchedCategoryBlocks.length > 0;
   const vettedResults = hydrated.filter((hit) => {
     if (hit.type === "category") return true;
     if (hit.data?._id && resolvedCategoryProductIds.has(hit.data._id.toString())) {
       return true;
     }
+    if (hasResolvedCategory) {
+      return nameMatchesQuery(normaliseSearchText(hit.data?.name || ""), normQ);
+    }
     return isStrictProductSearchMatch(hit.data, normQ);
   });
 
-  return limitResults(vettedResults, maxProducts);
+  return limitResults(
+    mergeCategoryBlocksAfterNameMatches(vettedResults, matchedCategoryBlocks, normQ),
+    maxProducts,
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -150,10 +159,22 @@ const findMatchingCategories = async (normQ) => {
     const variants = buildWordVariants(term);
 
     for (const cat of categories) {
-      const normCat = normalise(cat.name);
+      const normCat = normaliseSearchText(cat.name);
+      const categoryWords = normCat.split(" ").filter(Boolean);
 
       // Exact or variant match
       if (variants.some((v) => v === normCat)) {
+        if (!seenCategoryIds.has(cat._id.toString())) {
+          seenCategoryIds.add(cat._id.toString());
+          matches.push(cat);
+        }
+        continue;
+      }
+
+      // Also allow matching against words inside multi-word categories such as
+      // "kurta sets", so short or broken forms like "ku" / "krta" can still
+      // resolve the category through the main garment word.
+      if (categoryWords.some((word) => isCategoryTermMatch(term, word, variants))) {
         if (!seenCategoryIds.has(cat._id.toString())) {
           seenCategoryIds.add(cat._id.toString());
           matches.push(cat);
@@ -176,6 +197,47 @@ const findMatchingCategories = async (normQ) => {
   return matches;
 };
 
+const isCategoryTermMatch = (term, categoryWord, variants) => {
+  if (!term || !categoryWord) return false;
+
+  const termVariants = new Set([
+    ...variants,
+    ...getCategoryTermAliases(term).flatMap((alias) => buildWordVariants(alias)),
+  ]);
+  const candidateWords = new Set([
+    categoryWord,
+    ...buildWordVariants(categoryWord),
+    ...getCategoryTermAliases(categoryWord),
+  ]);
+  const maxSubsequenceSkips =
+    term.length >= 5 && term[0] === categoryWord[0] && term.at(-1) === categoryWord.at(-1)
+      ? 2
+      : 1;
+
+  for (const candidate of candidateWords) {
+    if (termVariants.has(candidate)) return true;
+    if (term.length >= 2 && candidate.startsWith(term)) return true;
+    if (isOrderedSubsequenceMatch(term, candidate, maxSubsequenceSkips)) return true;
+    if (term.length >= 4 && isCategoryTypoMatch(term, candidate)) return true;
+    if (isStrongCategoryNearMiss(term, candidate)) return true;
+  }
+
+  return false;
+};
+
+const isStrongCategoryNearMiss = (term, candidate) => {
+  if (!term || !candidate) return false;
+  if (term.includes(" ") || candidate.includes(" ")) return false;
+  if (term.length < 6 || candidate.length < 6) return false;
+  if (Math.abs(term.length - candidate.length) > 2) return false;
+  if (term[0] !== candidate[0]) return false;
+
+  const sharedPrefixLength = commonPrefixLength(term, candidate);
+  if (sharedPrefixLength < 4) return false;
+
+  return damerauLevenshteinDistance(term, candidate) <= 2;
+};
+
 /**
  * Fetches all Active products belonging to a category.
  * Joins both by category ObjectId reference AND by subCategory string
@@ -192,7 +254,7 @@ const getCategoryProducts = async (categoryId) => {
       .lean(),
     catName
       ? Product.find({
-          subCategory: new RegExp(`^${escapeRegex(normalise(catName))}$`, "i"),
+          subCategory: new RegExp(`^${escapeRegex(normaliseSearchText(catName))}$`, "i"),
           status: "Active",
         })
           .populate("category", "name slug")
@@ -271,26 +333,101 @@ const levenshteinDistance = (a, b) => {
   return matrix[b.length][a.length];
 };
 
+const damerauLevenshteinDistance = (a, b) => {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const matrix = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0),
+  );
+
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+
+      if (
+        i > 1 &&
+        j > 1 &&
+        a[i - 1] === b[j - 2] &&
+        a[i - 2] === b[j - 1]
+      ) {
+        matrix[i][j] = Math.min(matrix[i][j], matrix[i - 2][j - 2] + 1);
+      }
+    }
+  }
+
+  return matrix[a.length][b.length];
+};
+
+const commonPrefixLength = (left, right) => {
+  let index = 0;
+  const maxLength = Math.min(left.length, right.length);
+
+  while (index < maxLength && left[index] === right[index]) {
+    index++;
+  }
+
+  return index;
+};
+
+const softCategoryNormalise = (word) =>
+  String(word || "")
+    .toLowerCase()
+    .replace(/[hy]/g, "");
+
+const isOrderedSubsequenceMatch = (left, right, maxSkips = 2) => {
+  if (!left || !right) return false;
+
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+  const lengthDiff = longer.length - shorter.length;
+
+  if (lengthDiff < 1 || lengthDiff > maxSkips) return false;
+  if (shorter[0] !== longer[0] || shorter.at(-1) !== longer.at(-1)) return false;
+
+  let shortIndex = 0;
+  let longIndex = 0;
+
+  while (shortIndex < shorter.length && longIndex < longer.length) {
+    if (shorter[shortIndex] === longer[longIndex]) {
+      shortIndex++;
+    }
+    longIndex++;
+  }
+
+  return shortIndex === shorter.length;
+};
+
 const isStrictProductSearchMatch = (product, normQ) => {
   if (!product || !normQ) return false;
 
-  if (nameMatchesQuery(normalise(product.name || ""), normQ)) return true;
-  if (fieldMatchesQuery(normalise(product.category?.name || ""), normQ)) {
+  if (nameMatchesQuery(normaliseSearchText(product.name || ""), normQ)) return true;
+  if (fieldMatchesQuery(normaliseSearchText(product.category?.name || ""), normQ)) {
     return true;
   }
-  if (fieldMatchesQuery(normalise(product.subCategory || ""), normQ)) {
+  if (fieldMatchesQuery(normaliseSearchText(product.subCategory || ""), normQ)) {
     return true;
   }
 
   for (const field of ATTRIBUTE_FIELDS) {
     const values = Array.isArray(product[field]) ? product[field] : [];
-    if (values.some((value) => fieldMatchesQuery(normalise(value), normQ))) {
+    if (values.some((value) => fieldMatchesQuery(normaliseSearchText(value), normQ))) {
       return true;
     }
   }
 
   const colors = Array.isArray(product.variants)
-    ? product.variants.map((variant) => normalise(variant?.color?.name || ""))
+    ? product.variants.map((variant) => normaliseSearchText(variant?.color?.name || ""))
     : [];
   return colors.some((value) => fieldMatchesQuery(value, normQ));
 };
@@ -308,25 +445,64 @@ const isCategoryTypoMatch = (query, category) => {
 
   const lengthDiff = Math.abs(query.length - category.length);
   if (lengthDiff > 2) return false;
-  if (query[0] !== category[0]) return false;
+
+  const lastCharMatches = query.at(-1) === category.at(-1);
+  if (
+    !lastCharMatches &&
+    (
+      query.length < 6 ||
+      damerauLevenshteinDistance(query.slice(0, -1), category.slice(0, -1)) > 1
+    )
+  ) {
+    return false;
+  }
+
+  const firstCharMatches = query[0] === category[0];
+  if (
+    !firstCharMatches &&
+    (
+      query.length < 5 ||
+      damerauLevenshteinDistance(query.slice(1), category.slice(1)) > 1
+    )
+  ) {
+    return false;
+  }
 
   const distance = levenshteinDistance(query, category);
   if (distance <= 1) return true;
-  if (query.length < 5 || distance > 2) return false;
+  if (query.length < 6 || distance > 2) return false;
+
+  if (damerauLevenshteinDistance(query, category) <= 1) {
+    return true;
+  }
+
+  if (isOrderedSubsequenceMatch(query, category)) {
+    return true;
+  }
+
+  const softQuery = softCategoryNormalise(query);
+  const softCategory = softCategoryNormalise(category);
+  if (
+    softQuery.length >= 5 &&
+    softCategory.length >= 5 &&
+    softQuery[0] === softCategory[0] &&
+    softQuery.at(-1) === softCategory.at(-1) &&
+    damerauLevenshteinDistance(softQuery, softCategory) <= 1
+  ) {
+    return true;
+  }
 
   const queryKey = consonantKey(query);
   const categoryKey = consonantKey(category);
   if (
     queryKey.length >= 3 &&
     categoryKey.length >= 3 &&
-    (queryKey === categoryKey ||
-      queryKey.startsWith(categoryKey) ||
-      categoryKey.startsWith(queryKey))
+    queryKey === categoryKey
   ) {
     return true;
   }
 
-  return soundex(query) === soundex(category);
+  return false;
 };
 
 const nameMatchesQuery = (name, query) => {
@@ -375,14 +551,16 @@ const fuzzyWordsMatch = (queryWord, productWord) => {
     return true;
   }
 
+  if (isOrderedSubsequenceMatch(queryWord, productWord)) {
+    return true;
+  }
+
   const queryKey = consonantKey(queryWord);
   const productKey = consonantKey(productWord);
   if (
     queryKey.length >= 3 &&
     productKey.length >= 3 &&
-    (queryKey === productKey ||
-      queryKey.startsWith(productKey) ||
-      productKey.startsWith(queryKey))
+    queryKey === productKey
   ) {
     return true;
   }
@@ -394,8 +572,7 @@ const fuzzyWordsMatch = (queryWord, productWord) => {
     }
   }
 
-  return soundex(queryWord) === soundex(productWord) &&
-    queryWord[0] === productWord[0];
+  return false;
 };
 
 // ---------------------------------------------------------------------------
@@ -472,6 +649,37 @@ const limitResults = (results, maxProducts = Infinity) => {
   return out;
 };
 
+const mergeCategoryBlocksAfterNameMatches = (
+  vettedResults,
+  matchedCategoryBlocks,
+  normQ,
+) => {
+  if (!matchedCategoryBlocks.length) {
+    return vettedResults;
+  }
+
+  const leadingNameMatchedProducts = [];
+  const trailingResults = [];
+
+  for (const result of vettedResults) {
+    if (
+      result.type === "product" &&
+      nameMatchesQuery(normaliseSearchText(result.data?.name || ""), normQ)
+    ) {
+      leadingNameMatchedProducts.push(result);
+      continue;
+    }
+
+    trailingResults.push(result);
+  }
+
+  return [
+    ...leadingNameMatchedProducts,
+    ...matchedCategoryBlocks,
+    ...trailingResults,
+  ];
+};
+
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
@@ -485,6 +693,8 @@ const normalise = (text) => {
     .trim();
 };
 
+const normaliseSearchText = (text) => normalise(text);
+
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const buildWordVariants = (word) => {
@@ -494,3 +704,6 @@ const buildWordVariants = (word) => {
   if (!word.endsWith("s")) variants.add(word + "s");
   return [...variants];
 };
+
+const getCategoryTermAliases = (word) =>
+  CATEGORY_TERM_ALIASES.get(word) || [];

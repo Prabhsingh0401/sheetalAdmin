@@ -40,20 +40,34 @@ const orderSchema = new mongoose.Schema(
     ],
     shippingAddress: {
       fullName: { type: String, required: true },
-      phoneNumber: { type: String, required: true },
+      phoneNumber: {
+        type: String,
+        required: true,
+        match: [/^\d{10}$/, "Phone number must be a 10-digit number"],
+      },
       addressLine1: { type: String, required: true },
       city: { type: String, required: true },
       state: { type: String, required: true },
-      postalCode: { type: String, required: true },
+      postalCode: {
+        type: String,
+        required: true,
+        match: [/^\d{6}$/, "Postal code must be a 6-digit number"],
+      },
       country: { type: String, default: "India" },
     },
     billingAddress: {
       fullName: { type: String },
-      phoneNumber: { type: String },
+      phoneNumber: {
+        type: String,
+        match: [/^\d{10}$/, "Phone number must be a 10-digit number"],
+      },
       addressLine1: { type: String },
       city: { type: String },
       state: { type: String },
-      postalCode: { type: String },
+      postalCode: {
+        type: String,
+        match: [/^\d{6}$/, "Postal code must be a 6-digit number"],
+      },
       country: { type: String, default: "India" },
     },
     paymentInfo: {
