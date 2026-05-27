@@ -106,6 +106,22 @@ export default function UserDetailPage() {
     setIsDrawerOpen(true);
   };
 
+  const handleOrderUpdated = (updatedOrder) => {
+    if (!updatedOrder) return;
+
+    setSelectedOrder(updatedOrder);
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+
+      return {
+        ...currentUser,
+        orders: (currentUser.orders || []).map((order) =>
+          order._id === updatedOrder._id ? updatedOrder : order,
+        ),
+      };
+    });
+  };
+
   if (loading)
     return <div className="animate-pulse p-20 text-center">Loading...</div>;
   if (!user) return <div>User not found</div>;
@@ -466,6 +482,7 @@ export default function UserDetailPage() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         order={selectedOrder}
+        onOrderUpdated={handleOrderUpdated}
       />
 
       <AddressModal

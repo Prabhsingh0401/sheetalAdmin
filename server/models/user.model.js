@@ -3,11 +3,20 @@ import mongoose from "mongoose";
 const addressSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
-  phoneNumber: { type: String, required: true, trim: true },
+  phoneNumber: {
+    type: String,
+    required: true,
+    trim: true,
+    match: [/^\d{10}$/, "Phone number must be a 10-digit number"],
+  },
   addressLine1: { type: String, required: true },
   city: { type: String, required: true },
   state: { type: String, required: true },
-  postalCode: { type: String, required: true },
+  postalCode: {
+    type: String,
+    required: true,
+    match: [/^\d{6}$/, "Postal code must be a 6-digit number"],
+  },
   country: { type: String, default: "India" },
   isDefault: { type: Boolean, default: false },
   addressType: {
@@ -38,8 +47,16 @@ const userSchema = new mongoose.Schema(
       select: false,
       minlength: [8, "Password must be at least 8 characters"],
     },
-    phoneNumber: { type: String, trim: true },
-    alternativeMobileNumber: { type: String, trim: true }, // New field
+    phoneNumber: {
+      type: String,
+      trim: true,
+      match: [/^\d{10}$/, "Phone number must be a 10-digit number"],
+    },
+    alternativeMobileNumber: {
+      type: String,
+      trim: true,
+      match: [/^\d{10}$/, "Alternative mobile number must be a 10-digit number"],
+    }, // New field
     gender: { type: String, enum: ["Male", "Female"], trim: true }, // New field
     dateOfBirth: { type: Date }, // New field
     profilePicture: { type: String, default: "" }, // New field
