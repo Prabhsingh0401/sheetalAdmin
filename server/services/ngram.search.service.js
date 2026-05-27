@@ -42,7 +42,6 @@ import Category from "../models/category.model.js";
 const MAX_HITS = 200;             // hard cap before pagination
 const INDEX_TTL_MS = 15 * 60 * 1000; // 15 min stale threshold
 const MIN_FUZZY_LENGTH = 3;       // fuzzy only for queries >= this length
-
 // ---------------------------------------------------------------------------
 // In-Memory Index State
 // ---------------------------------------------------------------------------
@@ -78,13 +77,15 @@ const normalise = (text) => {
     .trim();
 };
 
+const normaliseSearchText = (text) => normalise(text);
+
 /**
  * Generate prefix grams + full words for an arbitrary text blob.
  * e.g. "blue shirt" → grams: {b,bl,blu,blue,s,sh,shi,shir,shirt}
  *                      words: {blue, shirt}
  */
 const generateNgrams = (text) => {
-  const norm = normalise(text);
+  const norm = normaliseSearchText(text);
   const grams = new Set();
   const words = new Set();
   if (!norm) return { grams, words };
@@ -189,6 +190,29 @@ const levenshteinDistance = (a, b) => {
   return matrix[b.length][a.length];
 };
 
+const isOrderedSubsequenceMatch = (left, right, maxSkips = 2) => {
+  if (!left || !right) return false;
+
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+  const lengthDiff = longer.length - shorter.length;
+
+  if (lengthDiff < 1 || lengthDiff > maxSkips) return false;
+  if (shorter[0] !== longer[0] || shorter.at(-1) !== longer.at(-1)) return false;
+
+  let shortIndex = 0;
+  let longIndex = 0;
+
+  while (shortIndex < shorter.length && longIndex < longer.length) {
+    if (shorter[shortIndex] === longer[longIndex]) {
+      shortIndex++;
+    }
+    longIndex++;
+  }
+
+  return shortIndex === shorter.length;
+};
+
 const soundex = (word) => {
   if (!word) return "";
   const map = {
@@ -219,19 +243,20 @@ const fuzzyWordsMatch = (qWord, pWord) => {
   // Prefix containment
   if (pWord.startsWith(qWord) || qWord.startsWith(pWord)) return true;
 
+  // Allows omitted-letter searches like "lehga" -> "lehenga" without relying
+  // on hardcoded token maps.
+  if (isOrderedSubsequenceMatch(qWord, pWord)) return true;
+
   // Consonant skeleton
   const qk = consonantKey(qWord);
   const pk = consonantKey(pWord);
-  if (qk.length >= 3 && pk.length >= 3 && (qk === pk || qk.startsWith(pk) || pk.startsWith(qk))) return true;
+  if (qk.length >= 3 && pk.length >= 3 && qk === pk) return true;
 
   // Levenshtein — allow 1 edit for short words, 2 for longer
   const maxDist = qWord.length <= 5 ? 1 : 2;
   if (Math.abs(qWord.length - pWord.length) <= maxDist) {
     if (levenshteinDistance(qWord, pWord) <= maxDist) return true;
   }
-
-  // Soundex phonetic
-  if (soundex(qWord) === soundex(pWord) && qWord[0] === pWord[0]) return true;
 
   return false;
 };
@@ -628,7 +653,7 @@ export const searchNgram = async (query, options = {}) => {
     return { hits: [], total: 0, page, totalPages: 0 };
   }
 
-  const normQ = normalise(query);
+  const normQ = normaliseSearchText(query);
   const queryLen = normQ.length;
   const allowFuzzy = queryLen >= MIN_FUZZY_LENGTH;
 
@@ -661,9 +686,9 @@ export const searchNgram = async (query, options = {}) => {
     const entry = documentStore.get(docId);
     if (!entry) continue;
     const { doc } = entry;
-    const normName = normalise(doc.name);
-    const normSubCat = normalise(doc.subCategory || "");
-    const normCatName = normalise(
+    const normName = normaliseSearchText(doc.name);
+    const normSubCat = normaliseSearchText(doc.subCategory || "");
+    const normCatName = normaliseSearchText(
       typeof doc.category === "string" ? doc.category : (doc.category?.name || "")
     );
 
@@ -741,15 +766,15 @@ export const searchNgram = async (query, options = {}) => {
           if (!entry || entry.doc.type !== "product") return;
 
           const { doc } = entry;
-          const normName = normalise(doc.name);
+          const normName = normaliseSearchText(doc.name);
 
           // Fuzzy expansion products must have ALL query words match somewhere
           // in name + category + subCategory + attributes. This prevents leakage.
           const qWords = normQ.split(" ").filter(Boolean);
           const searchable = [
             normName,
-            normalise(doc.category || ""),
-            normalise(doc.subCategory || ""),
+            normaliseSearchText(doc.category || ""),
+            normaliseSearchText(doc.subCategory || ""),
           ].join(" ");
           const searchableWords = searchable.split(" ").filter(Boolean);
 

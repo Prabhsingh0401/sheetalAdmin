@@ -55,6 +55,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
 
   const [paymentMethod, setPaymentMethod] = useState("COD");
 
+  const normalizeDigits = (value, maxLength) =>
+    String(value || "")
+      .replace(/\D/g, "")
+      .slice(0, maxLength);
+
   useEffect(() => {
     if (isOpen) fetchProducts();
   }, [isOpen]);
@@ -500,9 +505,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                     onChange={(e) =>
                       setCustomerDetails({
                         ...customerDetails,
-                        phoneNumber: e.target.value,
+                        phoneNumber: normalizeDigits(e.target.value, 10),
                       })
                     }
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
+                    maxLength={10}
                   />
                   <input
                     required
@@ -551,9 +559,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }) {
                       onChange={(e) =>
                         setCustomerDetails({
                           ...customerDetails,
-                          postalCode: e.target.value,
+                          postalCode: normalizeDigits(e.target.value, 6),
                         })
                       }
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
                     />
                   </div>
                 </div>

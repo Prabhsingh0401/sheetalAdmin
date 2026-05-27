@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "search:report": "node scripts/generate-search-report.js",
     "prettier": "prettier --write .",
     "test": "node --test"
   },

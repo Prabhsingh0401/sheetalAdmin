@@ -16,6 +16,7 @@ import {
   cancelAbandonedCartCoupons,
   issueAbandonedCartCoupon,
 } from "./abandonedcartcoupon.service.js";
+import { ensureAbandonedCartQueue } from "../queues/abandonedCart.queue.js";
 
 const REMINDER_STAGES = [
   {
@@ -363,7 +364,6 @@ export const scheduleReminders = async (
   cart.abandonmentReminderJobIds = {};
   cart.abandonmentReminderAttempts = sanitizeReminderAttempts(cart);
   await cart.save();
-  return cart;
 
   const policy = await getReminderPolicy();
   const cartSnapshot =
@@ -532,19 +532,6 @@ export const markCartAsAbandoned = async (
 
   cart.abandonmentReminderJobIds = {};
   cart.abandonmentReminderAttempts = sanitizeReminderAttempts(cart);
-
-  logger.info(
-    {
-      cartId: cart._id.toString(),
-      cartTrackingId: cart.cartTrackingId || null,
-      userId: cart.user?._id?.toString?.() || cart.user?.toString?.() || null,
-      reason,
-      cycleId: finalCycleId,
-    },
-    "[AbandonedCart] Cart marked as abandoned",
-  );
-
-  return cart;
 
   await scheduleReminders(cart, {
     cycleId: finalCycleId,
@@ -808,7 +795,7 @@ export const handleUserActivity = async ({
 
   await syncCartState(cart, nextState);
 
-  if (cart.items?.length) {
+  if (!cart.items?.length) {
     logger.info(
       {
         cartId: cart._id.toString(),
@@ -822,57 +809,55 @@ export const handleUserActivity = async ({
     return cart;
   }
 
-  if (cart.items?.length) {
-    const policy = await getReminderPolicy();
-    const queue = await ensureAbandonedCartQueue();
-    if (!queue) {
-      logger.warn(
-        {
-          cartId: cart._id.toString(),
-          cycleId: nextCycleId,
-          source,
-        },
-        "[AbandonedCart] Redis unavailable; abandonment timer skipped",
-      );
-      return cart;
-    }
-    const jobId = buildAbandonedCartJobId(
-      cart._id.toString(),
-      nextCycleId,
-      "mark",
+  const policy = await getReminderPolicy();
+  const queue = await ensureAbandonedCartQueue();
+  if (!queue) {
+    logger.warn(
+      {
+        cartId: cart._id.toString(),
+        cycleId: nextCycleId,
+        source,
+      },
+      "[AbandonedCart] Redis unavailable; abandonment timer skipped",
     );
-    try {
-      await queue.add(
-        "mark-abandoned",
-        {
-          cartId: cart._id.toString(),
-          userId: cart.user?._id?.toString?.() || userId?.toString?.() || null,
-          cycleId: nextCycleId,
-          inactivityMinutes: policy.inactivityMinutes,
-          source,
-        },
-        {
-          jobId,
-          delay: policy.inactivityMinutes * 60 * 1000,
-          removeOnComplete: true,
-          removeOnFail: false,
-        },
-      );
+    return cart;
+  }
+  const jobId = buildAbandonedCartJobId(
+    cart._id.toString(),
+    nextCycleId,
+    "mark",
+  );
+  try {
+    await queue.add(
+      "mark-abandoned",
+      {
+        cartId: cart._id.toString(),
+        userId: cart.user?._id?.toString?.() || userId?.toString?.() || null,
+        cycleId: nextCycleId,
+        inactivityMinutes: policy.inactivityMinutes,
+        source,
+      },
+      {
+        jobId,
+        delay: policy.inactivityMinutes * 60 * 1000,
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
 
-      cart.abandonmentReminderJobIds = {
-        mark: jobId,
-      };
-      await cart.save();
-    } catch (error) {
-      logger.error(
-        {
-          cartId: cart._id.toString(),
-          cycleId: nextCycleId,
-          error: error.message,
-        },
-        "[AbandonedCart] Failed to schedule abandonment timer",
-      );
-    }
+    cart.abandonmentReminderJobIds = {
+      mark: jobId,
+    };
+    await cart.save();
+  } catch (error) {
+    logger.error(
+      {
+        cartId: cart._id.toString(),
+        cycleId: nextCycleId,
+        error: error.message,
+      },
+      "[AbandonedCart] Failed to schedule abandonment timer",
+    );
   }
 
   logger.info(

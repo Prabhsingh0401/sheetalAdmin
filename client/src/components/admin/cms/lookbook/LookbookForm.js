@@ -306,7 +306,7 @@ function CenterSection({ content, onChange }) {
           </label>
           <div className="border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-400 focus-within:border-emerald-400 transition">
             <TiptapEditor
-              content={content.description}
+              value={content.description}
               onChange={(val) => onChange("description", val)}
             />
           </div>
@@ -339,7 +339,7 @@ function CenterSection({ content, onChange }) {
           </label>
 
           <a
-            href={content.link}
+            href={content.buttonLink || "#"}
             className="bg-[#faf9f7] border border-slate-200 rounded-2xl px-6 py-8 flex flex-col items-center text-center gap-3 hover:shadow-md transition cursor-pointer"
           >
             {content.label && (

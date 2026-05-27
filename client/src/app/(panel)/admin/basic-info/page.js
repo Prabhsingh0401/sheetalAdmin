@@ -70,7 +70,10 @@ export default function BasicInfoPage() {
   };
 
   const handleAddressChange = (section, field) => (event) => {
-    const value = event.target.value;
+    const value =
+      field === "pincode"
+        ? event.target.value.replace(/\D/g, "").slice(0, 6)
+        : event.target.value;
     setForm((prev) => ({
       ...prev,
       [section]: {
@@ -302,6 +305,9 @@ function AddressCard({
               value={values.pincode}
               onChange={onChange(sectionKey, "pincode")}
               placeholder="Pincode"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
               className={fieldClass}
               required
             />

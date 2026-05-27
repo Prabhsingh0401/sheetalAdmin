@@ -6,6 +6,7 @@ import ContactEnquiry from "../models/contactEnquiry.model.js";
 export const createContactEnquiry = async (req, res, next) => {
   try {
     const { name, email, phone, query } = req.body;
+    const trimmedPhone = phone?.trim();
 
     if (!name?.trim()) {
       return res.status(400).json({ success: false, message: "Name is required" });
@@ -13,8 +14,11 @@ export const createContactEnquiry = async (req, res, next) => {
     if (!email?.trim()) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
-    if (!phone?.trim()) {
+    if (!trimmedPhone) {
       return res.status(400).json({ success: false, message: "Phone is required" });
+    }
+    if (!/^\d{10}$/.test(trimmedPhone)) {
+      return res.status(400).json({ success: false, message: "Phone must be a 10-digit number" });
     }
     if (!query?.trim()) {
       return res.status(400).json({ success: false, message: "Query is required" });
@@ -23,7 +27,7 @@ export const createContactEnquiry = async (req, res, next) => {
     const contactEnquiry = await ContactEnquiry.create({
       name: name.trim(),
       email: email.trim(),
-      phone: phone.trim(),
+      phone: trimmedPhone,
       query: query.trim(),
     });
 
