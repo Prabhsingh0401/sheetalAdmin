@@ -25,6 +25,7 @@ import {
 } from "../utils/productSlug.js";
 import enquiryModel from "../models/enquiry.model.js";
 import { sendAvailabilityEmail } from "./enquiry.service.js";
+import { normalizeJsonLd } from "../utils/jsonLd.js";
 
 const toTitleCase = (str) => {
   if (!str) return "";
@@ -611,6 +612,7 @@ export const createProductService = async (data, files, userId) => {
       typeof data.byPrice === "string"
         ? JSON.parse(data.byPrice)
         : data.byPrice,
+    seoSchema: normalizeJsonLd(data.seoSchema),
   };
 
   if (parsedData.sizeChart === "null" || !parsedData.sizeChart)
@@ -802,6 +804,7 @@ export const updateProductService = async (id, data, files) => {
       typeof data.byPrice === "string"
         ? JSON.parse(data.byPrice)
         : data.byPrice,
+    seoSchema: normalizeJsonLd(data.seoSchema),
   };
 
   if (parsedData.sizeChart === "null" || !parsedData.sizeChart)

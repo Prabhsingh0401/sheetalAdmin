@@ -6,8 +6,11 @@ import { adminLogin } from "@/services/authService";
 import { Lock, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import useSettings from "@/hooks/useSettings";
 
 export default function AdminLogin() {
+  const { settings } = useSettings();
+  const logoUrl = settings?.logo?.url;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -44,7 +47,18 @@ export default function AdminLogin() {
     <div className="min-h-screen flex items-center justify-center bg-[#f9fafb] p-4 antialiased">
       <div className="w-full max-w-md">
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 md:p-10">
-          <div className="mb-8 text-center">
+          <div className="mb-8 text-center flex flex-col items-center">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="h-16 w-auto object-contain mb-6"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md mb-6">
+                <span className="font-bold text-xl text-white">S</span>
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
               Admin Login
             </h2>

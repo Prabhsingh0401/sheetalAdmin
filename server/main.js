@@ -40,6 +40,8 @@ import homepageRouter from "./routes/homepage.routes.js";
 import enquiryRouter from "./routes/enquiry.routes.js";
 import contactEnquiryRouter from "./routes/contactEnquiry.routes.js";
 import newsletterRouter from "./routes/newsletter.routes.js";
+import seoSettingsRouter from "./routes/seosettings.routes.js";
+import faqRoutes from "./routes/faq.routes.js";
 
 import errorHandler from "./middlewares/error.middleware.js";
 import sanitizeBody from "./middlewares/sanitize.middleware.js";
@@ -197,6 +199,8 @@ app.use("/api/v1/homepage", homepageRouter);
 app.use("/api/v1/enquiry", enquiryRouter);
 app.use("/api/v1/contact-enquiries", contactEnquiryRouter);
 app.use("/api/v1/newsletter", newsletterRouter);
+app.use("/api/v1/seo-settings", seoSettingsRouter);
+app.use("/api/v1/faq", faqRoutes);
 
 app.get("/", (req, res) => {
   const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;

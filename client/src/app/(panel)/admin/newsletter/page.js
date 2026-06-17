@@ -63,7 +63,7 @@ export default function NewsletterPage() {
     setCustomEndDate,
     dateRange,
     dateRangeLabel,
-  } = useDateRange("last_30_days");
+  } = useDateRange("last_365_days");
 
   const abortRef = useRef(null);
 

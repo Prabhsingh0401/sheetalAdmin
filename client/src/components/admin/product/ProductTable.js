@@ -685,19 +685,7 @@ export default function ProductTable({ refreshStats }) {
           title="Bulk Import"
         >
           <UploadCloud size={18} />
-        </button>
-
-        <button
-          onClick={() => setIsReorderMode(!isReorderMode)}
-          className={`p-2.5 rounded-lg transition-all cursor-pointer ${
-            isReorderMode
-              ? "bg-amber-500 text-white hover:bg-amber-400"
-              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-          }`}
-          title="Reorder Products"
-        >
-          <ListChecks size={18} />
-        </button>
+        </button> 
 
         {isReorderMode && (
           <button

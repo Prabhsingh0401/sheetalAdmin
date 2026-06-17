@@ -40,6 +40,7 @@ const categorySchema = new mongoose.Schema(
     metaKeywords: { type: String },
     ogImage: { type: String },
     canonicalUrl: { type: String },
+    seoSchema: { type: String },
 
     categoryBanner: { type: String },
     gstPercent: { type: Number, default: 0, min: 0 },

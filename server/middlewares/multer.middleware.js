@@ -93,10 +93,11 @@ export const uploadTo = (folderName) => {
       );
     }
 
-    const isExtValid = /\.(jpeg|jpg|png|webp|mp4|webm|mov|mkv)$/i.test(extname);
+    const isExtValid = /\.(jpeg|jpg|png|webp|svg|mp4|webm|mov|mkv)$/i.test(extname);
     const isMimeValid =
       /image|video/.test(file.mimetype || "") ||
-      file.mimetype === "application/octet-stream" ||
+      file.mimetype === "image\/svg\+xml" ||
+      file.mimetype === "application\/octet-stream" ||
       !file.mimetype;
 
     if (isExtValid && isMimeValid) {

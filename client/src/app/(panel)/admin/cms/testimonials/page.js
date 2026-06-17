@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import React, { useState, useEffect } from "react";
 import {
   PlusSquare,
@@ -14,6 +12,7 @@ import {
   Info,
   MessageSquare,
   GripVertical,
+  Save,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -94,6 +93,7 @@ function SortableTestimonial({
   saveEdit,
   startEdit,
   handleDelete,
+  handleToggleActive,
   ACCEPTED_EXTENSIONS,
 }) {
   const {
@@ -195,24 +195,42 @@ function SortableTestimonial({
             </p>
           </div>
           {/* Actions */}
-          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Active Toggle */}
             <button
-              onClick={() => startEdit(t)}
-              className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+              type="button"
+              onClick={() => handleToggleActive(t)}
+              className={`relative cursor-pointer w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ${
+                t.isActive ? "bg-emerald-500" : "bg-slate-200"
+              }`}
+              title={t.isActive ? "Active" : "Inactive"}
             >
-              <Pencil size={13} className="cursor-pointer" />
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                  t.isActive ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
             </button>
-            <button
-              onClick={() => handleDelete(t._id)}
-              disabled={deletingId === t._id}
-              className="p-1.5 rounded-lg bg-slate-100 text-rose-400 hover:bg-rose-500 hover:text-white transition disabled:opacity-60"
-            >
-              {deletingId === t._id ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Trash2 size={13} className="cursor-pointer" />
-              )}
-            </button>
+
+            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => startEdit(t)}
+                className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+              >
+                <Pencil size={13} className="cursor-pointer" />
+              </button>
+              <button
+                onClick={() => handleDelete(t._id)}
+                disabled={deletingId === t._id}
+                className="p-1.5 rounded-lg bg-slate-100 text-rose-400 hover:bg-rose-500 hover:text-white transition disabled:opacity-60"
+              >
+                {deletingId === t._id ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Trash2 size={13} className="cursor-pointer" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -223,6 +241,11 @@ function SortableTestimonial({
 export default function TestimonialForm() {
   const [testimonials, setTestimonials] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Heading/Subheading config
+  const [heading, setHeading] = useState("");
+  const [subheading, setSubheading] = useState("");
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Add form
   const [newFile, setNewFile] = useState(null);
@@ -251,11 +274,12 @@ export default function TestimonialForm() {
 
   useEffect(() => {
     fetchTestimonials();
+    fetchConfig();
   }, []);
 
   const fetchTestimonials = async () => {
     try {
-      const { data } = await axios.get(`${API_BASE_URL}/testimonials`, {
+      const { data } = await axios.get(`${API_BASE_URL}/testimonials?all=true`, {
         withCredentials: true,
       });
       if (data.success) setTestimonials(data.testimonials);
@@ -264,6 +288,38 @@ export default function TestimonialForm() {
       toast.error("Failed to load testimonials");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchConfig = async () => {
+    try {
+      const { data } = await axios.get(
+        `${API_BASE_URL}/homepage/section/testimonials`,
+      );
+      if (data.success) {
+        setHeading(data.data?.heading || "");
+        setSubheading(data.data?.subheading || "");
+      }
+    } catch (err) {
+      console.error("Failed to load section config:", err);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    setIsSavingConfig(true);
+    try {
+      const { data } = await axios.patch(
+        `${API_BASE_URL}/homepage/sections`,
+        { testimonials: { heading, subheading } },
+        { withCredentials: true },
+      );
+      if (data.success) {
+        toast.success("Testimonials header updated!");
+      }
+    } catch (err) {
+      toast.error("Failed to save header settings");
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -336,6 +392,31 @@ export default function TestimonialForm() {
       toast.error(err.response?.data?.message || "Failed to add testimonial");
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const handleToggleActive = async (t) => {
+    const nextActive = !t.isActive;
+    const loadingToast = toast.loading(
+      `Marking as ${nextActive ? "active" : "inactive"}...`,
+    );
+
+    try {
+      const { data } = await axios.patch(
+        `${API_BASE_URL}/testimonials/${t._id}`,
+        { isActive: nextActive },
+        { withCredentials: true },
+      );
+      if (data.success) {
+        setTestimonials((prev) =>
+          prev.map((item) => (item._id === t._id ? data.testimonial : item)),
+        );
+        toast.success(`Testimonial ${nextActive ? "activated" : "hidden"}!`, {
+          id: loadingToast,
+        });
+      }
+    } catch (err) {
+      toast.error("Failed to update status", { id: loadingToast });
     }
   };
 
@@ -415,7 +496,60 @@ export default function TestimonialForm() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-20">
+      {/* Header Config */}
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden p-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 uppercase">
+              Section Header
+            </h3>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              Customize the heading and subheading shown on the homepage
+              testimonials section.
+            </p>
+          </div>
+          <button
+            onClick={handleSaveConfig}
+            disabled={isSavingConfig}
+            className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isSavingConfig ? (
+              <Loader2 className="animate-spin" size={14} />
+            ) : (
+              <Save size={14} />
+            )}
+            <span>Save Header</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+              Main Heading
+            </span>
+            <input
+              type="text"
+              value={heading}
+              onChange={(e) => setHeading(e.target.value)}
+              placeholder="e.g. What Our Customers Say"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400 transition-colors"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+              Subheading / Intro
+            </span>
+            <input
+              type="text"
+              value={subheading}
+              onChange={(e) => setSubheading(e.target.value)}
+              placeholder="e.g. Your words"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400 transition-colors"
+            />
+          </label>
+        </div>
+      </div>
 
       {/* Add New */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
@@ -552,6 +686,7 @@ export default function TestimonialForm() {
                     saveEdit={saveEdit}
                     startEdit={startEdit}
                     handleDelete={handleDelete}
+                    handleToggleActive={handleToggleActive}
                     ACCEPTED_EXTENSIONS={ACCEPTED_EXTENSIONS}
                   />
                 ))}

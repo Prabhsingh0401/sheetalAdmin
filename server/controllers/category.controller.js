@@ -1,6 +1,9 @@
 import * as categoryService from "../services/category.service.js";
 import successResponse from "../utils/successResponse.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
+import SeoSettings from "../models/seosettings.model.js";
+import Product from "../models/product.model.js";
+import { generateCategorySchema } from "../utils/schemaGenerator.js";
 
 const cleanupFiles = async (files) => {
   if (!files) return;
@@ -156,6 +159,27 @@ export const deleteCategory = async (req, res, next) => {
     }
 
     return successResponse(res, 200, null, "Category deleted successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateSchema = async (req, res, next) => {
+  try {
+    const category = req.body;
+    const settings = await SeoSettings.findOne();
+
+    // Fetch some products for this category to include in ItemList
+    const products = await Product.find({ category: category._id })
+      .select("name slug")
+      .limit(10);
+
+    const generatedSchema = generateCategorySchema(category, products, settings);
+
+    res.status(200).json({
+      success: true,
+      schema: generatedSchema,
+    });
   } catch (error) {
     next(error);
   }
