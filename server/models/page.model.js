@@ -5,6 +5,12 @@ const pageSchema = new mongoose.Schema(
     title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     content: { type: String, default: "" },
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    metaKeywords: { type: String },
+    ogImage: { type: String },
+    canonicalUrl: { type: String },
+    seoSchema: { type: String },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

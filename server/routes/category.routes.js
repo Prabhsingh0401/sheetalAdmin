@@ -8,6 +8,7 @@ import {
   updateCategory,
   deleteCategory,
   reorderCategories,
+  generateSchema,
 } from "../controllers/category.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js";
@@ -20,6 +21,7 @@ router.get("/:slug", getCategoryBySlug);
 
 // admin routes
 router.put("/admin/reorder", isAuthenticated, isAdmin, reorderCategories);
+router.post("/admin/generate-schema", isAuthenticated, isAdmin, generateSchema);
 router.get("/admin/all", isAuthenticated, isAdmin, getAdminCategories);
 router.get("/admin/stats", isAuthenticated, isAdmin, getCategoryStats);
 router.post(

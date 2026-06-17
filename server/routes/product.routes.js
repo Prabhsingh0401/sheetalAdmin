@@ -22,6 +22,7 @@ import {
   getCollectionProducts,
   toggleStarProduct,
   reorderProducts,
+  generateSchema,
 } from "../controllers/product.controller.js";
 
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
@@ -51,6 +52,7 @@ router.get(
 );
 router.patch("/admin/:id/star", isAuthenticated, isAdmin, toggleStarProduct);
 router.post("/admin/reorder", isAuthenticated, isAdmin, reorderProducts);
+router.post("/admin/generate-schema", isAuthenticated, isAdmin, generateSchema);
 
 router.post(
   "/admin/import",

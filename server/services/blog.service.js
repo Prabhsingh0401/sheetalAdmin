@@ -28,7 +28,9 @@ export const createBlogService = async (data, files, userId) => {
       };
     }
 
-    const slug = slugify(title, { lower: true, strict: true });
+    const slug = data.slug
+      ? slugify(data.slug, { lower: true, strict: true })
+      : slugify(title, { lower: true, strict: true });
     const excerpt =
       data.excerpt || content.substring(0, 160).replace(/<[^>]*>/g, "") + "...";
 
@@ -98,7 +100,9 @@ export const updateBlogService = async (id, data, files) => {
 
     let updateData = { ...data };
 
-    if (data.title) {
+    if (data.slug) {
+      updateData.slug = slugify(data.slug, { lower: true, strict: true });
+    } else if (data.title) {
       updateData.slug = slugify(data.title, { lower: true, strict: true });
     }
 

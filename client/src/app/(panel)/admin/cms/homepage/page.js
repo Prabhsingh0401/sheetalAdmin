@@ -1,10 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Save, Info, Eye, EyeOff } from "lucide-react";
+import {
+  Loader2,
+  Save,
+  Info,
+  Eye,
+  EyeOff,
+  Edit2,
+  Search,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { API_BASE_URL } from "@/services/api";
+import Link from "next/link";
 
 const SECTION_LABELS = {
   topInfo: {
@@ -12,22 +21,30 @@ const SECTION_LABELS = {
     description: "Announcement strip above the navbar",
   },
   homeBanner: { label: "Home Banner", description: "Main hero/slider banner" },
-  aboutSBS: { label: "About SBS", description: "Brand introduction section" },
+  aboutSBS: {
+    label: "About SBS",
+    description: "Brand introduction section",
+    editable: true,
+  },
   hiddenBeauty: {
     label: "Hidden Beauty",
     description: "Featured highlight section",
+    editable: true,
   },
   trendingThisWeek: {
     label: "Trending This Week",
     description: "Trending products carousel",
+    editable: true,
   },
   newArrivals: {
     label: "New Arrivals",
     description: "Latest product additions",
+    editable: true,
   },
   collections: {
     label: "Collections",
     description: "Curated collection showcase",
+    editable: true,
   },
   timelessWomenCollection: {
     label: "Timeless Women Collection",
@@ -36,6 +53,7 @@ const SECTION_LABELS = {
   instagramDiaries: {
     label: "Instagram Diaries",
     description: "Instagram image carousel",
+    editable: true,
   },
   testimonials: {
     label: "Testimonials",
@@ -191,6 +209,27 @@ export default function HomepageSectionsForm() {
         </div>
       </div>
 
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-black uppercase text-slate-900">
+              Homepage SEO
+            </h3>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Manage homepage meta tags and JSON-LD without changing section
+              content.
+            </p>
+          </div>
+          <Link
+            href="/admin/cms/homepage/seo"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-700 transition hover:bg-slate-50"
+          >
+            <Search size={14} />
+            Edit SEO
+          </Link>
+        </div>
+      </div>
+
       {/* Sections List */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
@@ -237,20 +276,33 @@ export default function HomepageSectionsForm() {
                     </div>
                   </div>
 
-                  {/* Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggle(key)}
-                    className={`relative cursor-pointer w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ${
-                      isVisible ? "bg-emerald-500" : "bg-slate-200"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-                        isVisible ? "translate-x-5" : "translate-x-0"
+                  {/* Actions */}
+                  <div className="flex items-center gap-3">
+                    {SECTION_LABELS[key].editable && (
+                      <Link
+                        href={`/admin/cms/homepage/${key}`}
+                        className="p-2 text-slate-400 hover:text-slate-900 transition-colors"
+                        title="Edit Section Content"
+                      >
+                        <Edit2 size={18} />
+                      </Link>
+                    )}
+
+                    {/* Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggle(key)}
+                      className={`relative cursor-pointer w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ${
+                        isVisible ? "bg-emerald-500" : "bg-slate-200"
                       }`}
-                    />
-                  </button>
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                          isVisible ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
               );
             },

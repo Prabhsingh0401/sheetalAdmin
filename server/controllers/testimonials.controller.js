@@ -6,7 +6,10 @@ import { deleteS3File } from "../utils/fileHelper.js";
 // @access  Public
 export const getTestimonials = async (req, res, next) => {
   try {
-    const testimonials = await Testimonial.find({ isActive: true }).sort({
+    const { all } = req.query;
+    const filter = all === "true" ? {} : { isActive: true };
+
+    const testimonials = await Testimonial.find(filter).sort({
       order: 1,
       createdAt: -1,
     });
@@ -55,7 +58,7 @@ export const addTestimonial = async (req, res, next) => {
 export const updateTestimonial = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, comment } = req.body;
+    const { name, comment, isActive } = req.body;
 
     const testimonial = await Testimonial.findById(id);
     if (!testimonial)
@@ -65,6 +68,8 @@ export const updateTestimonial = async (req, res, next) => {
 
     if (name?.trim()) testimonial.name = name.trim();
     if (comment?.trim()) testimonial.comment = comment.trim();
+    if (isActive !== undefined)
+      testimonial.isActive = isActive === "true" || isActive === true;
 
     if (req.file) {
       if (testimonial.image?.key) deleteS3File(testimonial.image.key);

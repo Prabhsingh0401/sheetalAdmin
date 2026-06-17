@@ -72,6 +72,25 @@ const settingsSchema = new mongoose.Schema(
     },
     supportEmail: { type: String, default: "info@studiobysheetal.com" },
     supportWhatsapp: { type: String, default: "919958813913" },
+    logo: {
+      url: { type: String },
+      uploadDate: { type: Date },
+      dimensions: {
+        width: { type: Number },
+        height: { type: Number },
+      },
+    },
+    favicon: { type: String },
+    logoHistory: [
+      {
+        url: { type: String },
+        uploadDate: { type: Date },
+        dimensions: {
+          width: { type: Number },
+          height: { type: Number },
+        },
+      },
+    ],
     appointmentEmailTemplate: {
       type: String,
       default: `<!DOCTYPE html>

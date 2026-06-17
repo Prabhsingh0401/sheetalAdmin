@@ -34,7 +34,7 @@ export default function OrdersPage() {
     setCustomEndDate,
     dateRange,
     dateRangeLabel,
-  } = useDateRange("last_7_days");
+  } = useDateRange("last_365_days");
   const [ordersForExport, setOrdersForExport] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [stats, setStats] = useState({

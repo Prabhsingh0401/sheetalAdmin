@@ -121,6 +121,16 @@ export const deleteUser = async (req, res, next) => {
   }
 };
 
+export const deleteMe = async (req, res, next) => {
+  try {
+    const result = await userService.deleteUserService(req.user._id);
+    if (!result.success) return res.status(result.statusCode).json(result);
+    return successResponse(res, 200, null, "Your account has been deleted successfully");
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getUserStats = async (req, res, next) => {
   try {
     const result = await userService.getUserStatsService({

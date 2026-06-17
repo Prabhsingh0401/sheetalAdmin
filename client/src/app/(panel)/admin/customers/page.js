@@ -19,7 +19,7 @@ export default function CustomersPage() {
     setCustomEndDate,
     dateRange,
     dateRangeLabel,
-  } = useDateRange("last_7_days");
+  } = useDateRange("last_365_days");
   const [stats, setStats] = useState({
     total: 0,
     active: 0,

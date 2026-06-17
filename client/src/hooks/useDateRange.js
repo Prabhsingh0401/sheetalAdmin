@@ -6,7 +6,7 @@ import {
   toDateInputValue,
 } from "@/utils/dateRange";
 
-export function useDateRange(defaultRangeType = "last_7_days") {
+export function useDateRange(defaultRangeType = "last_365_days") {
   const [rangeType, setRangeType] = useState(defaultRangeType);
   const [customStartDate, setCustomStartDate] = useState(() => {
     const preset = getRelativeDateRange(defaultRangeType);

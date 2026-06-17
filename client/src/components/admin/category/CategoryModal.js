@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Upload, Loader2, LayoutGrid, Edit3, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Upload,
+  Loader2,
+  LayoutGrid,
+  Edit3,
+  Search,
+} from "lucide-react";
 import {
   addCategory,
   updateCategory,
@@ -9,12 +16,15 @@ import {
 } from "@/services/categoryService";
 import { getSizeCharts } from "@/services/sizeChartService";
 import { toast } from "react-hot-toast";
-import { IMAGE_BASE_URL } from "@/services/api";
+import axios from "axios";
+import { API_BASE_URL, IMAGE_BASE_URL } from "@/services/api";
 import {
   getRatioLabel,
   validateImageAspectRatio,
 } from "@/utils/imageAspectRatio";
 import CreateChartModal from "../size-chart/CreateChartModal";
+import SchemaEditor from "@/components/admin/seo/SchemaEditor";
+import { validateJsonLd } from "@/utils/jsonLd";
 
 const OG_RATIO = { width: 1200, height: 630 };
 const OG_RATIO_LABEL = getRatioLabel(OG_RATIO.width, OG_RATIO.height);
@@ -45,6 +55,10 @@ export default function CategoryModal({
   const [previewMainImage, setPreviewMainImage] = useState(null);
   const [previewBannerImage, setPreviewBannerImage] = useState(null);
   const [previewOgImage, setPreviewOgImage] = useState(null);
+  const [schemaError, setSchemaError] = useState(null);
+  const [isSchemaLoading, setIsSchemaLoading] = useState(false);
+  const [autoSchema, setAutoSchema] = useState("");
+  const autoRequestedRef = useRef(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -72,6 +86,7 @@ export default function CategoryModal({
     metaKeywords: "",
     canonicalUrl: "",
     ogImage: null,
+    seoSchema: "",
   });
 
   useEffect(() => {
@@ -104,8 +119,12 @@ export default function CategoryModal({
         metaDescription: initialData?.metaDescription || "",
         metaKeywords: initialData?.metaKeywords || "",
         canonicalUrl: initialData?.canonicalUrl || "",
-        ogImage: null,
+        ogImage: initialData?.ogImage || null,
+        seoSchema: initialData?.seoSchema || "",
       });
+      setAutoSchema("");
+      setSchemaError(null);
+      autoRequestedRef.current = false;
 
       if (initialData?.mainImage?.url) {
         const url = initialData.mainImage.url;
@@ -185,6 +204,43 @@ export default function CategoryModal({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  useEffect(() => {
+    const validation = validateJsonLd(formData.schema || "");
+    setSchemaError(validation.valid ? null : validation.error);
+  }, [formData.schema]);
+
+  const generateSchema = async (applyToForm = true) => {
+    try {
+      setIsSchemaLoading(true);
+      const res = await axios.post(
+        `${API_BASE_URL}/categories/admin/generate-schema`,
+        { ...formData, _id: initialData?._id },
+        { withCredentials: true },
+      );
+
+      if (res.data.success) {
+        setAutoSchema(res.data.schema || "");
+        if (applyToForm) {
+          setFormData((prev) => ({ ...prev, schema: res.data.schema || "" }));
+          setSchemaError(null);
+          toast.success("Schema generated");
+        }
+      }
+    } catch (error) {
+      toast.error("Failed to generate schema");
+    } finally {
+      setIsSchemaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen || autoRequestedRef.current || formData.schema?.trim()) return;
+    if (!formData.name?.trim() && !formData.metaTitle?.trim()) return;
+
+    autoRequestedRef.current = true;
+    generateSchema(true);
+  }, [isOpen, formData.name, formData.metaTitle]);
+
   const handleFileChange = (e, fieldName) => {
     const file = e.target.files[0];
     if (file) {
@@ -234,6 +290,14 @@ export default function CategoryModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const schemaValidation = validateJsonLd(formData.schema || "");
+    if (!schemaValidation.valid) {
+      setSchemaError(schemaValidation.error);
+      toast.error(schemaValidation.error);
+      return;
+    }
+
     setLoading(true);
 
     const data = new FormData();
@@ -262,10 +326,14 @@ export default function CategoryModal({
     data.append("metaDescription", formData.metaDescription);
     data.append("metaKeywords", formData.metaKeywords);
     data.append("canonicalUrl", formData.canonicalUrl);
+    data.append("schema", schemaValidation.formatted || "");
 
     if (formData.mainImage) data.append("mainImage", formData.mainImage);
     if (formData.bannerImage) data.append("bannerImage", formData.bannerImage);
     if (formData.ogImage) data.append("ogImage", formData.ogImage);
+    else if (typeof initialData?.ogImage === "string" && initialData.ogImage) {
+      data.append("existingOgImage", initialData.ogImage);
+    }
 
     try {
       const res = initialData
@@ -456,6 +524,20 @@ export default function CategoryModal({
                       placeholder="e.g. Mens Fashion"
                       className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition font-medium"
                       required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      URL Slug
+                    </label>
+                    <input
+                      value={formData.slug || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, slug: e.target.value })
+                      }
+                      placeholder="e.g. mens-fashion"
+                      className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition font-medium"
                     />
                   </div>
 
@@ -789,6 +871,20 @@ export default function CategoryModal({
             {/* ── SEO Tab ── */}
             {activeTab === "SEO" && (
               <div className="space-y-6 h-full ">
+                {/* URL Slug */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    URL Slug
+                  </label>
+                  <input
+                    name="slug"
+                    value={formData.slug || ""}
+                    onChange={handleChange}
+                    placeholder="e.g. mens-fashion"
+                    className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition font-medium"
+                  />
+                </div>
+
                 {/* Meta Title */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between">
@@ -861,6 +957,22 @@ export default function CategoryModal({
                     className="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-sm outline-none focus:border-slate-900 transition"
                   />
                 </div>
+
+                <SchemaEditor
+                  value={formData.seoSchema || ""}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, seoSchema: value }))
+                  }
+                  onGenerate={() => generateSchema(true)}
+                  onReset={() => {
+                    if (!autoSchema) return;
+                    setFormData((prev) => ({ ...prev, seoSchema: autoSchema }));
+                    setSchemaError(null);
+                  }}
+                  error={schemaError}
+                  isLoading={isSchemaLoading}
+                  autoSchemaAvailable={Boolean(autoSchema)}
+                />
 
                 {/* OG Image */}
                 <div className="space-y-2">

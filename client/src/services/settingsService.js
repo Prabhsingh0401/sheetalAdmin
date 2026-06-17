@@ -25,3 +25,39 @@ export const updateSettings = async (data) => {
 export const saveNavbarLayout = async (layout) => {
     return await updateSettings({ navbarLayout: layout });
 };
+
+// Update logo
+export const updateLogo = async (formData) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(`${API_BASE_URL}/settings/logo`, formData, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+    });
+    return response.data;
+};
+
+// Restore previous logo
+export const restoreLogo = async (historyId) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(`${API_BASE_URL}/settings/logo/restore/${historyId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+    });
+    return response.data;
+};
+
+// Update favicon
+export const updateFavicon = async (formData) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(`${API_BASE_URL}/settings/favicon`, formData, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+    });
+    return response.data;
+};

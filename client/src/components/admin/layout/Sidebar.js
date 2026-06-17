@@ -29,13 +29,18 @@ import {
   Truck,
   Settings,
   Mail,
+  Search,
+  HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef } from "react";
+import useSettings from "@/hooks/useSettings";
 
 export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
   const pathname = usePathname();
+  const { settings } = useSettings();
+  const logoUrl = settings?.logo?.url;
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Overview", href: "/admin" },
@@ -98,6 +103,8 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
         { icon: Layout, label: "Banners", href: "/admin/cms/banners" },
         { icon: BookOpen, label: "Lookbooks", href: "/admin/cms/lookbooks" },
         { icon: FileText, label: "Text Pages", href: "/admin/cms/pages" },
+        { icon: HelpCircle, label: "FAQ", href: "/admin/cms/faq" },
+        { icon: Search, label: "SEO Settings", href: "/admin/cms/seo-settings" },
         {
           icon: UserIcon,
           label: "Testimonials",
@@ -136,17 +143,25 @@ export default function Sidebar({ storeName = "Admin", isOpen, setIsOpen }) {
       >
         <div className="h-full flex flex-col">
           <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="font-bold text-base text-white leading-none">
-                  S
-                </span>
-              </div>
+            <Link href="/admin" className="flex items-center gap-2.5">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-8 w-auto object-contain"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+                  <span className="font-bold text-base text-white leading-none">
+                    {storeName?.[0] || "A"}
+                  </span>
+                </div>
+              )}
               <span className="text-base font-bold tracking-tight text-slate-900">
                 {storeName}
                 <span className="text-indigo-500">Panel</span>
               </span>
-            </div>
+            </Link>
             <button
               onClick={() => setIsOpen(false)}
               className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
