@@ -4,6 +4,7 @@ import {
   updateAboutPage,
   getPageBySlug,
   updatePageBySlug,
+  generateSchema,
 } from "../controllers/pages.controller.js";
 import { isAuthenticated, isAdmin } from "../middlewares/auth.middleware.js";
 import { uploadTo } from "../middlewares/multer.middleware.js";
@@ -32,5 +33,6 @@ router.get("/slug/:slug", getPageBySlug);
 
 // Update page by slug (admin)
 router.post("/slug/:slug", isAuthenticated, isAdmin, updatePageBySlug);
+router.post("/generate-schema", isAuthenticated, isAdmin, generateSchema);
 
 export default router;

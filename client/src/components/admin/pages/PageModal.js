@@ -1,34 +1,52 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Save, Loader2, Edit3 } from "lucide-react";
+import { X, Save, Loader2, Edit3, Search, RefreshCw } from "lucide-react";
 import TiptapEditor from "../../TiptapEditor";
 import toast from "react-hot-toast";
+import axios from "axios";
+import { API_BASE_URL } from "@/services/api";
 
 export default function PageModal({ isOpen, onClose, onSuccess, initialData }) {
   const [loading, setLoading] = useState(false);
-  const [content, setContent] = useState("");
-  const [title, setTitle] = useState("");
+  const [formData, setFormData] = useState({
+      title: "",
+      content: "",
+      metaTitle: "",
+      metaDescription: "",
+      metaKeywords: "",
+      canonicalUrl: "",
+      seoSchema: "",
+  });
 
   useEffect(() => {
     if (isOpen && initialData) {
-      setTitle(initialData.title || "");
-      setContent(initialData.content || "");
+      setFormData({
+          title: initialData.title || "",
+          content: initialData.content || "",
+          metaTitle: initialData.metaTitle || "",
+          metaDescription: initialData.metaDescription || "",
+          metaKeywords: initialData.metaKeywords || "",
+          canonicalUrl: initialData.canonicalUrl || "",
+          seoSchema: initialData.seoSchema || "",
+      });
     }
   }, [isOpen, initialData]);
 
+  const handleChange = (e) => {
+      setFormData({...formData, [e.target.name]: e.target.value});
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content || content === "<p></p>") {
+    if (!formData.content || formData.content === "<p></p>") {
       return toast.error("Content is empty!");
     }
 
     setLoading(true);
     try {
-      // Yahan aapki API call aayegi (e.g., updateCMSPage)
-      console.log("Saving Content for:", title, content);
-
-      toast.success(`${title} Updated!`);
+      console.log("Saving Content for:", formData);
+      toast.success(`${formData.title} Updated!`);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -51,10 +69,10 @@ export default function PageModal({ isOpen, onClose, onSuccess, initialData }) {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 leading-tight">
-                Edit {title}
+                Edit {formData.title}
               </h2>
               <p className="text-xs text-slate-500 font-medium">
-                Update website content using rich text editor
+                Update page content and SEO settings
               </p>
             </div>
           </div>
@@ -67,16 +85,47 @@ export default function PageModal({ isOpen, onClose, onSuccess, initialData }) {
         </div>
 
         {/* --- FORM & EDITOR --- */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Page Content
-            </label>
-            {/* Aapka Tiptap Editor */}
-            <div className="min-h-[300px] max-h-[500px] overflow-y-auto">
-              <TiptapEditor value={content} onChange={setContent} />
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 h-[70vh] overflow-y-auto">
+            {/* SEO Section */}
+            <div className="space-y-4 border-b pb-4">
+                <h3 className="text-sm font-bold uppercase flex items-center gap-2"><Search size={16}/> SEO Settings</h3>
+                <input name="metaTitle" value={formData.metaTitle} onChange={handleChange} placeholder="Meta Title" className="w-full border p-2 rounded text-sm"/>
+                <textarea name="metaDescription" value={formData.metaDescription} onChange={handleChange} placeholder="Meta Description" className="w-full border p-2 rounded text-sm"/>
+                <input name="canonicalUrl" value={formData.canonicalUrl} onChange={handleChange} placeholder="Canonical URL" className="w-full border p-2 rounded text-sm"/>
+
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider flex justify-between items-center">
+                        Structured Data (Schema JSON-LD)
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                try {
+                                    const res = await axios.post(`${API_BASE_URL}/pages/admin/generate-schema`, formData);
+                                    if (res.data.success) {
+                                        setFormData({ ...formData, seoSchema: res.data.schema });
+                                        toast.success("Schema generated");
+                                    }
+                                } catch (error) {
+                                    toast.error("Failed to generate schema");
+                                }
+                            }}
+                            className="flex items-center gap-1 text-[10px] bg-slate-900 text-white px-2 py-1 rounded"
+                        >
+                            <RefreshCw size={10} /> Auto-Generate
+                        </button>
+                    </label>
+                    <textarea name="seoSchema" value={formData.seoSchema || ""} onChange={handleChange} rows={4} placeholder='{ "@context": "https://schema.org", ... }' className="w-full border p-2 rounded text-sm font-mono"/>
+                </div>
             </div>
-          </div>
+
+            <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Page Content
+                </label>
+                <div className="min-h-[200px]">
+                    <TiptapEditor value={formData.content} onChange={(val) => setFormData({...formData, content: val})} />
+                </div>
+            </div>
 
           {/* --- ACTIONS --- */}
           <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">

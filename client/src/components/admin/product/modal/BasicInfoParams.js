@@ -25,6 +25,15 @@ export default function BasicInfoParams({
         maxLength={150}
       />
 
+      <InputField
+        label="URL Slug"
+        name="slug"
+        value={formData.slug || ""}
+        onChange={handleChange}
+        placeholder="cotton-slim-fit-shirt"
+        maxLength={150}
+      />
+
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
           Short Description (Summary)

@@ -6,6 +6,7 @@ import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import { config } from "../config/config.js";
 import { syncToIndex, deleteFromIndex } from "./ngram.search.service.js";
 import { getGlobalTax } from "./settings.service.js";
+import { normalizeJsonLd } from "../utils/jsonLd.js";
 
 const resolveCategorySizing = async ({ sizeMode, sizeChart }) => {
   const normalizedMode = String(sizeMode || "")
@@ -45,6 +46,7 @@ export const createCategoryService = async (data, files) => {
     metaDescription,
     metaKeywords,
     canonicalUrl,
+    schema,
     status,
     categoryBanner,
     subCategories,
@@ -66,7 +68,7 @@ export const createCategoryService = async (data, files) => {
   const exists = await Category.findOne({ name });
   if (exists) return { success: false, message: "Category already exists" };
 
-  const slug = slugify(name, { lower: true });
+  const slug = data.slug ? slugify(data.slug, { lower: true }) : slugify(name, { lower: true });
 
   let parsedSubCategories = [];
   if (subCategories) {
@@ -120,6 +122,7 @@ export const createCategoryService = async (data, files) => {
     metaDescription,
     metaKeywords,
     canonicalUrl,
+    seoSchema: normalizeJsonLd(schema),
     categoryBanner,
     subCategories: parsedSubCategories,
     style: parsedStyle,
@@ -300,6 +303,7 @@ export const updateCategoryService = async (id, data, files) => {
     metaDescription: data.metaDescription,
     metaKeywords: data.metaKeywords,
     canonicalUrl: data.canonicalUrl,
+    seoSchema: normalizeJsonLd(data.seoSchema),
   };
 
   const parseArrayField = (fieldData) => {
@@ -360,7 +364,9 @@ export const updateCategoryService = async (id, data, files) => {
     updateData.subCategories = parsedSubCategories;
   }
 
-  if (data.name) {
+  if (data.slug) {
+    updateData.slug = slugify(data.slug, { lower: true });
+  } else if (data.name) {
     updateData.slug = slugify(data.name, { lower: true });
   }
 
@@ -401,6 +407,12 @@ export const updateCategoryService = async (id, data, files) => {
       url: files.bannerImage[0].location || files.bannerImage[0].path,
       public_id: files.bannerImage[0].key || files.bannerImage[0].filename,
     };
+  }
+
+  if (files && files.ogImage) {
+    updateData.ogImage = files.ogImage[0].location || files.ogImage[0].path;
+  } else if (data.existingOgImage) {
+    updateData.ogImage = data.existingOgImage;
   }
 
   const updated = await Category.findByIdAndUpdate(

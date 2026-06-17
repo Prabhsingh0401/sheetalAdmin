@@ -59,7 +59,7 @@ export default function SalesPage() {
     setCustomEndDate,
     dateRange,
     dateRangeLabel,
-  } = useDateRange("last_7_days");
+  } = useDateRange("last_365_days");
 
   const reportRangeQuery = useMemo(
     () => ({

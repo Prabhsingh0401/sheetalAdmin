@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { createProduct, updateProduct } from "@/services/productService";
 import { getCategories } from "@/services/categoryService";
+import { validateJsonLd } from "@/utils/jsonLd";
 import toast from "react-hot-toast";
 
 // Import Modular Components
@@ -59,6 +60,7 @@ export default function ProductModal({
     metaKeywords: "",
     ogImage: "",
     canonicalUrl: "",
+    seoSchema: "",
     returnPolicy: "7 Days Easy Return",
     mainImage: { url: "", alt: "" },
     hoverImage: { url: "", alt: "" },
@@ -323,6 +325,12 @@ export default function ProductModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const schemaValidation = validateJsonLd(formData.seoSchema || "");
+    if (!schemaValidation.valid) {
+      toast.error(`Invalid schema: ${schemaValidation.error}`);
+      return;
+    }
+
     // ── Final Duplicate Validation ──
     const colors = new Set();
     for (const v of formData.variants) {
@@ -378,6 +386,8 @@ export default function ProductModal({
         "subCategory",
         "brand",
         "gstPercent",
+        "schema",
+        "seoSchema",
       ];
 
       Object.keys(formData).forEach((key) => {
@@ -484,6 +494,7 @@ export default function ProductModal({
         };
       });
       data.append("variants", JSON.stringify(cleanedVariants));
+      data.append("seoSchema", schemaValidation.formatted || "");
 
       if (formData.mainImageFile) {
         data.append("mainImage", formData.mainImageFile);

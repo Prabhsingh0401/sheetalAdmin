@@ -6,7 +6,7 @@ import {
   Image as ImageIcon,
   BookOpen,
   FileText,
-  ExternalLink,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,6 +32,13 @@ export default function CMSPage() {
       icon: <FileText size={24} />,
       link: "/admin/cms/pages",
       color: "emerald",
+    },
+    {
+      title: "SEO Settings",
+      description: "Manage global website schema and metadata defaults",
+      icon: <Search size={24} />,
+      link: "/admin/cms/seo-settings",
+      color: "orange",
     },
     // {
     //   title: "Blog Posts",

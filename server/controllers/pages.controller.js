@@ -1,6 +1,9 @@
 import About from "../models/about.model.js";
 import Page from "../models/page.model.js";
+import SeoSettings from "../models/seosettings.model.js";
+import { generatePageSchema } from "../utils/schemaGenerator.js";
 import { deleteS3File } from "../utils/fileHelper.js";
+import { normalizeJsonLd } from "../utils/jsonLd.js";
 
 // @desc    Get About Page Data
 // @route   GET /api/v1/pages/about
@@ -196,7 +199,16 @@ export const getPageBySlug = async (req, res, next) => {
 export const updatePageBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { title, content } = req.body;
+    const {
+      title,
+      content,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      canonicalUrl,
+      ogImage,
+      schema,
+    } = req.body;
 
     let page = await Page.findOne({ slug });
 
@@ -206,6 +218,14 @@ export const updatePageBySlug = async (req, res, next) => {
 
     if (title !== undefined) page.title = title;
     if (content !== undefined) page.content = content;
+    if (metaTitle !== undefined) page.metaTitle = metaTitle;
+    if (metaDescription !== undefined) page.metaDescription = metaDescription;
+    if (metaKeywords !== undefined) page.metaKeywords = metaKeywords;
+    if (canonicalUrl !== undefined) page.canonicalUrl = canonicalUrl;
+    if (ogImage !== undefined) page.ogImage = ogImage;
+    if (schema !== undefined) {
+      page.seoSchema = normalizeJsonLd(schema);
+    }
 
     if (req.user) {
       page.updatedBy = req.user._id;
@@ -217,6 +237,21 @@ export const updatePageBySlug = async (req, res, next) => {
       success: true,
       message: `${page.title} updated successfully`,
       page,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateSchema = async (req, res, next) => {
+  try {
+    const page = req.body;
+    const settings = await SeoSettings.findOne();
+    const generatedSchema = generatePageSchema(page, settings);
+
+    res.status(200).json({
+      success: true,
+      schema: generatedSchema,
     });
   } catch (error) {
     next(error);

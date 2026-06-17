@@ -135,6 +135,7 @@ const productSchema = new mongoose.Schema(
     metaKeywords: { type: String },
     ogImage: { type: String },
     canonicalUrl: { type: String },
+    seoSchema: { type: String },
 
     isTrending: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },

@@ -2,6 +2,7 @@ import express from "express";
 import {
   getMe,
   updateProfile,
+  deleteMe,
   getAllUsers,
   deleteUser,
   updateUser,
@@ -27,6 +28,7 @@ router.post("/guest-login", guestLogin);
 
 // protected routes
 router.get("/me", isAuthenticated, getMe);
+router.delete("/me", isAuthenticated, deleteMe);
 router.put(
   "/update",
   isAuthenticated,

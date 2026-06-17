@@ -17,6 +17,7 @@ import {
   getRatioLabel,
   validateImageAspectRatio,
 } from "@/utils/imageAspectRatio";
+import { sanitizeProductSlug } from "@/utils/productSlug";
 
 const BANNER_RATIO = { width: 3, height: 2 };
 const CONTENT_RATIO = { width: 960, height: 640 };
@@ -43,6 +44,7 @@ export default function BlogModal({
 
   const [formData, setFormData] = useState({
     title: "",
+    slug: "",
     content: "",
     excerpt: "",
     tags: "",
@@ -57,11 +59,14 @@ export default function BlogModal({
     ogImage: null,
   });
 
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setActiveTab("Details");
       setFormData({
         title: initialData?.title || "",
+        slug: initialData?.slug || "",
         content: initialData?.content || "",
         excerpt: initialData?.excerpt || "",
         tags: initialData?.tags?.join(", ") || "",
@@ -75,6 +80,7 @@ export default function BlogModal({
         canonicalUrl: initialData?.canonicalUrl || "",
         ogImage: null,
       });
+      setIsSlugManuallyEdited(!!initialData?.slug);
 
       if (initialData?.bannerImage) {
         setBannerPreview(initialData.bannerImage.url || initialData.bannerImage);
@@ -114,10 +120,24 @@ export default function BlogModal({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    const nextValue = type === "checkbox" ? checked : value;
+
+    if (name === "slug") {
+      setIsSlugManuallyEdited(Boolean(nextValue));
+    }
+
+    setFormData((prev) => {
+      const nextState = {
+        ...prev,
+        [name]: nextValue,
+      };
+
+      if (name === "title" && !initialData && !isSlugManuallyEdited) {
+        nextState.slug = sanitizeProductSlug(value);
+      }
+
+      return nextState;
+    });
   };
 
   const handleBannerChange = (e) => {
@@ -379,6 +399,20 @@ export default function BlogModal({
                       />
                     </div>
 
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                        URL Slug
+                      </label>
+                      <input
+                        name="slug"
+                        value={formData.slug}
+                        onChange={handleChange}
+                        placeholder="e.g. 5-tips-for-better-web-design"
+                        className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
+                        required
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-5">
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -467,6 +501,20 @@ export default function BlogModal({
             {activeTab === "SEO" && (
               <div className="p-6">
                 <div className="space-y-6 max-w-4xl">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      URL Slug
+                    </label>
+                    <input
+                      name="slug"
+                      value={formData.slug}
+                      onChange={handleChange}
+                      placeholder="e.g. 5-tips-for-better-web-design"
+                      className="w-full bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition"
+                      required
+                    />
+                  </div>
+
                   <div className="space-y-1.5">
                     <div className="flex justify-between">
                       <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">

@@ -47,7 +47,7 @@ export default function EnquiriesPage() {
     setCustomEndDate,
     dateRange,
     dateRangeLabel,
-  } = useDateRange("last_7_days");
+  } = useDateRange("last_365_days");
 
   const abortRef = useRef(null);
 

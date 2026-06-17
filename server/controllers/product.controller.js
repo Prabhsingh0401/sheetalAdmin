@@ -3,6 +3,8 @@ import successResponse from "../utils/successResponse.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { deleteFile, deleteS3File } from "../utils/fileHelper.js";
 import fs from "fs/promises";
+import SeoSettings from "../models/seosettings.model.js";
+import { generateProductSchema } from "../utils/schemaGenerator.js";
 
 const clearFiles = async (files) => {
   if (!files) return;
@@ -398,6 +400,21 @@ export const toggleStarProduct = async (req, res, next) => {
       { isStarred: result.isStarred },
       "Star updated",
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateSchema = async (req, res, next) => {
+  try {
+    const product = req.body;
+    const settings = await SeoSettings.findOne();
+    const generatedSchema = generateProductSchema(product, settings);
+
+    res.status(200).json({
+      success: true,
+      schema: generatedSchema,
+    });
   } catch (error) {
     next(error);
   }
