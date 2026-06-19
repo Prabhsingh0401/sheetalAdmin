@@ -163,7 +163,20 @@ export default function InventoryParams({
     }
     updateVariant(variantIndex, (v) => {
       const sizes = [...v.sizes];
-      sizes[sizeIndex] = { ...sizes[sizeIndex], [field]: value };
+      const current = sizes[sizeIndex];
+      let updated = { ...current, [field]: value };
+
+      // If MRP is lowered below the existing discountPrice, clamp discountPrice down.
+      if (field === "price" && updated.discountPrice > value && value > 0) {
+        updated.discountPrice = value;
+      }
+
+      // If discountPrice is set above MRP, clamp it to MRP.
+      if (field === "discountPrice" && updated.price > 0 && value > updated.price) {
+        updated.discountPrice = updated.price;
+      }
+
+      sizes[sizeIndex] = updated;
       return { ...v, sizes };
     });
   };
@@ -692,10 +705,15 @@ export default function InventoryParams({
                               Disc. (₹)
                             </label>
                             <input
-                              className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs"
+                              className={`w-full border px-3 py-2 rounded-lg text-xs outline-none transition-all ${
+                                s.price > 0 && s.discountPrice > s.price
+                                  ? "bg-red-50 border-red-500 text-red-900 focus:ring-red-200"
+                                  : "bg-white border-slate-300 focus:ring-slate-900"
+                              }`}
                               placeholder="Disc. Price (₹)"
                               type="number"
                               min={0}
+                              max={s.price > 0 ? s.price : undefined}
                               value={s.discountPrice}
                               onChange={(e) =>
                                 updateSize(
@@ -706,6 +724,11 @@ export default function InventoryParams({
                                 )
                               }
                             />
+                            {s.price > 0 && s.discountPrice > s.price && (
+                              <p className="text-[9px] font-bold text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                Cannot exceed MRP (₹{s.price})
+                              </p>
+                            )}
                           </div>
                         </div>
 

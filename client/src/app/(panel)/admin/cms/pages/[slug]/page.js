@@ -50,7 +50,7 @@ export default function EditPolicyPage({ params }) {
             metaKeywords: data.page.metaKeywords || "",
             canonicalUrl: data.page.canonicalUrl || "",
             ogImage: data.page.ogImage || "",
-            schema: data.page.schema || "",
+            schema: data.page.seoSchema || data.page.schema || "",
           });
         }
       } catch (error) {

@@ -25,6 +25,12 @@ const aboutSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    metaKeywords: { type: String },
+    ogImage: { type: String },
+    canonicalUrl: { type: String },
+    seoSchema: { type: String },
   },
   { timestamps: true },
 );

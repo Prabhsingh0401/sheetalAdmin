@@ -57,6 +57,11 @@ export default function FAQForm() {
     seoSchema: "",
   });
 
+  // Tracks which single FAQ item id is currently expanded.
+  // null = all collapsed. Lives here (not inside SortableFaqItem) so that
+  // adding a new FAQ can explicitly open just that one item.
+  const [expandedFaqId, setExpandedFaqId] = useState(null);
+
   const [activeTab, setActiveTab] = useState("content");
 
   const sensors = useSensors(
@@ -100,6 +105,8 @@ export default function FAQForm() {
           ogImage: page.ogImage || "",
           seoSchema: page.seoSchema || "",
         });
+        // All accordions start closed when the page loads.
+        setExpandedFaqId(null);
       }
     } catch (error) {
       console.error("Error fetching FAQ data", error);
@@ -124,8 +131,9 @@ export default function FAQForm() {
   };
 
   const addFaq = () => {
+    const newId = `temp-${Date.now()}`;
     const newFaq = {
-      id: `temp-${Date.now()}`,
+      id: newId,
       question: "",
       answer: "",
       isActive: true,
@@ -135,6 +143,8 @@ export default function FAQForm() {
       ...prev,
       faqs: [...prev.faqs, newFaq],
     }));
+    // Newly added FAQ opens automatically; everything else stays/becomes closed.
+    setExpandedFaqId(newId);
   };
 
   const removeFaq = (id) => {
@@ -142,6 +152,11 @@ export default function FAQForm() {
       ...prev,
       faqs: prev.faqs.filter((faq) => faq.id !== id),
     }));
+    setExpandedFaqId((prev) => (prev === id ? null : prev));
+  };
+
+  const toggleExpanded = (id) => {
+    setExpandedFaqId((prev) => (prev === id ? null : id));
   };
 
   const handleDragEnd = (event) => {
@@ -338,6 +353,8 @@ export default function FAQForm() {
                     key={faq.id}
                     faq={faq}
                     index={index}
+                    isExpanded={expandedFaqId === faq.id}
+                    onToggleExpanded={() => toggleExpanded(faq.id)}
                     onChange={handleFaqChange}
                     onRemove={removeFaq}
                   />
@@ -458,8 +475,14 @@ export default function FAQForm() {
   );
 }
 
-function SortableFaqItem({ faq, index, onChange, onRemove }) {
-  const [isExpanded, setIsExpanded] = useState(index === 0);
+function SortableFaqItem({
+  faq,
+  index,
+  isExpanded,
+  onToggleExpanded,
+  onChange,
+  onRemove,
+}) {
   const {
     attributes,
     listeners,
@@ -519,7 +542,7 @@ function SortableFaqItem({ faq, index, onChange, onRemove }) {
           </button>
           <button
             type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={onToggleExpanded}
             className="p-2 hover:bg-slate-200 rounded-xl transition-colors text-slate-600"
           >
             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}

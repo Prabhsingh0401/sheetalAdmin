@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Save, Loader2, UploadCloud, Trash2 } from "lucide-react";
+import { Save, Loader2, UploadCloud, Trash2, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { API_BASE_URL } from "@/services/api";
@@ -9,6 +9,8 @@ import {
     getRatioLabel,
     validateImageAspectRatio,
 } from "@/utils/imageAspectRatio";
+import SchemaEditor from "@/components/admin/seo/SchemaEditor";
+import { validateJsonLd } from "@/utils/jsonLd";
 
 const ABOUT_RATIOS = {
     banner: { width: 1920, height: 600 },
@@ -20,6 +22,9 @@ const ABOUT_RATIOS = {
 export default function AboutUsForm() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSchemaLoading, setIsSchemaLoading] = useState(false);
+    const [schemaError, setSchemaError] = useState(null);
+    const [autoSchema, setAutoSchema] = useState("");
     const [formData, setFormData] = useState({
         bannerImage: null,
         bannerImagePreview: "",
@@ -36,11 +41,28 @@ export default function AboutUsForm() {
         craftImagePreview: "",
         craftTitle: "",
         craftDescription: "",
+        metaTitle: "",
+        metaDescription: "",
+        metaKeywords: "",
+        canonicalUrl: "",
+        ogImage: "",
+        schema: "",
     });
 
     useEffect(() => {
         fetchAboutData();
     }, []);
+
+    useEffect(() => {
+        const validation = validateJsonLd(formData.schema || "");
+        setSchemaError(validation.valid ? null : validation.error);
+    }, [formData.schema]);
+
+    useEffect(() => {
+        if (isLoading || formData.schema?.trim()) return;
+        if (!formData.bannerTitle?.trim() && !formData.metaTitle?.trim()) return;
+        generateSchema(true);
+    }, [isLoading, formData.bannerTitle, formData.metaTitle]);
 
     const fetchAboutData = async () => {
         try {
@@ -65,6 +87,12 @@ export default function AboutUsForm() {
                     craftImagePreview: page.craft?.image || "",
                     craftTitle: page.craft?.title || "",
                     craftDescription: page.craft?.description || "",
+                    metaTitle: page.metaTitle || "",
+                    metaDescription: page.metaDescription || "",
+                    metaKeywords: page.metaKeywords || "",
+                    canonicalUrl: page.canonicalUrl || "",
+                    ogImage: page.ogImage || "",
+                    schema: page.seoSchema || page.schema || "",
                 });
             }
         } catch (error) {
@@ -72,6 +100,37 @@ export default function AboutUsForm() {
             // toast.error("Failed to load data");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const generateSchema = async (applyToForm = true) => {
+        try {
+            setIsSchemaLoading(true);
+            const { data } = await axios.post(
+                `${API_BASE_URL}/pages/generate-schema`,
+                {
+                    title: formData.bannerTitle || "About Us",
+                    content: formData.journeyDescription || "",
+                    metaTitle: formData.metaTitle,
+                    metaDescription: formData.metaDescription,
+                    canonicalUrl: formData.canonicalUrl,
+                    slug: "about-us"
+                },
+                { withCredentials: true },
+            );
+
+            if (data.success) {
+                setAutoSchema(data.schema || "");
+                if (applyToForm) {
+                    setFormData((prev) => ({ ...prev, schema: data.schema || "" }));
+                    setSchemaError(null);
+                    toast.success("Schema generated");
+                }
+            }
+        } catch (error) {
+            toast.error("Failed to generate schema");
+        } finally {
+            setIsSchemaLoading(false);
         }
     };
 
@@ -101,6 +160,14 @@ export default function AboutUsForm() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const schemaValidation = validateJsonLd(formData.schema || "");
+        if (!schemaValidation.valid) {
+            setSchemaError(schemaValidation.error);
+            toast.error(schemaValidation.error);
+            return;
+        }
+
         setIsSaving(true);
         try {
             const data = new FormData();
@@ -123,6 +190,14 @@ export default function AboutUsForm() {
             if (formData.craftImage) data.append("craftImage", formData.craftImage);
             data.append("craftTitle", formData.craftTitle);
             data.append("craftDescription", formData.craftDescription);
+
+            // SEO & Meta
+            data.append("metaTitle", formData.metaTitle || "");
+            data.append("metaDescription", formData.metaDescription || "");
+            data.append("metaKeywords", formData.metaKeywords || "");
+            data.append("canonicalUrl", formData.canonicalUrl || "");
+            data.append("ogImage", formData.ogImage || "");
+            data.append("schema", schemaValidation.formatted || "");
 
             const res = await axios.post(`${API_BASE_URL}/pages/about`, data, {
                 headers: { "Content-Type": "multipart/form-data" },
@@ -284,6 +359,90 @@ export default function AboutUsForm() {
                     </div>
                 </div>
             </SectionCard>
+
+            {/* SEO & Meta Section */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-900">
+                    <Search size={16} />
+                    SEO & Meta
+                </h2>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                    <label className="block md:col-span-2">
+                        <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+                            Meta Title
+                        </span>
+                        <input
+                            type="text"
+                            value={formData.metaTitle}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, metaTitle: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+                        />
+                    </label>
+
+                    <label className="block md:col-span-2">
+                        <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+                            Meta Description
+                        </span>
+                        <textarea
+                            rows={3}
+                            value={formData.metaDescription}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, metaDescription: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+                            Meta Keywords
+                        </span>
+                        <input
+                            type="text"
+                            value={formData.metaKeywords}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, metaKeywords: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+                            Canonical URL
+                        </span>
+                        <input
+                            type="text"
+                            value={formData.canonicalUrl}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, canonicalUrl: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+                        />
+                    </label>
+
+                    <label className="block md:col-span-2">
+                        <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-600">
+                            OG Image URL
+                        </span>
+                        <input
+                            type="text"
+                            value={formData.ogImage}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, ogImage: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+                        />
+                    </label>
+                </div>
+
+                <SchemaEditor
+                    value={formData.schema}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, schema: value }))}
+                    onGenerate={() => generateSchema(true)}
+                    onReset={() => {
+                        if (!autoSchema) return;
+                        setFormData((prev) => ({ ...prev, schema: autoSchema }));
+                        setSchemaError(null);
+                    }}
+                    error={schemaError}
+                    isLoading={isSchemaLoading}
+                    autoSchemaAvailable={Boolean(autoSchema)}
+                />
+            </div>
 
             {/* Save Button */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 md:pl-72 z-10 flex justify-end">

@@ -79,6 +79,15 @@ export const updateAboutPage = async (req, res, next) => {
     }
     handleFile("craft", "craftImage");
 
+    if (req.body.metaTitle !== undefined) about.metaTitle = req.body.metaTitle;
+    if (req.body.metaDescription !== undefined) about.metaDescription = req.body.metaDescription;
+    if (req.body.metaKeywords !== undefined) about.metaKeywords = req.body.metaKeywords;
+    if (req.body.canonicalUrl !== undefined) about.canonicalUrl = req.body.canonicalUrl;
+    if (req.body.ogImage !== undefined) about.ogImage = req.body.ogImage;
+    if (req.body.schema !== undefined) {
+      about.seoSchema = normalizeJsonLd(req.body.schema);
+    }
+
     if (req.user) {
       about.updatedBy = req.user._id;
     }

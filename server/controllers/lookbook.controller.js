@@ -41,12 +41,21 @@ export const updateLookbook = async (req, res, next) => {
       lookbook = new Lookbook({
         slug,
         title: title || "Lookbook",
+        sliderImages: [],
         leftSliderImages: [],
         rightSliderImages: [],
       });
     }
 
-    // Parse existing images
+    // Parse existing shared slider images (new unified field)
+    let existingSlider = [];
+    try {
+      existingSlider = JSON.parse(req.body.existingSliderImages || "[]");
+    } catch (e) {
+      console.error("Error parsing existingSliderImages", e);
+    }
+
+    // Legacy: also handle left/right for backwards compat
     let existingLeft = [];
     try {
       existingLeft = JSON.parse(req.body.existingLeftImages || "[]");
@@ -69,43 +78,89 @@ export const updateLookbook = async (req, res, next) => {
       console.error("Error parsing centerContent", e);
     }
 
-    // Find and delete removed images from S3
+    // Determine which images to delete from S3
+    // Use sliderImages if provided, otherwise fall back to left/right
+    const isUnifiedMode = req.body.existingSliderImages !== undefined;
     const toDelete = [];
 
-    lookbook.leftSliderImages.forEach((img) => {
-      if (!existingLeft.find((e) => e.key === img.key)) {
-        toDelete.push(img.key);
-      }
-    });
+    if (isUnifiedMode) {
+      // Unified mode: compare against sliderImages pool
+      const currentImages = [
+        ...lookbook.sliderImages,
+        ...lookbook.leftSliderImages,
+        ...lookbook.rightSliderImages,
+      ];
+      currentImages.forEach((img) => {
+        if (!existingSlider.find((e) => e.key === img.key)) {
+          toDelete.push(img.key);
+        }
+      });
+    } else {
+      // Legacy left/right mode
+      lookbook.leftSliderImages.forEach((img) => {
+        if (!existingLeft.find((e) => e.key === img.key)) {
+          toDelete.push(img.key);
+        }
+      });
+      lookbook.rightSliderImages.forEach((img) => {
+        if (!existingRight.find((e) => e.key === img.key)) {
+          toDelete.push(img.key);
+        }
+      });
+    }
 
-    lookbook.rightSliderImages.forEach((img) => {
-      if (!existingRight.find((e) => e.key === img.key)) {
-        toDelete.push(img.key);
-      }
-    });
-
-    toDelete.forEach((key) => deleteS3File(key));
+    // Deduplicate before deleting (keys can appear in sliderImages AND mirrored left/right)
+    const uniqueKeysToDelete = [...new Set(toDelete)];
+    uniqueKeysToDelete.forEach((key) => deleteS3File(key));
 
     // Process new uploads
-    const newLeftFiles = req.files["leftImages"] || [];
-    const newRightFiles = req.files["rightImages"] || [];
+    const newSliderFiles = (req.files && req.files["sliderImages"]) || [];
+    const newLeftFiles = (req.files && req.files["leftImages"]) || [];
+    const newRightFiles = (req.files && req.files["rightImages"]) || [];
+
+    // Parse per-image metadata for new slider uploads (categoryLink etc.)
+    let newSliderMeta = [];
+    try {
+      newSliderMeta = JSON.parse(req.body.newSliderImagesMeta || "[]");
+    } catch (e) {
+      console.error("Error parsing newSliderImagesMeta", e);
+    }
+
+    const newSliderImages = newSliderFiles.map((file, idx) => ({
+      url: file.location,
+      key: file.key,
+      alt: file.originalname,
+      categoryLink: newSliderMeta[idx]?.categoryLink || "",
+    }));
 
     const newLeftImages = newLeftFiles.map((file) => ({
       url: file.location,
       key: file.key,
       alt: file.originalname,
+      categoryLink: "",
     }));
 
     const newRightImages = newRightFiles.map((file) => ({
       url: file.location,
       key: file.key,
       alt: file.originalname,
+      categoryLink: "",
     }));
 
     // Apply updates
     lookbook.title = title || lookbook.title;
-    lookbook.leftSliderImages = [...existingLeft, ...newLeftImages];
-    lookbook.rightSliderImages = [...existingRight, ...newRightImages];
+
+    if (isUnifiedMode) {
+      // Save to unified sliderImages field
+      lookbook.sliderImages = [...existingSlider, ...newSliderImages];
+      // Mirror to left/right for frontend rendering compatibility
+      lookbook.leftSliderImages = lookbook.sliderImages;
+      lookbook.rightSliderImages = lookbook.sliderImages;
+    } else {
+      // Legacy path
+      lookbook.leftSliderImages = [...existingLeft, ...newLeftImages];
+      lookbook.rightSliderImages = [...existingRight, ...newRightImages];
+    }
 
     if (centerContent) {
       lookbook.centerContent = {
