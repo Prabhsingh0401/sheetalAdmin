@@ -14,11 +14,23 @@ const lookbookSchema = new mongoose.Schema(
       required: true,
     },
     description: String,
+    // Single shared pool of images — both sliders use these
+    sliderImages: [
+      {
+        url: { type: String, required: true },
+        key: { type: String, required: true },
+        alt: String,
+        // Category slug → user is taken to /[categorySlug] when clicked
+        categoryLink: { type: String, default: "" },
+      },
+    ],
+    // Keep old fields for backwards compatibility (read-only migration path)
     leftSliderImages: [
       {
         url: { type: String, required: true },
         key: { type: String, required: true },
         alt: String,
+        categoryLink: { type: String, default: "" },
       },
     ],
     rightSliderImages: [
@@ -26,13 +38,17 @@ const lookbookSchema = new mongoose.Schema(
         url: { type: String, required: true },
         key: { type: String, required: true },
         alt: String,
+        categoryLink: { type: String, default: "" },
       },
     ],
     centerContent: {
       label: { type: String, default: "Exclusive Deal · Few Days Left" },
       heading: { type: String, default: "Timeless Women's Collection" },
       description: { type: String, default: "" },
+      buttonText: { type: String, default: "VIEW MORE" },
       buttonLink: { type: String, default: "#" },
+      // Category slug for the banner/button link
+      categoryLink: { type: String, default: "" },
     },
     isActive: {
       type: Boolean,

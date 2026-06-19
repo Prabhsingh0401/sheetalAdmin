@@ -104,6 +104,9 @@ const homepageSchema = new mongoose.Schema(
         default: "Testimonials from our happy customers.",
       },
     },
+    blogs: {
+      heading: { type: String, default: "Latest Articles & Blogs" },
+    },
     metaTitle: { type: String, trim: true },
     metaDescription: { type: String, trim: true },
     metaKeywords: { type: String },

@@ -121,6 +121,7 @@ export const getSections = async (req, res, next) => {
       newArrivals: homepage.newArrivals,
       instagramDiaries: homepage.instagramDiaries,
       testimonials: homepage.testimonials,
+      blogs: homepage.blogs,
       metaTitle: homepage.metaTitle || "",
       metaDescription: homepage.metaDescription || "",
       metaKeywords: homepage.metaKeywords || "",
@@ -149,6 +150,7 @@ export const updateSections = async (req, res, next) => {
       newArrivals,
       instagramDiaries,
       testimonials,
+      blogs,
       metaTitle,
       metaDescription,
       metaKeywords,
@@ -210,6 +212,8 @@ export const updateSections = async (req, res, next) => {
         };
       if (testimonials)
         homepage.testimonials = { ...homepage.testimonials, ...testimonials };
+      if (blogs)
+        homepage.blogs = { ...homepage.blogs, ...blogs };
       if (metaTitle !== undefined) homepage.metaTitle = metaTitle;
       if (metaDescription !== undefined)
         homepage.metaDescription = metaDescription;
@@ -232,6 +236,7 @@ export const updateSections = async (req, res, next) => {
       newArrivals: homepage.newArrivals,
       instagramDiaries: homepage.instagramDiaries,
       testimonials: homepage.testimonials,
+      blogs: homepage.blogs,
       metaTitle: homepage.metaTitle || "",
       metaDescription: homepage.metaDescription || "",
       metaKeywords: homepage.metaKeywords || "",

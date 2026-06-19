@@ -193,9 +193,9 @@ export default function ProductModal({
       v.sizes.forEach((s) => {
         const currentPrice = Number(s.price);
         const currentDiscountPrice = Number(s.discountPrice);
-        if (currentDiscountPrice > 0 && currentPrice <= currentDiscountPrice) {
+        if (currentDiscountPrice > 0 && currentPrice < currentDiscountPrice) {
           toast.error(
-            `For size '${s.name}' (Variant: ${v.color?.name || "N/A"}), MRP Price (${currentPrice}) must be greater than Selling Price (${currentDiscountPrice}).`,
+            `For size '${s.name}' (Variant: ${v.color?.name || "N/A"}), MRP Price (${currentPrice}) must be greater than or equal to Selling Price (${currentDiscountPrice}).`,
           );
         }
       });
