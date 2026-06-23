@@ -70,6 +70,47 @@ const recordCouponUsage = async (couponId, userId) => {
   await coupon.save();
 };
 
+export const normalizeCouponPaymentMethod = (value) => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (["prepaid", "prepaid orders", "online", "paid"].includes(normalized)) {
+    return "Prepaid";
+  }
+
+  if (["cod", "cash on delivery"].includes(normalized)) {
+    return "COD";
+  }
+
+  return "Both";
+};
+
+export const validateCouponPaymentMethod = (coupon, orderMethod) => {
+  if (!coupon) {
+    return { valid: true };
+  }
+
+  const couponPaymentMethod = normalizeCouponPaymentMethod(
+    coupon.paymentMethod,
+  );
+  if (couponPaymentMethod === "Both") {
+    return { valid: true };
+  }
+
+  const normalizedOrderMethod = normalizeCouponPaymentMethod(orderMethod);
+  if (couponPaymentMethod === normalizedOrderMethod) {
+    return { valid: true };
+  }
+
+  const message =
+    normalizedOrderMethod === "COD"
+      ? "This coupon can not be applied with COD orders"
+      : "This coupon can not be applied with prepaid orders";
+
+  return { valid: false, message };
+};
+
 const resolveCouponForOrder = async (order) => {
   if (order?.couponId) {
     return await Coupon.findById(order.couponId);
@@ -360,14 +401,15 @@ export const applyCouponService = async ({
 
     return {
       success: true,
-      data: {
-        couponId: coupon._id,
-        discount,
-        couponCode: coupon.code,
-        couponType: coupon.couponType,
-        isAutomatic: coupon.isAutomatic,
-        description: coupon.description,
-        offerType: coupon.offerType,
+    data: {
+      couponId: coupon._id,
+      discount,
+      couponCode: coupon.code,
+      couponType: coupon.couponType,
+      paymentMethod: coupon.paymentMethod || "Both",
+      isAutomatic: coupon.isAutomatic,
+      description: coupon.description,
+      offerType: coupon.offerType,
         isMaxApplied: coupon.maxDiscountAmount
           ? discount >= coupon.maxDiscountAmount
           : false,
@@ -426,6 +468,7 @@ export const confirmCouponUsageForOrder = async (order) => {
 export const createCouponService = async (data) => {
   try {
     data.isAutomatic = data.couponType === "FestiveSale";
+    data.paymentMethod = normalizeCouponPaymentMethod(data.paymentMethod);
     const code = data.code?.toUpperCase();
 
     if (code) {
@@ -473,6 +516,11 @@ export const updateCouponService = async (id, updateData) => {
 
     if (updateData.code) {
       updateData.code = updateData.code.toUpperCase();
+    }
+    if (updateData.paymentMethod) {
+      updateData.paymentMethod = normalizeCouponPaymentMethod(
+        updateData.paymentMethod,
+      );
     }
 
     if (updateData.showOnHomepage === true) {

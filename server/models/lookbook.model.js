@@ -49,6 +49,8 @@ const lookbookSchema = new mongoose.Schema(
       buttonLink: { type: String, default: "#" },
       // Category slug for the banner/button link
       categoryLink: { type: String, default: "" },
+      // Category slugs for the View More discounted product list
+      categoryLinks: [{ type: String, trim: true }],
     },
     isActive: {
       type: Boolean,

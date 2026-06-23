@@ -394,6 +394,14 @@ export default function CouponTable({ refreshStats }) {
                             ? `Category (${c.applicableIds?.length || 0})`
                             : `Specific Products (${c.applicableIds?.length || 0})`}
                       </span>
+                      <span className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                        Payment:{" "}
+                        {c.paymentMethod === "Prepaid"
+                          ? "Prepaid orders"
+                          : c.paymentMethod === "COD"
+                            ? "COD"
+                            : "Both"}
+                      </span>
                     </div>
                   </td>
 

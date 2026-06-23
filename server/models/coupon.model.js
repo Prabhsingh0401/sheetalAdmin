@@ -55,6 +55,11 @@ const couponSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     showOnHomepage: { type: Boolean, default: false },
     showOnLoginPage: { type: Boolean, default: false },
+    paymentMethod: {
+      type: String,
+      enum: ["Both", "Prepaid", "COD"],
+      default: "Both",
+    },
     isAbandonedCartCoupon: {
       type: Boolean,
       default: false,

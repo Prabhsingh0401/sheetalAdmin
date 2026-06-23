@@ -255,7 +255,17 @@ export const getAllProductsService = async (queryStr) => {
   }
 
   if (category && category !== "All") {
-    filter.category = new mongoose.Types.ObjectId(category);
+    const categoryIds = String(category)
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    if (categoryIds.length === 1) {
+      filter.category = categoryIds[0];
+    } else if (categoryIds.length > 1) {
+      filter.category = { $in: categoryIds };
+    }
   }
 
   if (subCategory && subCategory !== "All") {

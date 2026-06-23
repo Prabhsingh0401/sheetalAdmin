@@ -1,8 +1,14 @@
 import express from "express";
 import {
+  createAdminPage,
+  deleteAdminPage,
+  getAdminPage,
+  getAdminPages,
   getAboutPage,
   updateAboutPage,
   getPageBySlug,
+  getPublishedFooterPages,
+  updateAdminPage,
   updatePageBySlug,
   generateSchema,
 } from "../controllers/pages.controller.js";
@@ -27,6 +33,19 @@ router.post(
   ]),
   updateAboutPage,
 );
+
+router.get("/public/footer", getPublishedFooterPages);
+
+router
+  .route("/admin")
+  .get(isAuthenticated, isAdmin, getAdminPages)
+  .post(isAuthenticated, isAdmin, createAdminPage);
+
+router
+  .route("/admin/:id")
+  .get(isAuthenticated, isAdmin, getAdminPage)
+  .put(isAuthenticated, isAdmin, updateAdminPage)
+  .delete(isAuthenticated, isAdmin, deleteAdminPage);
 
 // Get page by slug (public)
 router.get("/slug/:slug", getPageBySlug);

@@ -18,8 +18,8 @@ router.post(
   isAdmin,
   uploadTo("lookbooks").fields([
     { name: "sliderImages", maxCount: 20 }, // unified shared slider (new)
-    { name: "leftImages", maxCount: 10 },   // legacy
-    { name: "rightImages", maxCount: 10 },  // legacy
+    { name: "leftImages", maxCount: 5 },   // legacy
+    { name: "rightImages", maxCount: 5 },  // legacy
   ]),
   updateLookbook,
 );
