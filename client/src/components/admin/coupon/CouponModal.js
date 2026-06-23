@@ -50,6 +50,7 @@ export default function CouponModal({
     buyQuantity: 1,
     getQuantity: 1,
     scope: "All",
+    paymentMethod: "Both",
     applicableIds: [],
     minOrderAmount: "",
     maxDiscountAmount: "",
@@ -115,6 +116,7 @@ export default function CouponModal({
         buyQuantity: initialData?.buyQuantity || 1,
         getQuantity: initialData?.getQuantity || 1,
         scope: initialData?.scope || "All",
+        paymentMethod: initialData?.paymentMethod || "Both",
         applicableIds: [],
         minOrderAmount: initialData?.minOrderAmount || "",
         maxDiscountAmount: initialData?.maxDiscountAmount || "",
@@ -172,6 +174,7 @@ export default function CouponModal({
       showOnHomepage: formData.showOnHomepage,
       showOnLoginPage: formData.showOnLoginPage,
       isAbandonedCartCoupon: formData.isAbandonedCartCoupon,
+      paymentMethod: formData.paymentMethod,
     };
 
     try {
@@ -530,6 +533,29 @@ export default function CouponModal({
                 <option value="All">All Products</option>
                 <option value="Category">Specific Category</option>
                 <option value="Specific_Product">Specific Product</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="coupon-payment-method"
+                className="text-xs font-bold text-slate-900 uppercase tracking-wider"
+              >
+                Payment Method
+              </label>
+              <select
+                id="coupon-payment-method"
+                value={formData.paymentMethod}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    paymentMethod: e.target.value,
+                  }))
+                }
+                className="w-full cursor-pointer bg-white border border-slate-400 px-4 py-2.5 rounded-lg text-sm text-slate-900 font-medium focus:border-slate-900 outline-none transition"
+              >
+                <option value="Both">Both</option>
+                <option value="Prepaid">Prepaid orders</option>
+                <option value="COD">COD</option>
               </select>
             </div>
 

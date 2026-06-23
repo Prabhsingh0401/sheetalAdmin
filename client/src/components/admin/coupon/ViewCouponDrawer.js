@@ -103,7 +103,7 @@ export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
                 Offer Value & Logic
               </h4>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
                   Benefit Type
@@ -126,6 +126,18 @@ export default function ViewCouponDrawer({ isOpen, onClose, coupon }) {
                 </p>
                 <p className="text-lg font-black text-indigo-600">
                   {coupon.scope || "All Store"}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  Payment Method
+                </p>
+                <p className="text-lg font-black text-indigo-600">
+                  {coupon.paymentMethod === "Prepaid"
+                    ? "Prepaid orders"
+                    : coupon.paymentMethod === "COD"
+                      ? "COD"
+                      : "Both"}
                 </p>
               </div>
             </div>

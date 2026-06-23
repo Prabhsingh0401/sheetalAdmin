@@ -2,6 +2,8 @@ import Lookbook from "../models/lookbook.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { deleteS3File } from "../utils/fileHelper.js";
 
+const MAX_IMAGES_PER_SIDE = 5;
+
 // @desc    Get lookbook by slug
 // @route   GET /api/v1/lookbooks/:slug
 // @access  Public
@@ -126,6 +128,20 @@ export const updateLookbook = async (req, res, next) => {
       console.error("Error parsing newSliderImagesMeta", e);
     }
 
+    let newLeftMeta = [];
+    try {
+      newLeftMeta = JSON.parse(req.body.newLeftImagesMeta || "[]");
+    } catch (e) {
+      console.error("Error parsing newLeftImagesMeta", e);
+    }
+
+    let newRightMeta = [];
+    try {
+      newRightMeta = JSON.parse(req.body.newRightImagesMeta || "[]");
+    } catch (e) {
+      console.error("Error parsing newRightImagesMeta", e);
+    }
+
     const newSliderImages = newSliderFiles.map((file, idx) => ({
       url: file.location,
       key: file.key,
@@ -133,18 +149,18 @@ export const updateLookbook = async (req, res, next) => {
       categoryLink: newSliderMeta[idx]?.categoryLink || "",
     }));
 
-    const newLeftImages = newLeftFiles.map((file) => ({
+    const newLeftImages = newLeftFiles.map((file, idx) => ({
       url: file.location,
       key: file.key,
       alt: file.originalname,
-      categoryLink: "",
+      categoryLink: newLeftMeta[idx]?.categoryLink || "",
     }));
 
-    const newRightImages = newRightFiles.map((file) => ({
+    const newRightImages = newRightFiles.map((file, idx) => ({
       url: file.location,
       key: file.key,
       alt: file.originalname,
-      categoryLink: "",
+      categoryLink: newRightMeta[idx]?.categoryLink || "",
     }));
 
     // Apply updates
@@ -158,8 +174,14 @@ export const updateLookbook = async (req, res, next) => {
       lookbook.rightSliderImages = lookbook.sliderImages;
     } else {
       // Legacy path
-      lookbook.leftSliderImages = [...existingLeft, ...newLeftImages];
-      lookbook.rightSliderImages = [...existingRight, ...newRightImages];
+      lookbook.leftSliderImages = [...existingLeft, ...newLeftImages].slice(
+        0,
+        MAX_IMAGES_PER_SIDE,
+      );
+      lookbook.rightSliderImages = [...existingRight, ...newRightImages].slice(
+        0,
+        MAX_IMAGES_PER_SIDE,
+      );
     }
 
     if (centerContent) {

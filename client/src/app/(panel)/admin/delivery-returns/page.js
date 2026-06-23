@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Truck, Save, RefreshCw, Mail, Phone, MessageSquare, Info } from "lucide-react";
+import {
+  Truck,
+  Save,
+  RefreshCw,
+  Mail,
+  Phone,
+  MessageSquare,
+  Info,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import PageHeader from "@/components/admin/layout/PageHeader.js";
 import { getSettings, updateSettings } from "@/services/settingsService";
@@ -95,7 +103,10 @@ export default function DeliveryReturnsPage() {
                 type="text"
                 value={settings.prepaidShippingCharge}
                 onChange={(e) =>
-                  setSettings({ ...settings, prepaidShippingCharge: e.target.value })
+                  setSettings({
+                    ...settings,
+                    prepaidShippingCharge: e.target.value,
+                  })
                 }
                 placeholder="e.g. Free Shipping"
                 className={inputStyle}
@@ -107,7 +118,10 @@ export default function DeliveryReturnsPage() {
                 type="text"
                 value={settings.codShippingCharge}
                 onChange={(e) =>
-                  setSettings({ ...settings, codShippingCharge: e.target.value })
+                  setSettings({
+                    ...settings,
+                    codShippingCharge: e.target.value,
+                  })
                 }
                 placeholder="e.g. Free Shipping"
                 className={inputStyle}
@@ -127,7 +141,10 @@ export default function DeliveryReturnsPage() {
               rows="4"
               value={settings.returnPolicyContent}
               onChange={(e) =>
-                setSettings({ ...settings, returnPolicyContent: e.target.value })
+                setSettings({
+                  ...settings,
+                  returnPolicyContent: e.target.value,
+                })
               }
               className={inputStyle}
               placeholder="Enter your return policy description..."
@@ -141,11 +158,14 @@ export default function DeliveryReturnsPage() {
         {/* Delivery Options Points */}
         <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-200 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
-            <Info size={18} className="text-indigo-500" /> Delivery Options Badges
+            <Info size={18} className="text-indigo-500" /> Delivery Options
+            Badges
           </h3>
           <div className="space-y-6">
             <div>
-              <label className={labelStyle}>First Point (Delivery Date Estimation)</label>
+              <label className={labelStyle}>
+                First Point (Delivery Date Estimation)
+              </label>
               <input
                 type="text"
                 value="Get it by [Estimated Date] (Dynamic)"
@@ -154,7 +174,9 @@ export default function DeliveryReturnsPage() {
               />
             </div>
             <div>
-              <label className={labelStyle}>Second Point (Pay on Delivery)</label>
+              <label className={labelStyle}>
+                Second Point (Pay on Delivery)
+              </label>
               <input
                 type="text"
                 value={settings.deliveryPoint2}
@@ -166,7 +188,9 @@ export default function DeliveryReturnsPage() {
               />
             </div>
             <div>
-              <label className={labelStyle}>Third Point (Returns & Exchange)</label>
+              <label className={labelStyle}>
+                Third Point (Returns & Exchange)
+              </label>
               <input
                 type="text"
                 value={settings.deliveryPoint3}
@@ -183,7 +207,8 @@ export default function DeliveryReturnsPage() {
         {/* Support Contact */}
         <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-200 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
-            <Info size={18} className="text-amber-500" /> Platform Fee Information
+            <Info size={18} className="text-amber-500" /> Platform Fee
+            Information
           </h3>
           <div>
             <label className={labelStyle}>Platform Fee (Know more) Text</label>
@@ -191,13 +216,17 @@ export default function DeliveryReturnsPage() {
               rows="3"
               value={settings.platformFeeKnowMore}
               onChange={(e) =>
-                setSettings({ ...settings, platformFeeKnowMore: e.target.value })
+                setSettings({
+                  ...settings,
+                  platformFeeKnowMore: e.target.value,
+                })
               }
               className={inputStyle}
               placeholder="Explain what the platform fee is for..."
             ></textarea>
             <p className="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              This text will be shown when users click &quot;Know more&quot; next to the platform fee in the cart.
+              This text will be shown when users click &quot;Know more&quot;
+              next to the platform fee in the cart.
             </p>
           </div>
         </div>
@@ -205,13 +234,17 @@ export default function DeliveryReturnsPage() {
         {/* Support Contact */}
         <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-200 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
-            <MessageSquare size={18} className="text-emerald-500" /> Support Contact
+            <MessageSquare size={18} className="text-emerald-500" /> Support
+            Contact
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className={labelStyle}>Support Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={16}
+                />
                 <input
                   type="email"
                   value={settings.supportEmail}
@@ -226,15 +259,24 @@ export default function DeliveryReturnsPage() {
             <div>
               <label className={labelStyle}>WhatsApp Number</label>
               <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Phone
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={16}
+                />
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={settings.supportWhatsapp}
-                  onChange={(e) =>
-                    setSettings({ ...settings, supportWhatsapp: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const digits = e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 10);
+                    setSettings({ ...settings, supportWhatsapp: digits });
+                  }}
                   className={`${inputStyle} pl-11`}
-                  placeholder="919958813913"
+                  placeholder="9199588139"
+                  maxLength={10}
                 />
               </div>
               <p className="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">

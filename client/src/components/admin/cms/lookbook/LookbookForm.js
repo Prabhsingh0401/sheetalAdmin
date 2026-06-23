@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   PlusSquare,
   Trash2,
@@ -7,9 +7,9 @@ import {
   Loader2,
   Info,
   Type,
-  Link,
   Tag,
   ChevronDown,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -19,19 +19,46 @@ import { fetchAllCategories } from "@/services/categoryService";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 const ACCEPTED_EXTENSIONS = ".jpg,.jpeg,.png";
+const MAX_IMAGES_PER_SIDE = 5;
 
 const DEFAULT_CENTER = {
-  label: "Exclusive Deal · Few Days Left",
+  label: "Exclusive Deal - Few Days Left",
   heading: "Timeless Women's Collection",
   description:
     "<p>Upgrade your everyday style with beautifully crafted pieces that blend comfort, elegance, and effortless charm.</p>",
   buttonText: "VIEW MORE",
   buttonLink: "",
   categoryLink: "",
+  categoryLinks: [],
 };
 
+const normalizeCategoryLinks = (content = {}) => {
+  const categoryLinks = Array.isArray(content.categoryLinks)
+    ? content.categoryLinks
+    : content.categoryLink
+      ? [content.categoryLink]
+      : [];
+
+  return categoryLinks.filter(Boolean);
+};
+
+const buildLookbookProductListHref = (categoryLinks = []) => {
+  const selected = categoryLinks.filter(Boolean);
+  if (selected.length === 0) return "";
+
+  const params = new URLSearchParams({
+    fromLookbook: "true",
+    categories: selected.join(","),
+  });
+
+  return `/product-list?${params.toString()}`;
+};
+
+const limitSideImages = (images = []) => images.slice(0, MAX_IMAGES_PER_SIDE);
+
 export default function LookbookForm() {
-  const [sliderImages, setSliderImages] = useState([]);
+  const [leftImages, setLeftImages] = useState([]);
+  const [rightImages, setRightImages] = useState([]);
   const [centerContent, setCenterContent] = useState(DEFAULT_CENTER);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +66,6 @@ export default function LookbookForm() {
 
   const SLUG = "timeless-women";
 
-  // Load lookbook data + categories in parallel
   useEffect(() => {
     const load = async () => {
       try {
@@ -50,23 +76,40 @@ export default function LookbookForm() {
           fetchAllCategories(),
         ]);
 
-        // Categories — API returns { success, data: [...] }
-        if (catRes && catRes.data) {
+        if (catRes?.data) {
           setCategories(catRes.data);
         }
 
-        // Lookbook data
         const lb = lookbookRes.data?.lookbook;
         if (lb) {
-          // Prefer unified sliderImages; fall back to leftSliderImages for migration
-          const imgs =
-            lb.sliderImages?.length > 0
-              ? lb.sliderImages
-              : lb.leftSliderImages || [];
-          setSliderImages(imgs);
+          const sharedFallback = lb.sliderImages || [];
+          setLeftImages(
+            limitSideImages(
+              lb.leftSliderImages?.length > 0
+                ? lb.leftSliderImages
+                : sharedFallback,
+            ),
+          );
+          setRightImages(
+            limitSideImages(
+              lb.rightSliderImages?.length > 0
+                ? lb.rightSliderImages
+                : sharedFallback,
+            ),
+          );
 
           if (lb.centerContent) {
-            setCenterContent({ ...DEFAULT_CENTER, ...lb.centerContent });
+            const categoryLinks = normalizeCategoryLinks(lb.centerContent);
+            setCenterContent({
+              ...DEFAULT_CENTER,
+              ...lb.centerContent,
+              categoryLink: categoryLinks[0] || "",
+              categoryLinks,
+              buttonLink:
+                buildLookbookProductListHref(categoryLinks) ||
+                lb.centerContent.buttonLink ||
+                "",
+            });
           }
         }
       } catch (error) {
@@ -75,10 +118,9 @@ export default function LookbookForm() {
         setIsLoading(false);
       }
     };
+
     load();
   }, []);
-
-  // ─── Image helpers ─────────────────────────────────────────────────────────
 
   const validateImage = (file) =>
     new Promise((resolve, reject) => {
@@ -89,15 +131,31 @@ export default function LookbookForm() {
       }
     });
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e, side) => {
     const newFiles = Array.from(e.target.files);
     if (!newFiles.length) return;
+
+    const currentImages = side === "left" ? leftImages : rightImages;
+    const remainingSlots = MAX_IMAGES_PER_SIDE - currentImages.length;
+
+    if (remainingSlots <= 0) {
+      toast.error(`You can add at most ${MAX_IMAGES_PER_SIDE} ${side} images.`);
+      e.target.value = "";
+      return;
+    }
+
+    const filesToValidate = newFiles.slice(0, remainingSlots);
+    if (newFiles.length > remainingSlots) {
+      toast.error(
+        `Only ${remainingSlots} more ${side} image(s) can be added. Maximum is ${MAX_IMAGES_PER_SIDE}.`,
+      );
+    }
 
     const valid = [];
     const errors = [];
 
     await Promise.all(
-      newFiles.map(async (file) => {
+      filesToValidate.map(async (file) => {
         try {
           await validateImage(file);
           valid.push(file);
@@ -107,7 +165,9 @@ export default function LookbookForm() {
       }),
     );
 
-    if (errors.length) errors.forEach((err) => toast.error(err, { duration: 4000 }));
+    if (errors.length) {
+      errors.forEach((err) => toast.error(err, { duration: 4000 }));
+    }
 
     if (valid.length) {
       const newImgs = valid.map((file) => ({
@@ -116,51 +176,55 @@ export default function LookbookForm() {
         isNew: true,
         categoryLink: "",
       }));
-      setSliderImages((prev) => [...prev, ...newImgs]);
-      toast.success(`${valid.length} image(s) added`);
+      const setter = side === "left" ? setLeftImages : setRightImages;
+      setter((prev) => [...prev, ...newImgs]);
+      toast.success(`${valid.length} ${side} image(s) added`);
     }
 
     e.target.value = "";
   };
 
-  const removeImage = (index) => {
-    setSliderImages((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (side, index) => {
+    const setter = side === "left" ? setLeftImages : setRightImages;
+    setter((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateImageCategory = (index, categorySlug) => {
-    setSliderImages((prev) =>
+  const updateImageCategory = (side, index, categorySlug) => {
+    const setter = side === "left" ? setLeftImages : setRightImages;
+    setter((prev) =>
       prev.map((img, i) =>
         i === index ? { ...img, categoryLink: categorySlug } : img,
       ),
     );
   };
 
-  // ─── Center content ─────────────────────────────────────────────────────────
-
   const handleCenterChange = (field, value) => {
     setCenterContent((prev) => ({ ...prev, [field]: value }));
   };
 
-  // ─── Save ───────────────────────────────────────────────────────────────────
+  const appendImagesToForm = (formData, side, images) => {
+    const existingImages = images.filter((img) => !img.isNew);
+    const newImages = images.filter((img) => img.isNew);
+    const existingKey = side === "left" ? "existingLeftImages" : "existingRightImages";
+    const fileKey = side === "left" ? "leftImages" : "rightImages";
+    const metaKey = side === "left" ? "newLeftImagesMeta" : "newRightImagesMeta";
+
+    formData.append(existingKey, JSON.stringify(existingImages));
+    newImages.forEach((img) => formData.append(fileKey, img.file));
+    formData.append(
+      metaKey,
+      JSON.stringify(
+        newImages.map((img) => ({ categoryLink: img.categoryLink || "" })),
+      ),
+    );
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     const formData = new FormData();
 
-    const existingImgs = sliderImages.filter((img) => !img.isNew);
-    const newImgs = sliderImages.filter((img) => img.isNew);
-
-    // Send existing images (with their categoryLinks already embedded)
-    formData.append("existingSliderImages", JSON.stringify(existingImgs));
-
-    // Send new image files (binary) — multer can't carry metadata alongside files,
-    // so we send their categoryLinks separately as ordered JSON
-    newImgs.forEach((img) => formData.append("sliderImages", img.file));
-    formData.append(
-      "newSliderImagesMeta",
-      JSON.stringify(newImgs.map((img) => ({ categoryLink: img.categoryLink || "" }))),
-    );
-
+    appendImagesToForm(formData, "left", leftImages);
+    appendImagesToForm(formData, "right", rightImages);
     formData.append("title", "Timeless Women Collection");
     formData.append("centerContent", JSON.stringify(centerContent));
 
@@ -177,12 +241,21 @@ export default function LookbookForm() {
       if (data.success) {
         toast.success("Lookbook updated successfully!");
         const lb = data.lookbook;
-        const imgs =
-          lb.sliderImages?.length > 0
-            ? lb.sliderImages
-            : lb.leftSliderImages || [];
-        setSliderImages(imgs);
-        if (lb.centerContent) setCenterContent(lb.centerContent);
+        setLeftImages(limitSideImages(lb.leftSliderImages || []));
+        setRightImages(limitSideImages(lb.rightSliderImages || []));
+        if (lb.centerContent) {
+          const categoryLinks = normalizeCategoryLinks(lb.centerContent);
+          setCenterContent({
+            ...DEFAULT_CENTER,
+            ...lb.centerContent,
+            categoryLink: categoryLinks[0] || "",
+            categoryLinks,
+            buttonLink:
+              buildLookbookProductListHref(categoryLinks) ||
+              lb.centerContent.buttonLink ||
+              "",
+          });
+        }
       }
     } catch (error) {
       console.error("Error saving lookbook:", error);
@@ -202,7 +275,6 @@ export default function LookbookForm() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* Image Spec Banner */}
       <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
         <Info size={16} className="text-amber-500 mt-0.5 shrink-0" />
         <div>
@@ -210,33 +282,45 @@ export default function LookbookForm() {
             Image Requirements
           </p>
           <p className="text-[11px] text-amber-700 mt-0.5">
-            All images must be exactly{" "}
-            <span className="font-bold">650 × 500 px</span> and in{" "}
-            <span className="font-bold">JPG or PNG</span> format. The same
-            images are displayed in <span className="font-bold">both</span>{" "}
-            sliders. Assign a category link to each image so clicking it takes
-            users to that category page.
+            Add separate images for the left and right lookbook sliders. Each
+            image can link to its own category. The View More button uses the
+            center content link only.
           </p>
         </div>
       </div>
 
-      {/* Shared Slider Images */}
-      <SharedImageSection
-        images={sliderImages}
-        onUpload={handleImageUpload}
-        onRemove={removeImage}
-        onCategoryChange={updateImageCategory}
+      <ImageSection
+        title="Left Slider Images"
+        description="Images and links for the left carousel."
+        images={leftImages}
+        onUpload={(e) => handleImageUpload(e, "left")}
+        onRemove={(index) => removeImage("left", index)}
+        onCategoryChange={(index, slug) =>
+          updateImageCategory("left", index, slug)
+        }
         categories={categories}
+        maxImages={MAX_IMAGES_PER_SIDE}
       />
 
-      {/* Center Content */}
+      <ImageSection
+        title="Right Slider Images"
+        description="Images and links for the right carousel."
+        images={rightImages}
+        onUpload={(e) => handleImageUpload(e, "right")}
+        onRemove={(index) => removeImage("right", index)}
+        onCategoryChange={(index, slug) =>
+          updateImageCategory("right", index, slug)
+        }
+        categories={categories}
+        maxImages={MAX_IMAGES_PER_SIDE}
+      />
+
       <CenterSection
         content={centerContent}
         onChange={handleCenterChange}
         categories={categories}
       />
 
-      {/* Save */}
       <div className="flex justify-end pt-4 border-t border-slate-200">
         <button
           onClick={handleSave}
@@ -260,9 +344,12 @@ export default function LookbookForm() {
   );
 }
 
-// ─── Category Dropdown ─────────────────────────────────────────────────────────
-
-function CategorySelect({ value, onChange, categories, placeholder = "No link — select category" }) {
+function CategorySelect({
+  value,
+  onChange,
+  categories,
+  placeholder = "No link - select category",
+}) {
   return (
     <div className="relative">
       <Tag
@@ -289,61 +376,136 @@ function CategorySelect({ value, onChange, categories, placeholder = "No link �
   );
 }
 
-// ─── Shared Image Section ──────────────────────────────────────────────────────
+function MultiCategorySelect({
+  value = [],
+  onChange,
+  categories,
+  placeholder = "Select categories",
+}) {
+  const selected = Array.isArray(value) ? value : [];
+  const selectedCategories = categories.filter((cat) =>
+    selected.includes(cat.slug),
+  );
+  const availableCategories = categories.filter(
+    (cat) => !selected.includes(cat.slug),
+  );
 
-function SharedImageSection({
+  const addCategory = (slug) => {
+    if (!slug || selected.includes(slug)) return;
+    onChange([...selected, slug]);
+  };
+
+  const removeCategory = (slug) => {
+    onChange(selected.filter((item) => item !== slug));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Tag
+          size={12}
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+        />
+        <ChevronDown
+          size={12}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+        />
+        <select
+          value=""
+          onChange={(e) => addCategory(e.target.value)}
+          className="w-full appearance-none pl-7 pr-7 py-1.5 text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition cursor-pointer"
+        >
+          <option value="">{placeholder}</option>
+          {availableCategories.map((cat) => (
+            <option key={cat._id} value={cat.slug}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedCategories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedCategories.map((cat) => (
+            <span
+              key={cat._id}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700"
+            >
+              {cat.name}
+              <button
+                type="button"
+                onClick={() => removeCategory(cat.slug)}
+                className="rounded-full p-0.5 text-emerald-500 hover:bg-emerald-100 hover:text-emerald-800"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ImageSection({
+  title,
+  description,
   images,
   onUpload,
   onRemove,
   onCategoryChange,
   categories,
+  maxImages,
 }) {
+  const isAtLimit = images.length >= maxImages;
+
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-4 gap-4">
         <div>
           <h3 className="text-sm font-black text-slate-900 uppercase">
-            Slider Images
+            {title}
           </h3>
-          <p className="text-[10px] text-slate-500 mt-0.5">
-            These images appear in <span className="font-bold text-indigo-600">both</span> the left and right carousels.
-            Assign a category to each so clicking the image navigates the user there.
-          </p>
+          <p className="text-[10px] text-slate-500 mt-0.5">{description}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              📐 650 × 500 px
+              400 x 310 ratio
             </span>
             <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              🖼 JPG · PNG
+              Max {maxImages} images
             </span>
-            <span className="inline-flex items-center gap-1 bg-indigo-100 border border-indigo-200 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              🔗 Shared in both sliders
+            <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              JPG / PNG
             </span>
           </div>
         </div>
-        <label className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all shadow-md active:scale-95">
+        <label
+          className={`group flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 ${
+            isAtLimit
+              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+          }`}
+        >
           <PlusSquare size={16} className="text-white/80 group-hover:text-white" />
-          <span>Add Images</span>
+          <span>{isAtLimit ? "Limit Reached" : "Add Images"}</span>
           <input
             type="file"
             multiple
             accept={ACCEPTED_EXTENSIONS}
             className="hidden"
             onChange={onUpload}
+            disabled={isAtLimit}
           />
         </label>
       </div>
 
-      {/* Image Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {images.map((img, i) => (
           <div
-            key={i}
+            key={`${img.key || img.url}-${i}`}
             className="rounded-2xl overflow-visible bg-white border-2 border-indigo-400 relative shadow-sm transition-all animate-in zoom-in-95 duration-200 group"
           >
-            {/* Image */}
-            <div className="aspect-[2/3] overflow-hidden rounded-t-xl">
+            <div className="aspect-[400/310] overflow-hidden rounded-t-xl">
               <img
                 src={img.url}
                 alt={`Slide ${i + 1}`}
@@ -351,14 +513,12 @@ function SharedImageSection({
               />
             </div>
 
-            {/* NEW badge */}
             {img.isNew && (
               <div className="absolute top-2 left-2 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase shadow-sm bg-indigo-500 z-10">
                 New
               </div>
             )}
 
-            {/* Delete */}
             <button
               type="button"
               onClick={() => onRemove(i)}
@@ -367,10 +527,9 @@ function SharedImageSection({
               <Trash2 size={14} />
             </button>
 
-            {/* Category link dropdown */}
             <div className="p-2 border-t border-slate-100 bg-slate-50 rounded-b-xl">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                Links to
+                Image link
               </p>
               <CategorySelect
                 value={img.categoryLink}
@@ -380,7 +539,7 @@ function SharedImageSection({
               />
               {img.categoryLink && (
                 <p className="text-[8px] text-indigo-500 font-semibold mt-1 truncate">
-                  → /{img.categoryLink}
+                  /{img.categoryLink}
                 </p>
               )}
             </div>
@@ -394,7 +553,7 @@ function SharedImageSection({
               No images added
             </p>
             <p className="text-[9px] text-slate-300 mt-1">
-              650 × 500 px · JPG or PNG
+              400 x 310 ratio - JPG or PNG
             </p>
           </div>
         )}
@@ -403,12 +562,9 @@ function SharedImageSection({
   );
 }
 
-// ─── Center Content Section ────────────────────────────────────────────────────
-
 function CenterSection({ content, onChange, categories }) {
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
           <Type size={15} className="text-emerald-600" />
@@ -418,13 +574,12 @@ function CenterSection({ content, onChange, categories }) {
             Center Content
           </h3>
           <p className="text-[10px] text-slate-500 mt-0.5">
-            Edit the text and link for the middle banner panel.
+            The View More button uses this link, separate from image links.
           </p>
         </div>
       </div>
 
       <div className="space-y-5">
-        {/* Top Label */}
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
             Top Label
@@ -433,12 +588,11 @@ function CenterSection({ content, onChange, categories }) {
             type="text"
             value={content.label}
             onChange={(e) => onChange("label", e.target.value)}
-            placeholder="e.g. Exclusive Deal · Few Days Left"
+            placeholder="e.g. Exclusive Deal - Few Days Left"
             className="w-full text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition placeholder:text-slate-300"
           />
         </div>
 
-        {/* Heading */}
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
             Heading
@@ -452,7 +606,6 @@ function CenterSection({ content, onChange, categories }) {
           />
         </div>
 
-        {/* Description */}
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
             Description
@@ -465,7 +618,6 @@ function CenterSection({ content, onChange, categories }) {
           </div>
         </div>
 
-        {/* Button Text */}
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
             Button Text
@@ -479,40 +631,32 @@ function CenterSection({ content, onChange, categories }) {
           />
         </div>
 
-        {/* Category Link for Banner */}
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
-            Link Banner &amp; Button to Category
+            View More Button Categories
           </label>
-          <CategorySelect
-            value={content.categoryLink}
-            onChange={(slug) => {
-              onChange("categoryLink", slug);
-              // Also update buttonLink to /{slug} for backwards compat
-              onChange("buttonLink", slug ? `/${slug}` : "");
+          <MultiCategorySelect
+            value={content.categoryLinks}
+            onChange={(slugs) => {
+              onChange("categoryLinks", slugs);
+              onChange("categoryLink", slugs[0] || "");
+              onChange("buttonLink", buildLookbookProductListHref(slugs));
             }}
             categories={categories}
-            placeholder="No link — select a category"
+            placeholder="Add a category"
           />
-          {content.categoryLink && (
+          {content.buttonLink && (
             <p className="text-[10px] text-emerald-600 font-semibold mt-1.5">
-              → /{content.categoryLink}
+              {content.buttonLink}
             </p>
           )}
-          <p className="text-[9px] text-slate-400 mt-1">
-            Clicking the banner image or the button will navigate users to this category page.
-          </p>
         </div>
 
-        {/* Live Preview */}
         <div>
           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">
             Preview
           </label>
-          <a
-            
-            className="bg-[#faf9f7] border border-slate-200 rounded-2xl px-6 py-8 flex flex-col items-center text-center gap-3 hover:shadow-md transition cursor-pointer"
-          >
+          <div className="bg-[#faf9f7] border border-slate-200 rounded-2xl px-6 py-8 flex flex-col items-center text-center gap-3 hover:shadow-md transition">
             {content.label && (
               <p className="text-[10px] tracking-widest text-slate-500 uppercase">
                 {content.label}
@@ -529,15 +673,12 @@ function CenterSection({ content, onChange, categories }) {
                 dangerouslySetInnerHTML={{ __html: content.description }}
               />
             )}
-            {(content.buttonText || content.categoryLink) && (
+            {content.buttonText && (
               <span className="mt-2 inline-flex items-center gap-1.5 bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-full tracking-wider">
-                {content.buttonText || "VIEW MORE"}
-                {/* {content.categoryLink && (
-                  <Link size={10} className="opacity-70" />
-                )} */}
+                {content.buttonText}
               </span>
             )}
-          </a>
+          </div>
         </div>
       </div>
     </div>

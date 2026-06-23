@@ -15,8 +15,17 @@ const firstDefined = (...values) =>
       !(typeof value === "string" && value.trim() === ""),
   );
 
+const extractTiptapText = (value) => {
+  if (!value || typeof value !== "object") return "";
+  if (typeof value.text === "string") return value.text;
+  if (!Array.isArray(value.content)) return "";
+  return value.content.map(extractTiptapText).filter(Boolean).join(" ");
+};
+
 const stripHtml = (value = "") =>
-  String(value)
+  String(
+    value && typeof value === "object" ? extractTiptapText(value) : value,
+  )
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();

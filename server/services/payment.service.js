@@ -2,13 +2,17 @@ import razorpay from "../config/razorpay.js";
 import crypto from "crypto";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import Order from "../models/order.model.js";
+import Coupon from "../models/coupon.model.js";
 import Cart from "../models/cart.model.js";
 import User from "../models/user.model.js";
 import Settings from "../models/settings.model.js";
 import { createShiprocketOrder } from "./shiprocket.service.js";
 import { sendOrderConfirmationEmail } from "./order.email.service.js";
 import { completeAbandonedCartFlow } from "./abandonedCart.service.js";
-import { confirmCouponUsageForOrder } from "./coupon.service.js";
+import {
+  confirmCouponUsageForOrder,
+  validateCouponPaymentMethod,
+} from "./coupon.service.js";
 import {
   applyOrderInventoryAdjustments,
   revertOrderInventoryAdjustments,
@@ -78,6 +82,16 @@ const validateCheckoutAddress = (address, label) => {
   return normalized;
 };
 
+const resolveCouponForCheckout = async (couponId, couponCode) => {
+  if (couponId) {
+    return Coupon.findById(couponId);
+  }
+  if (couponCode) {
+    return Coupon.findOne({ code: String(couponCode).toUpperCase() });
+  }
+  return null;
+};
+
 export const createPaymentLinkService = async (
   userId,
   shippingAddress,
@@ -118,6 +132,15 @@ export const createPaymentLinkService = async (
   const validatedBillingAddress = billingAddress
     ? validateCheckoutAddress(billingAddress, "billingAddress")
     : { ...validatedShippingAddress };
+
+  const coupon = await resolveCouponForCheckout(
+    couponData?.couponId,
+    couponData?.couponCode,
+  );
+  const paymentMethodCheck = validateCouponPaymentMethod(coupon, "Prepaid");
+  if (!paymentMethodCheck.valid) {
+    throw ErrorResponse(paymentMethodCheck.message, 400);
+  }
 
   // 2. Calculate Total Amount
   let totalPrice = 0;

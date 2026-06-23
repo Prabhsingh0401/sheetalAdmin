@@ -1,4 +1,5 @@
 import Order from "../models/order.model.js";
+import Coupon from "../models/coupon.model.js";
 import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import Cart from "../models/cart.model.js";
@@ -7,7 +8,10 @@ import ErrorResponse from "../utils/ErrorResponse.js";
 import { createShiprocketOrder } from "./shiprocket.service.js";
 import { sendOrderConfirmationEmail } from "./order.email.service.js";
 import { completeAbandonedCartFlow } from "./abandonedCart.service.js";
-import { confirmCouponUsageForOrder } from "./coupon.service.js";
+import {
+  confirmCouponUsageForOrder,
+  validateCouponPaymentMethod,
+} from "./coupon.service.js";
 import { redeemAbandonedCartCoupon } from "./abandonedcartcoupon.service.js";
 
 const normalizeOrderStats = (orderStats = {}) => {
@@ -48,7 +52,7 @@ const ensureAddress = (address, label) => {
 
   for (const field of requiredFields) {
     if (!normalized[field]) {
-      throw new ErrorResponse(`${label}.${field} is required`, 400);
+      throw ErrorResponse(`${label}.${field} is required`, 400);
     }
   }
 
@@ -150,19 +154,29 @@ const getAvailableStockForOrderItem = (product, item) => {
 };
 
 const buildInventoryError = (product, item, availableStock) => {
-  return new ErrorResponse(`This item only has ${availableStock} left.`, 400);
+  return ErrorResponse(`This item only has ${availableStock} left.`, 400);
+};
+
+const resolveCouponForCheckout = async (couponId, couponCode) => {
+  if (couponId) {
+    return Coupon.findById(couponId);
+  }
+  if (couponCode) {
+    return Coupon.findOne({ code: String(couponCode).toUpperCase() });
+  }
+  return null;
 };
 
 export const validateInventoryForOrderItems = async (orderItems = []) => {
   for (const item of orderItems) {
     const quantity = normalizeItemQuantity(item?.quantity);
     if (quantity <= 0) {
-      throw new ErrorResponse("Invalid order quantity", 400);
+      throw ErrorResponse("Invalid order quantity", 400);
     }
 
     const product = await Product.findById(item.product).lean();
     if (!product) {
-      throw new ErrorResponse(`Product not found: ${item.product}`, 404);
+      throw ErrorResponse(`Product not found: ${item.product}`, 404);
     }
 
     const availableStock = getAvailableStockForOrderItem(product, item);
@@ -179,12 +193,12 @@ export const applyOrderInventoryAdjustments = async (orderItems = []) => {
     for (const item of orderItems) {
       const quantity = normalizeItemQuantity(item?.quantity);
       if (quantity <= 0) {
-        throw new ErrorResponse("Invalid order quantity", 400);
+        throw ErrorResponse("Invalid order quantity", 400);
       }
 
       const product = await Product.findById(item.product);
       if (!product) {
-        throw new ErrorResponse(`Product not found: ${item.product}`, 404);
+        throw ErrorResponse(`Product not found: ${item.product}`, 404);
       }
 
       const availableStock = getAvailableStockForOrderItem(product, item);
@@ -253,7 +267,7 @@ export const revertOrderInventoryAdjustments = async (orderItems = []) => {
 
 const resolveOrderUser = async (data, requester) => {
   if (!requester?._id) {
-    throw new ErrorResponse("User not found", 404);
+    throw ErrorResponse("User not found", 404);
   }
 
   const isAdminOrder = data?.isCreatedByAdmin && requester.role === "admin";
@@ -264,7 +278,7 @@ const resolveOrderUser = async (data, requester) => {
   if (data?.customerId) {
     const customer = await User.findById(data.customerId).select("_id");
     if (!customer) {
-      throw new ErrorResponse("Customer not found for manual order", 404);
+      throw ErrorResponse("Customer not found for manual order", 404);
     }
     return customer._id;
   }
@@ -285,7 +299,7 @@ const resolveOrderUser = async (data, requester) => {
       : null;
 
   if (!lookup) {
-    throw new ErrorResponse(
+    throw ErrorResponse(
       "Existing customer email or phone number is required",
       400,
     );
@@ -293,7 +307,7 @@ const resolveOrderUser = async (data, requester) => {
 
   const customer = await User.findOne(lookup).select("_id");
   if (!customer) {
-    throw new ErrorResponse("Customer not found for manual order", 404);
+    throw ErrorResponse("Customer not found for manual order", 404);
   }
 
   return customer._id;
@@ -318,7 +332,7 @@ export const createOrderService = async (data, requester) => {
   const isBuyNow = Array.isArray(buyNowItems) && buyNowItems.length > 0;
 
   if (!Array.isArray(orderItems) || orderItems.length === 0) {
-    throw new ErrorResponse("At least one order item is required", 400);
+    throw ErrorResponse("At least one order item is required", 400);
   }
 
   const normalizedShippingAddress = ensureAddress(
@@ -328,6 +342,15 @@ export const createOrderService = async (data, requester) => {
   const normalizedBillingAddress = billingAddress
     ? ensureAddress(billingAddress, "billingAddress")
     : { ...normalizedShippingAddress };
+
+  const coupon = await resolveCouponForCheckout(data.couponId, data.couponCode);
+  const paymentMethodCheck = validateCouponPaymentMethod(
+    coupon,
+    paymentInfo?.method === "COD" ? "COD" : "Prepaid",
+  );
+  if (!paymentMethodCheck.valid) {
+    throw ErrorResponse(paymentMethodCheck.message, 400);
+  }
 
   // 1. Parallel pre-checks and data fetching
   const [user, abandonedCartCouponRecordId] = await Promise.all([
@@ -339,7 +362,7 @@ export const createOrderService = async (data, requester) => {
       : Promise.resolve(null),
   ]);
 
-  if (!user) throw new ErrorResponse("User not found", 404);
+  if (!user) throw ErrorResponse("User not found", 404);
 
   await validateInventoryForOrderItems(orderItems);
 
@@ -478,12 +501,12 @@ export const updateOrderStatusService = async (
   trackingData = {},
 ) => {
   const order = await Order.findById(orderId);
-  if (!order) throw new ErrorResponse("Order nahi mila", 404);
+  if (!order) throw ErrorResponse("Order nahi mila", 404);
 
   const oldStatus = order.orderStatus;
 
   if (oldStatus === "Delivered" && status === "Delivered") {
-    throw new ErrorResponse("Ye order pehle hi deliver ho chuka hai", 400);
+    throw ErrorResponse("Ye order pehle hi deliver ho chuka hai", 400);
   }
 
   if (status === "Cancelled" || status === "Returned") {
@@ -539,16 +562,16 @@ export const updateOrderItemStatusService = async (
   status,
 ) => {
   const order = await Order.findById(orderId);
-  if (!order) throw new ErrorResponse("Order nahi mila", 404);
+  if (!order) throw ErrorResponse("Order nahi mila", 404);
 
   const orderItem = order.orderItems.id(orderItemId);
-  if (!orderItem) throw new ErrorResponse("Order item nahi mila", 404);
+  if (!orderItem) throw ErrorResponse("Order item nahi mila", 404);
 
   if (
     TERMINAL_ITEM_STATUSES.has(orderItem.itemStatus) &&
     orderItem.itemStatus !== status
   ) {
-    throw new ErrorResponse(
+    throw ErrorResponse(
       `Item is already in a terminal state: ${orderItem.itemStatus}`,
       400,
     );
@@ -605,9 +628,9 @@ export const getSingleOrderService = async (orderId, userId) => {
     })
     .populate("user", "name email")
     .lean();
-  if (!order) throw new ErrorResponse("Order not found", 404);
+  if (!order) throw ErrorResponse("Order not found", 404);
   if (order.user._id.toString() !== userId.toString()) {
-    throw new ErrorResponse("You are not authorised to view this order", 403);
+    throw ErrorResponse("You are not authorised to view this order", 403);
   }
 
   // Add isReviewed flag and review details to each item
@@ -644,7 +667,7 @@ export const getSingleOrderAdminService = async (orderId) => {
     .populate("user", "name email");
 
   if (!order) {
-    throw new ErrorResponse("Order not found", 404);
+    throw ErrorResponse("Order not found", 404);
   }
 
   return order;
