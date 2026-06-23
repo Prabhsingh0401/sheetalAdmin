@@ -390,7 +390,7 @@ const ToolbarGroup = ({ children }) => (
 // ---------------------------------------------------------------------------
 // Editor component
 // ---------------------------------------------------------------------------
-const TiptapEditor = ({ value, onChange }) => {
+const TiptapEditor = ({ value, onChange, outputFormat = "html" }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [linkModal, setLinkModal] = useState({
     open: false,
@@ -485,9 +485,10 @@ const TiptapEditor = ({ value, onChange }) => {
       },
     },
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      lastSetKeyRef.current = contentKey(html);
-      onChange(html);
+      const nextValue =
+        outputFormat === "json" ? editor.getJSON() : editor.getHTML();
+      lastSetKeyRef.current = contentKey(nextValue);
+      onChange(nextValue);
     },
   });
 

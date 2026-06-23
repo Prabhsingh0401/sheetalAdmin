@@ -94,15 +94,15 @@ export const getSections = async (req, res, next) => {
       })
       .populate({
         path: "collections.products",
-        select: "name slug mainImage variants price stock status",
+        select: "name slug mainImage hoverImage variants price stock status category averageRating",
       })
       .populate({
         path: "trendingThisWeek.products",
-        select: "name slug mainImage variants price stock status",
+        select: "name slug mainImage hoverImage variants price stock status category averageRating",
       })
       .populate({
         path: "newArrivals.products",
-        select: "name slug mainImage variants price stock status",
+        select: "name slug mainImage hoverImage variants price stock status category averageRating",
       });
 
     res.status(200).json({

@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getSettings, updateSettings } from "../../../services/settingsService";
+import { getFooterStaticPages } from "../../../services/staticPageService";
 import toast from "react-hot-toast";
 import { Loader2, Save, Eye, EyeOff } from "lucide-react";
 
@@ -110,6 +111,68 @@ const defaultFooterLayout = [
   },
 ];
 
+const cloneLayout = (layout) => JSON.parse(JSON.stringify(layout));
+
+const removeAutomaticStaticLinks = (layout) =>
+  layout.map((block) => {
+    if (block.type === "double") {
+      return {
+        ...block,
+        columns: block.columns.map((column) => ({
+          ...column,
+          links: (column.links || []).filter(
+            (link) => !String(link.id || "").startsWith("static-page-"),
+          ),
+        })),
+      };
+    }
+
+    return {
+      ...block,
+      links: (block.links || []).filter(
+        (link) => !String(link.id || "").startsWith("static-page-"),
+      ),
+    };
+  });
+
+const mergeFooterStaticPages = (layout, pages = []) => {
+  const nextLayout = removeAutomaticStaticLinks(cloneLayout(layout));
+  const doubleBlock = nextLayout.find((block) => block.type === "double");
+  const singleBlock = nextLayout.find((block) => block.type === "single");
+
+  pages.forEach((page) => {
+    if (page.footerPlacement === "footer_column_3") {
+      if (!singleBlock) return;
+      singleBlock.hidden = false;
+      singleBlock.links.push({
+        id: `static-page-${page._id}`,
+        label: page.title,
+        href: `/${page.slug}`,
+        hidden: false,
+        isAutomaticStaticPage: true,
+      });
+      return;
+    }
+
+    if (!doubleBlock || !Array.isArray(doubleBlock.columns)) return;
+    doubleBlock.hidden = false;
+    const columnIndex = page.footerPlacement === "footer_column_2" ? 1 : 0;
+    const column = doubleBlock.columns[columnIndex];
+    if (!column) return;
+
+    column.hidden = false;
+    column.links.push({
+      id: `static-page-${page._id}`,
+      label: page.title,
+      href: `/${page.slug}`,
+      hidden: false,
+      isAutomaticStaticPage: true,
+    });
+  });
+
+  return nextLayout;
+};
+
 // ── Sortable link row ──────────────────────────────────────────────────────
 const SortableLinkItem = ({ id, link, onUpdate }) => {
   const {
@@ -143,9 +206,15 @@ const SortableLinkItem = ({ id, link, onUpdate }) => {
         type="text"
         value={link.label}
         onChange={(e) => onUpdate(id, "label", e.target.value)}
+        disabled={link.isAutomaticStaticPage}
         className="flex-1 bg-transparent text-[#b3a660] text-sm focus:outline-none"
         placeholder="Label"
       />
+      {link.isAutomaticStaticPage && (
+        <span className="text-[10px] uppercase tracking-wider text-[#f2bf42]/70">
+          CMS
+        </span>
+      )}
       <button
         type="button"
         onClick={() => onUpdate(id, "hidden", !link.hidden)}
@@ -299,15 +368,21 @@ const FooterLayoutEditor = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const res = await getSettings();
-        const saved = res.data?.footerLayout;
+        const [settingsRes, footerPagesRes] = await Promise.all([
+          getSettings(),
+          getFooterStaticPages(),
+        ]);
+        const saved = settingsRes.data?.footerLayout;
+        const footerPages = footerPagesRes.pages || [];
         const isValid =
           Array.isArray(saved) &&
           saved.length > 0 &&
           saved[0].hasOwnProperty("type") &&
           (saved[0].type === "double" || saved[0].type === "single");
 
-        setLayout(isValid ? saved : defaultFooterLayout);
+        setLayout(
+          mergeFooterStaticPages(isValid ? saved : defaultFooterLayout, footerPages),
+        );
       } catch {
         toast.error("Failed to load footer layout");
         setLayout(defaultFooterLayout);
@@ -325,7 +400,7 @@ const FooterLayoutEditor = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateSettings({ footerLayout: layout });
+      await updateSettings({ footerLayout: removeAutomaticStaticLinks(layout) });
       toast.success("Footer Layout Saved!");
     } catch {
       toast.error("Failed to save footer layout");
@@ -365,7 +440,8 @@ const FooterLayoutEditor = () => {
       <p className="px-4 text-sm text-gray-500 mb-6">
         The first block is the "Information" double-column. The second is the
         "Quick Links" single column. Hide sections or individual links as
-        needed.
+        needed. Published CMS pages assigned to Footer Column 1 or 2 appear here
+        automatically with a CMS badge.
       </p>
 
       <div className="flex flex-col gap-6 px-4">
