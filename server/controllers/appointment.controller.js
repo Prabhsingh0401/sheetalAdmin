@@ -145,6 +145,16 @@ export const updateStatus = async (req, res, next) => {
           message: "Appointment date and time are required to confirm appointment",
         });
       }
+
+      // Check that the appointmentDate is not in the past
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      if (appointmentDate < todayStr) {
+        return res.status(400).json({
+          success: false,
+          message: "Appointment date cannot be in the past",
+        });
+      }
+
       updateData.appointmentDate = appointmentDate;
       updateData.appointmentTime = appointmentTime;
     }

@@ -1250,6 +1250,7 @@ export default function AppointmentsPage() {
                 <input
                   type="date"
                   value={confirmDate}
+                  min={new Date().toLocaleDateString('en-CA')}
                   onChange={(e) => setConfirmDate(e.target.value)}
                   className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400 transition"
                 />

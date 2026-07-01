@@ -93,27 +93,33 @@ export default function SettingsPage() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("logo", file);
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = async () => {
+      const formData = new FormData();
+      formData.append("logo", file);
+      formData.append("width", img.width);
+      formData.append("height", img.height);
 
-    setIsUploadingLogo(true);
-    try {
-      const res = await updateLogo(formData);
-      if (res.success) {
-        toast.success("Logo updated successfully!");
-        setBrandSettings((prev) => ({
-          ...prev,
-          logo: res.data.logo,
-          logoHistory: res.data.logoHistory,
-        }));
-      } else {
-        toast.error(res.message || "Failed to upload logo");
+      setIsUploadingLogo(true);
+      try {
+        const res = await updateLogo(formData);
+        if (res.success) {
+          toast.success("Logo updated successfully!");
+          setBrandSettings((prev) => ({
+            ...prev,
+            logo: res.data.logo,
+            logoHistory: res.data.logoHistory,
+          }));
+        } else {
+          toast.error(res.message || "Failed to upload logo");
+        }
+      } catch (error) {
+        toast.error("Error uploading logo");
+      } finally {
+        setIsUploadingLogo(false);
       }
-    } catch (error) {
-      toast.error("Error uploading logo");
-    } finally {
-      setIsUploadingLogo(false);
-    }
+    };
   };
 
   const handleFaviconUpload = async (e) => {
@@ -217,6 +223,9 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  This logo appears in headers and footers. Recommended size: 150x50px (3:1 aspect ratio).
+                </p>
                 {brandSettings.logo && (
                   <div className="flex items-center justify-between text-[10px] text-slate-400 px-2">
                     <span>Uploaded: {new Date(brandSettings.logo.uploadDate).toLocaleDateString()}</span>
